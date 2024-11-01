@@ -10,6 +10,10 @@ const dotenv = require('dotenv');
 dotenv.config();
 
 const PORT = process.env.PORT || 10000;
+app.listen(PORT, () => {
+  console.log(`Servidor escuchando en el puerto ${PORT}`);
+});
+
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
 
 const app = express();

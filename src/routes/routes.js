@@ -471,5 +471,91 @@ router.delete('/products/:id', async (req, res) => {
   }
 });
 
+router.post('/inspections', async (req, res) => {
+  const { date, time, duration, observations, service_id, exit_time } = req.body;
+
+  try {
+    const query = `
+      INSERT INTO inspections (date, time, duration, observations, service_id, exit_time)
+      VALUES ($1, $2, $3, $4, $5, $6) RETURNING *
+    `;
+    const values = [date, time, duration, observations, service_id, exit_time];
+    const result = await pool.query(query, values);
+
+    res.status(201).json({ success: true, message: "Inspección creada exitosamente", inspection: result.rows[0] });
+  } catch (error) {
+    console.error("Error al crear inspección:", error);
+    res.status(500).json({ success: false, message: "Error en el servidor" });
+  }
+});
+
+
+// Obtener todas las inspecciones
+router.get('/inspections', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT * FROM inspections');
+    res.json(result.rows);
+  } catch (error) {
+    console.error("Error al obtener inspecciones:", error);
+    res.status(500).json({ success: false, message: "Error en el servidor" });
+  }
+});
+
+// Obtener una inspección por ID
+router.get('/inspections/:id', async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const result = await pool.query('SELECT * FROM inspections WHERE id = $1', [id]);
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, message: "Inspección no encontrada" });
+    }
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error("Error al obtener inspección:", error);
+    res.status(500).json({ success: false, message: "Error en el servidor" });
+  }
+});
+
+// Actualizar una inspección
+router.put('/inspections/:id', async (req, res) => {
+  const { id } = req.params;
+  const { date, time, duration, observations, service_id, exit_time } = req.body;
+
+  try {
+    const query = `
+      UPDATE inspections
+      SET date = $1, time = $2, duration = $3, observations = $4, service_id = $5, exit_time = $6
+      WHERE id = $7 RETURNING *
+    `;
+    const values = [date, time, duration, observations, service_id, exit_time, id];
+    const result = await pool.query(query, values);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, message: "Inspección no encontrada" });
+    }
+    res.json({ success: true, message: "Inspección actualizada exitosamente", inspection: result.rows[0] });
+  } catch (error) {
+    console.error("Error al actualizar inspección:", error);
+    res.status(500).json({ success: false, message: "Error en el servidor" });
+  }
+});
+
+// Eliminar una inspección
+router.delete('/inspections/:id', async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const result = await pool.query('DELETE FROM inspections WHERE id = $1 RETURNING *', [id]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, message: "Inspección no encontrada" });
+    }
+    res.json({ success: true, message: "Inspección eliminada exitosamente" });
+  } catch (error) {
+    console.error("Error al eliminar inspección:", error);
+    res.status(500).json({ success: false, message: "Error en el servidor" });
+  }
+});
 
 module.exports = router;
