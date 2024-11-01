@@ -15,7 +15,6 @@ const PORT = process.env.PORT || 10000;
 
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
 
-
 // Configuración de CORS permitiendo solicitudes desde el frontend
 app.use(cors({
   origin: [FRONTEND_URL, 'https://localhost'],
