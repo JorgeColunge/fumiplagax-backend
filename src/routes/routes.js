@@ -383,5 +383,93 @@ router.delete('/services/:id', async (req, res) => {
   }
 });
 
+// Crear producto
+router.post('/products', async (req, res) => {
+  const { name, description_type, dose, residual_duration, safety_data_sheet, technical_sheet, health_registration, emergency_card } = req.body;
+
+  try {
+    const query = `
+      INSERT INTO products (name, description_type, dose, residual_duration, safety_data_sheet, technical_sheet, health_registration, emergency_card)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *
+    `;
+    const values = [name, description_type, dose, residual_duration, safety_data_sheet, technical_sheet, health_registration, emergency_card];
+    const result = await pool.query(query, values);
+
+    res.status(201).json({ success: true, message: "Product created successfully", product: result.rows[0] });
+  } catch (error) {
+    console.error("Error creating product:", error);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+});
+
+// Obtener todos los productos
+router.get('/products', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT * FROM products');
+    res.json(result.rows);
+  } catch (error) {
+    console.error("Error fetching products:", error);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+});
+
+// Obtener un producto por ID
+router.get('/products/:id', async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const result = await pool.query('SELECT * FROM products WHERE id = $1', [id]);
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, message: "Product not found" });
+    }
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error("Error fetching product:", error);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+});
+
+// Editar producto
+router.put('/products/:id', async (req, res) => {
+  const { id } = req.params;
+  const { name, description_type, dose, residual_duration, safety_data_sheet, technical_sheet, health_registration, emergency_card } = req.body;
+
+  try {
+    const query = `
+      UPDATE products
+      SET name = $1, description_type = $2, dose = $3, residual_duration = $4, safety_data_sheet = $5,
+          technical_sheet = $6, health_registration = $7, emergency_card = $8
+      WHERE id = $9 RETURNING *
+    `;
+    const values = [name, description_type, dose, residual_duration, safety_data_sheet, technical_sheet, health_registration, emergency_card, id];
+    const result = await pool.query(query, values);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, message: "Product not found" });
+    }
+    res.json({ success: true, message: "Product updated successfully", product: result.rows[0] });
+  } catch (error) {
+    console.error("Error updating product:", error);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+});
+
+// Eliminar producto
+router.delete('/products/:id', async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const result = await pool.query('DELETE FROM products WHERE id = $1 RETURNING *', [id]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, message: "Product not found" });
+    }
+    res.json({ success: true, message: "Product deleted successfully" });
+  } catch (error) {
+    console.error("Error deleting product:", error);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+});
+
 
 module.exports = router;
