@@ -471,8 +471,14 @@ router.delete('/products/:id', async (req, res) => {
   }
 });
 
+// Ruta para crear una nueva inspección
 router.post('/inspections', async (req, res) => {
   const { date, time, duration, observations, service_id, exit_time } = req.body;
+
+  // Validación de campos obligatorios
+  if (!date || !time) {
+    return res.status(400).json({ success: false, message: "La fecha y la hora son campos obligatorios." });
+  }
 
   try {
     const query = `
@@ -485,23 +491,22 @@ router.post('/inspections', async (req, res) => {
     res.status(201).json({ success: true, message: "Inspección creada exitosamente", inspection: result.rows[0] });
   } catch (error) {
     console.error("Error al crear inspección:", error);
-    res.status(500).json({ success: false, message: "Error en el servidor" });
+    res.status(500).json({ success: false, message: "Error en el servidor", error: error.message });
   }
 });
 
-
-// Obtener todas las inspecciones
+// Ruta para obtener todas las inspecciones
 router.get('/inspections', async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM inspections');
     res.json(result.rows);
   } catch (error) {
     console.error("Error al obtener inspecciones:", error);
-    res.status(500).json({ success: false, message: "Error en el servidor" });
+    res.status(500).json({ success: false, message: "Error en el servidor", error: error.message });
   }
 });
 
-// Obtener una inspección por ID
+// Ruta para obtener una inspección por ID
 router.get('/inspections/:id', async (req, res) => {
   const { id } = req.params;
 
@@ -513,14 +518,19 @@ router.get('/inspections/:id', async (req, res) => {
     res.json(result.rows[0]);
   } catch (error) {
     console.error("Error al obtener inspección:", error);
-    res.status(500).json({ success: false, message: "Error en el servidor" });
+    res.status(500).json({ success: false, message: "Error en el servidor", error: error.message });
   }
 });
 
-// Actualizar una inspección
+// Ruta para actualizar una inspección
 router.put('/inspections/:id', async (req, res) => {
   const { id } = req.params;
   const { date, time, duration, observations, service_id, exit_time } = req.body;
+
+  // Validación de campos obligatorios
+  if (!date || !time) {
+    return res.status(400).json({ success: false, message: "La fecha y la hora son campos obligatorios." });
+  }
 
   try {
     const query = `
@@ -537,11 +547,11 @@ router.put('/inspections/:id', async (req, res) => {
     res.json({ success: true, message: "Inspección actualizada exitosamente", inspection: result.rows[0] });
   } catch (error) {
     console.error("Error al actualizar inspección:", error);
-    res.status(500).json({ success: false, message: "Error en el servidor" });
+    res.status(500).json({ success: false, message: "Error en el servidor", error: error.message });
   }
 });
 
-// Eliminar una inspección
+// Ruta para eliminar una inspección
 router.delete('/inspections/:id', async (req, res) => {
   const { id } = req.params;
 
@@ -554,7 +564,7 @@ router.delete('/inspections/:id', async (req, res) => {
     res.json({ success: true, message: "Inspección eliminada exitosamente" });
   } catch (error) {
     console.error("Error al eliminar inspección:", error);
-    res.status(500).json({ success: false, message: "Error en el servidor" });
+    res.status(500).json({ success: false, message: "Error en el servidor", error: error.message });
   }
 });
 
