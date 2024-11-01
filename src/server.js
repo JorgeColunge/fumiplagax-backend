@@ -9,14 +9,12 @@ const dotenv = require('dotenv');
 // Configurar dotenv para cargar variables de entorno
 dotenv.config();
 
+const app = express();
+
 const PORT = process.env.PORT || 10000;
-app.listen(PORT, () => {
-  console.log(`Servidor escuchando en el puerto ${PORT}`);
-});
 
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
 
-const app = express();
 
 // Configuración de CORS permitiendo solicitudes desde el frontend
 app.use(cors({
