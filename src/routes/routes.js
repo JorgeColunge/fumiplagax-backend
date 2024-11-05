@@ -297,14 +297,14 @@ router.delete('/clients/:id', async (req, res) => {
 
 // Crear servicio
 router.post('/services', async (req, res) => {
-  const { service_type, description, pest_to_control, intervention_areas, responsible, category, quantity_per_month, client_id, value, companion, created_by } = req.body;
+  const { service_type, description, pest_to_control, intervention_areas, category, quantity_per_month = null, client_id, value, created_by } = req.body;
 
   try {
     const query = `
-      INSERT INTO services (service_type, description, pest_to_control, intervention_areas, responsible, category, quantity_per_month, client_id, value, companion, created_by)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *
+      INSERT INTO services (service_type, description, pest_to_control, intervention_areas, category, quantity_per_month, client_id, value, created_by)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *
     `;
-    const values = [service_type, description, pest_to_control, intervention_areas, responsible, category, quantity_per_month, client_id, value, companion, created_by];
+    const values = [service_type, description, pest_to_control, intervention_areas, category, quantity_per_month, client_id, value, created_by];
     const result = await pool.query(query, values);
 
     res.status(201).json({ success: true, message: "Service created successfully", service: result.rows[0] });
@@ -313,6 +313,7 @@ router.post('/services', async (req, res) => {
     res.status(500).json({ success: false, message: "Server error" });
   }
 });
+
 
 // Obtener todos los servicios
 router.get('/services', async (req, res) => {
@@ -344,16 +345,16 @@ router.get('/services/:id', async (req, res) => {
 // Editar servicio
 router.put('/services/:id', async (req, res) => {
   const { id } = req.params;
-  const { service_type, description, pest_to_control, intervention_areas, responsible, category, quantity_per_month, client_id, value, companion, created_by } = req.body;
+  const { service_type, description, pest_to_control, intervention_areas, category, quantity_per_month, client_id, value, created_by } = req.body;
 
   try {
     const query = `
       UPDATE services
-      SET service_type = $1, description = $2, pest_to_control = $3, intervention_areas = $4, responsible = $5, category = $6,
-          quantity_per_month = $7, client_id = $8, value = $9, companion = $10, created_by = $11
-      WHERE id = $12 RETURNING *
+      SET service_type = $1, description = $2, pest_to_control = $3, intervention_areas = $4, category = $5,
+          quantity_per_month = $6, client_id = $7, value = $8, created_by = $9
+      WHERE id = $10 RETURNING *
     `;
-    const values = [service_type, description, pest_to_control, intervention_areas, responsible, category, quantity_per_month, client_id, value, companion, created_by, id];
+    const values = [service_type, description, pest_to_control, intervention_areas, category, quantity_per_month, client_id, value, created_by, id];
     const result = await pool.query(query, values);
 
     if (result.rows.length === 0) {
