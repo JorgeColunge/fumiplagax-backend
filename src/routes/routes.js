@@ -171,7 +171,7 @@ router.post('/register', uploadImage, async (req, res) => {
 router.get('/users', async (req, res) => {
   try {
     // Selecciona los campos que deseas devolver, por ejemplo: id, nombre, apellido, email, rol
-    const result = await pool.query('SELECT id, name, lastname, email, rol, image FROM users');
+    const result = await pool.query('SELECT * FROM users');
     res.json(result.rows); // Enviar la lista de usuarios como JSON
   } catch (error) {
     console.error("Error al obtener usuarios:", error);
@@ -196,7 +196,7 @@ router.delete('/users/:id', async (req, res) => {
 router.get('/users/:id', async (req, res) => {
   const { id } = req.params;
   try {
-    const result = await pool.query('SELECT id, name, lastname, rol, email, phone, image FROM users WHERE id = $1', [id]);
+    const result = await pool.query('SELECT * FROM users WHERE id = $1', [id]);
     if (result.rows.length === 0) {
       return res.status(404).json({ message: 'Usuario no encontrado' });
     }
@@ -565,6 +565,81 @@ router.delete('/inspections/:id', async (req, res) => {
     res.json({ success: true, message: "Inspección eliminada exitosamente" });
   } catch (error) {
     console.error("Error al eliminar inspección:", error);
+    res.status(500).json({ success: false, message: "Error en el servidor", error: error.message });
+  }
+});
+
+// Ruta para obtener todos los registros
+router.get('/service-schedule', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT * FROM service_schedule');
+    res.json(result.rows);
+  } catch (error) {
+    console.error("Error al obtener los registros:", error);
+    res.status(500).json({ success: false, message: "Error en el servidor", error: error.message });
+  }
+});
+
+// Ruta para obtener un registro por ID
+router.get('/service-schedule/:id', async (req, res) => {
+  const { id } = req.params;
+  try {
+    const result = await pool.query('SELECT * FROM service_schedule WHERE id = $1', [id]);
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, message: "Registro no encontrado" });
+    }
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error("Error al obtener el registro:", error);
+    res.status(500).json({ success: false, message: "Error en el servidor", error: error.message });
+  }
+});
+
+// Ruta para crear un nuevo registro
+router.post('/service-schedule', async (req, res) => {
+  const { service_id, date, start_time, end_time } = req.body;
+  try {
+    const result = await pool.query(
+      'INSERT INTO service_schedule (service_id, date, start_time, end_time) VALUES ($1, $2, $3, $4) RETURNING *',
+      [service_id, date, start_time, end_time]
+    );
+    res.status(201).json({ success: true, message: "Registro creado con éxito", data: result.rows[0] });
+  } catch (error) {
+    console.error("Error al crear el registro:", error);
+    res.status(500).json({ success: false, message: "Error en el servidor", error: error.message });
+  }
+});
+
+// Ruta para actualizar un registro
+router.put('/service-schedule/:id', async (req, res) => {
+  const { id } = req.params;
+  const { service_id, date, start_time, end_time } = req.body;
+  try {
+    const result = await pool.query(
+      'UPDATE service_schedule SET service_id = $1, date = $2, start_time = $3, end_time = $4 WHERE id = $5 RETURNING *',
+      [service_id, date, start_time, end_time, id]
+    );
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, message: "Registro no encontrado" });
+    }
+    res.json({ success: true, message: "Registro actualizado con éxito", data: result.rows[0] });
+  } catch (error) {
+    console.error("Error al actualizar el registro:", error);
+    res.status(500).json({ success: false, message: "Error en el servidor", error: error.message });
+  }
+});
+
+// Ruta para eliminar un registro
+router.delete('/service-schedule/:id', async (req, res) => {
+  const { id } = req.params;
+  try {
+    const result = await pool.query('DELETE FROM service_schedule WHERE id = $1 RETURNING *', [id]);
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, message: "Registro no encontrado" });
+    }
+    res.json({ success: true, message: "Registro eliminado con éxito", data: result.rows[0] });
+  } catch (error) {
+    console.error("Error al eliminar el registro:", error);
     res.status(500).json({ success: false, message: "Error en el servidor", error: error.message });
   }
 });
