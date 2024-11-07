@@ -132,7 +132,7 @@ router.post('/register', uploadImage, async (req, res) => {
   console.log("Received body:", req.body);
   console.log("Received file:", req.file);
 
-  const { id, name, lastname, rol, email, phone, password } = req.body;
+  const { id, name, lastname, rol, email, phone, password, color } = req.body;
 
   // Comprobación de campos obligatorios y log de error si falta alguno
   if (!id || !name || !lastname || !rol || !email || !phone || !password) {
@@ -156,8 +156,8 @@ router.post('/register', uploadImage, async (req, res) => {
 
     const hashedPassword = await bcrypt.hash(password, 10);
     await pool.query(
-      'INSERT INTO users (id, name, lastname, rol, email, phone, password, image) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)',
-      [id, name, lastname, rol, email, phone, hashedPassword, imageUrl]
+      'INSERT INTO users (id, name, lastname, rol, email, phone, password, image, color) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)',
+      [id, name, lastname, rol, email, phone, hashedPassword, imageUrl, color]
     );
     res.json({ success: true, message: "User registered successfully", profilePicURL: imageUrl });
   } catch (error) {
