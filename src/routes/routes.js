@@ -473,25 +473,42 @@ router.delete('/products/:id', async (req, res) => {
 
 // Ruta para crear una nueva inspección
 router.post('/inspections', async (req, res) => {
-  const { date, time, duration, observations, service_id, exit_time } = req.body;
+  const { date, time, service_id, inspection_type, inspection_sub_type } = req.body;
 
   // Validación de campos obligatorios
-  if (!date || !time) {
-    return res.status(400).json({ success: false, message: "La fecha y la hora son campos obligatorios." });
+  if (!date || !time || !inspection_type || !service_id) {
+    return res.status(400).json({
+      success: false,
+      message: "La fecha, hora, tipo de inspección y servicio son campos obligatorios.",
+    });
   }
 
   try {
     const query = `
-      INSERT INTO inspections (date, time, duration, observations, service_id, exit_time)
-      VALUES ($1, $2, $3, $4, $5, $6) RETURNING *
+      INSERT INTO inspections (date, time, service_id, inspection_type, inspection_sub_type)
+      VALUES ($1, $2, $3, $4, $5) RETURNING *
     `;
-    const values = [date, time, duration, observations, service_id, exit_time];
+    const values = [
+      date,
+      time,
+      service_id,
+      Array.isArray(inspection_type) ? inspection_type.join(", ") : inspection_type, // Convierte el array en texto si es necesario
+      inspection_sub_type || null, // Si no hay sub tipo, inserta NULL
+    ];
     const result = await pool.query(query, values);
 
-    res.status(201).json({ success: true, message: "Inspección creada exitosamente", inspection: result.rows[0] });
+    res.status(201).json({
+      success: true,
+      message: "Inspección creada exitosamente",
+      inspection: result.rows[0],
+    });
   } catch (error) {
     console.error("Error al crear inspección:", error);
-    res.status(500).json({ success: false, message: "Error en el servidor", error: error.message });
+    res.status(500).json({
+      success: false,
+      message: "Error en el servidor",
+      error: error.message,
+    });
   }
 });
 
@@ -640,6 +657,151 @@ router.delete('/service-schedule/:id', async (req, res) => {
   } catch (error) {
     console.error("Error al eliminar el registro:", error);
     res.status(500).json({ success: false, message: "Error en el servidor", error: error.message });
+  }
+});
+
+// Obtener todas las estaciones
+router.get('/stations', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT * FROM stations');
+    res.json(result.rows);
+  } catch (error) {
+    console.error("Error fetching stations:", error);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+});
+
+// Obtener una estación por ID
+router.get('/stations/:id', async (req, res) => {
+  const { id } = req.params;
+  try {
+    const result = await pool.query('SELECT * FROM stations WHERE id = $1', [id]);
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, message: "Station not found" });
+    }
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error("Error fetching station:", error);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+});
+
+// Crear una nueva estación
+router.post('/stations', async (req, res) => {
+  const { description, category, type, control_method, client_id, qr_code } = req.body;
+
+  try {
+    const adjustedQrCode = qr_code === '' ? null : qr_code; // Convertir cadena vacía a NULL
+
+    const query = `
+      INSERT INTO stations (description, category, type, control_method, client_id, qr_code)
+      VALUES ($1, $2, $3, $4, $5, $6) RETURNING *
+    `;
+    const values = [description, category, type, control_method, client_id, adjustedQrCode];
+    const result = await pool.query(query, values);
+
+    res.status(201).json({ success: true, station: result.rows[0] });
+  } catch (error) {
+    console.error('Error creating station:', error);
+    res.status(500).json({ success: false, message: 'Error creating station', error: error.message });
+  }
+});
+
+
+// Actualizar una estación existente
+router.put('/stations/:id', async (req, res) => {
+  const { id } = req.params;
+  const { description, category, type, control_method, client_id, qr_code } = req.body;
+
+  try {
+    const query = `
+      UPDATE stations
+      SET description = $1, category = $2, type = $3, control_method = $4, client_id = $5, qr_code = $6
+      WHERE id = $7 RETURNING *
+    `;
+    const values = [description, category, type, control_method, client_id, qr_code, id];
+    const result = await pool.query(query, values);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, message: "Station not found" });
+    }
+
+    res.json({ success: true, message: "Station updated successfully", station: result.rows[0] });
+  } catch (error) {
+    console.error("Error updating station:", error);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+});
+
+// Eliminar una estación
+router.delete('/stations/:id', async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const result = await pool.query('DELETE FROM stations WHERE id = $1 RETURNING *', [id]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, message: "Station not found" });
+    }
+
+    res.json({ success: true, message: "Station deleted successfully", station: result.rows[0] });
+  } catch (error) {
+    console.error("Error deleting station:", error);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+});
+
+// Obtener estaciones por ID del cliente
+router.get('/stations/client/:client_id', async (req, res) => {
+  const { client_id } = req.params;
+
+  try {
+    const result = await pool.query('SELECT * FROM stations WHERE client_id = $1', [client_id]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, message: "No stations found for the specified client" });
+    }
+
+    res.json(result.rows);
+  } catch (error) {
+    console.error("Error fetching stations by client_id:", error);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+});
+
+router.post('/inspections/:inspectionId/save', async (req, res) => {
+  const { inspectionId } = req.params;
+  const {
+    generalObservations,
+    findingsByType,
+    productsByType,
+    stationsFindings,
+  } = req.body;
+
+  try {
+    // Procesar observaciones generales
+    console.log(`Guardando observaciones para la inspección ${inspectionId}:`, generalObservations);
+
+    // Procesar hallazgos por tipo de inspección
+    Object.entries(findingsByType).forEach(([type, findings]) => {
+      console.log(`Guardando hallazgos para el tipo ${type}:`, findings);
+    });
+
+    // Procesar productos aplicados
+    Object.entries(productsByType).forEach(([type, productData]) => {
+      console.log(`Guardando producto aplicado para el tipo ${type}:`, productData);
+    });
+
+    // Procesar hallazgos en estaciones
+    stationsFindings.forEach((finding) => {
+      console.log(`Guardando hallazgo para la estación ${finding.stationId}:`, finding);
+    });
+
+    // Respuesta de éxito
+    res.status(200).json({ success: true, message: 'Datos guardados exitosamente' });
+  } catch (error) {
+    console.error('Error al guardar los datos:', error);
+    res.status(500).json({ success: false, message: 'Error al guardar los datos' });
   }
 });
 
