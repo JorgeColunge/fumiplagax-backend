@@ -769,39 +769,98 @@ router.get('/stations/client/:client_id', async (req, res) => {
   }
 });
 
-router.post('/inspections/:inspectionId/save', async (req, res) => {
-  const { inspectionId } = req.params;
-  const {
-    generalObservations,
-    findingsByType,
-    productsByType,
-    stationsFindings,
-  } = req.body;
+// Configuración de almacenamiento con Multer para inspecciones
+const inspectionStorage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, path.join(__dirname, '..', '..', 'public', 'media', 'inspections'));
+  },
+  filename: function (req, file, cb) {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, uniqueSuffix + path.extname(file.originalname));
+  }
+});
 
+// File filter para imágenes
+const inspectionFileFilter = (req, file, cb) => {
+  const allowedTypes = /jpeg|jpg|png|gif/;
+  const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
+  const mimetype = allowedTypes.test(file.mimetype);
+
+  if (extname && mimetype) {
+    cb(null, true);
+  } else {
+    cb(new Error('Solo se permiten imágenes (jpeg, jpg, png, gif)'));
+  }
+};
+
+// Configuración del middleware de Multer
+const uploadInspectionImages = multer({
+  storage: inspectionStorage,
+  fileFilter: inspectionFileFilter,
+  limits: { fileSize: 5 * 1024 * 1024 }, // Límite de 5MB por archivo
+}).array('images', 10); // Campo de entrada 'images' y máximo 10 archivos
+
+
+router.post('/inspections/:inspectionId/save', uploadInspectionImages, async (req, res) => {
   try {
-    // Procesar observaciones generales
-    console.log(`Guardando observaciones para la inspección ${inspectionId}:`, generalObservations);
+    const { inspectionId } = req.params;
+    const {
+      generalObservations,
+      findingsByType,
+      productsByType,
+      stationsFindings,
+    } = req.body;
 
-    // Procesar hallazgos por tipo de inspección
-    Object.entries(findingsByType).forEach(([type, findings]) => {
-      console.log(`Guardando hallazgos para el tipo ${type}:`, findings);
+    // Parsear solo si los datos son strings
+    const parsedFindingsByType = typeof findingsByType === 'string' ? JSON.parse(findingsByType) : findingsByType;
+    const parsedProductsByType = typeof productsByType === 'string' ? JSON.parse(productsByType) : productsByType;
+    const parsedStationsFindings = typeof stationsFindings === 'string' ? JSON.parse(stationsFindings) : stationsFindings;
+
+    // Validar si se recibieron archivos
+    const imagePaths = req.files
+      ? req.files.map((file) => `/media/inspections/${file.filename}`)
+      : [];
+
+    // Asociar rutas de imágenes con estaciones si corresponde
+    parsedStationsFindings.forEach((finding, index) => {
+      if (imagePaths[index]) {
+        finding.photo = imagePaths[index];
+      }
     });
 
-    // Procesar productos aplicados
-    Object.entries(productsByType).forEach(([type, productData]) => {
-      console.log(`Guardando producto aplicado para el tipo ${type}:`, productData);
-    });
+    // Crear el objeto findingsData
+    const findingsData = {
+      findingsByType: parsedFindingsByType,
+      productsByType: parsedProductsByType,
+      stationsFindings: parsedStationsFindings,
+    };
 
-    // Procesar hallazgos en estaciones
-    stationsFindings.forEach((finding) => {
-      console.log(`Guardando hallazgo para la estación ${finding.stationId}:`, finding);
-    });
+    // Actualizar inspección en la base de datos
+    const query = `
+      UPDATE inspections
+      SET 
+        observations = $1,
+        findings = $2,
+        exit_time = NOW()
+      WHERE id = $3
+      RETURNING *;
+    `;
+    const values = [generalObservations, findingsData, inspectionId];
+    const result = await pool.query(query, values);
 
-    // Respuesta de éxito
-    res.status(200).json({ success: true, message: 'Datos guardados exitosamente' });
+    if (result.rowCount === 0) {
+      return res.status(404).json({ success: false, message: 'Inspección no encontrada' });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Inspección guardada exitosamente',
+      inspection: result.rows[0],
+      uploadedImages: imagePaths,
+    });
   } catch (error) {
-    console.error('Error al guardar los datos:', error);
-    res.status(500).json({ success: false, message: 'Error al guardar los datos' });
+    console.error('Error al guardar la inspección:', error);
+    res.status(500).json({ success: false, message: 'Error al guardar la inspección' });
   }
 });
 
