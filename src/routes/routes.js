@@ -769,6 +769,7 @@ router.get('/stations/client/:client_id', async (req, res) => {
   }
 });
 
+
 // Configuración de almacenamiento con Multer para inspecciones
 const inspectionStorage = multer.diskStorage({
   destination: function (req, file, cb) {
@@ -801,41 +802,74 @@ const uploadInspectionImages = multer({
 }).array('images', 10); // Campo de entrada 'images' y máximo 10 archivos
 
 
+// Ruta para guardar inspecciones
 router.post('/inspections/:inspectionId/save', uploadInspectionImages, async (req, res) => {
   try {
     const { inspectionId } = req.params;
-    const {
+    const { generalObservations, findingsByType, productsByType, stationsFindings } = req.body;
+
+    console.log('Datos recibidos en el body:', {
       generalObservations,
       findingsByType,
       productsByType,
       stationsFindings,
-    } = req.body;
+    });
 
-    // Parsear solo si los datos son strings
-    const parsedFindingsByType = typeof findingsByType === 'string' ? JSON.parse(findingsByType) : findingsByType;
-    const parsedProductsByType = typeof productsByType === 'string' ? JSON.parse(productsByType) : productsByType;
-    const parsedStationsFindings = typeof stationsFindings === 'string' ? JSON.parse(stationsFindings) : stationsFindings;
+    // Parsear datos de strings a objetos si es necesario
+    const parsedFindingsByType =
+      typeof findingsByType === 'string' ? JSON.parse(findingsByType) : findingsByType;
+    const parsedStationsFindings =
+      typeof stationsFindings === 'string' ? JSON.parse(stationsFindings) : stationsFindings;
 
-    // Validar si se recibieron archivos
+    console.log('findingsByType parseado:', JSON.stringify(parsedFindingsByType, null, 2));
+    console.log('stationsFindings parseado:', JSON.stringify(parsedStationsFindings, null, 2));
+
+    // Validar si se recibieron archivos e inicializar rutas de imágenes
     const imagePaths = req.files
       ? req.files.map((file) => `/media/inspections/${file.filename}`)
       : [];
+    console.log('Rutas de imágenes procesadas:', imagePaths);
 
-    // Asociar rutas de imágenes con estaciones si corresponde
-    parsedStationsFindings.forEach((finding, index) => {
-      if (imagePaths[index]) {
-        finding.photo = imagePaths[index];
-      }
+    let imageIndex = 0; // Índice para las rutas de imágenes
+
+    // Asociar imágenes a `findingsByType`
+    Object.keys(parsedFindingsByType).forEach((type) => {
+      parsedFindingsByType[type] = parsedFindingsByType[type].map((finding, index) => {
+        console.log(`Procesando findingsByType [${type}] índice ${index}:`, finding);
+
+        // Verificar si la foto es temporal (blob) o está vacía
+        if ((!finding.photo || finding.photo.startsWith('blob:')) && imagePaths[imageIndex]) {
+          finding.photo = imagePaths[imageIndex];
+          console.log(`Imagen asociada a findingsByType [${type}] índice ${index}: ${imagePaths[imageIndex]}`);
+          imageIndex++;
+        }
+        return finding;
+      });
     });
 
-    // Crear el objeto findingsData
+    // Asociar imágenes a `stationsFindings`
+    parsedStationsFindings.forEach((finding, index) => {
+      console.log(`Procesando stationsFindings, índice ${index}:`, finding);
+
+      if ((!finding.photo || finding.photo.startsWith('blob:')) && imagePaths[imageIndex]) {
+        finding.photo = imagePaths[imageIndex];
+        console.log(`Imagen asociada a stationsFindings, índice ${index}: ${imagePaths[imageIndex]}`);
+        imageIndex++;
+      }
+
+      console.log('stationsFindings después de asociar imagen:', finding);
+    });
+
+    // Crear el objeto findingsData para almacenar en la base de datos
     const findingsData = {
       findingsByType: parsedFindingsByType,
-      productsByType: parsedProductsByType,
+      productsByType: typeof productsByType === 'string' ? JSON.parse(productsByType) : productsByType,
       stationsFindings: parsedStationsFindings,
     };
 
-    // Actualizar inspección en la base de datos
+    console.log('findingsData preparado para guardar en la base de datos:', JSON.stringify(findingsData, null, 2));
+
+    // Query para actualizar la inspección en la base de datos
     const query = `
       UPDATE inspections
       SET 
@@ -846,12 +880,17 @@ router.post('/inspections/:inspectionId/save', uploadInspectionImages, async (re
       RETURNING *;
     `;
     const values = [generalObservations, findingsData, inspectionId];
+
     const result = await pool.query(query, values);
 
     if (result.rowCount === 0) {
+      console.warn(`Inspección no encontrada para ID: ${inspectionId}`);
       return res.status(404).json({ success: false, message: 'Inspección no encontrada' });
     }
 
+    console.log('Datos guardados en la base de datos:', result.rows[0]);
+
+    // Respuesta exitosa al cliente
     res.status(200).json({
       success: true,
       message: 'Inspección guardada exitosamente',
