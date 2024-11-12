@@ -864,4 +864,109 @@ router.post('/inspections/:inspectionId/save', uploadInspectionImages, async (re
   }
 });
 
+
+// Marcar una notificación como leída
+router.put('/notifications/:id/read', async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const query = 'UPDATE notifications SET is_read = TRUE WHERE id = $1 RETURNING *';
+    const result = await pool.query(query, [id]);
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({ success: false, message: 'Notification not found' });
+    }
+
+    res.json({ success: true, notification: result.rows[0] });
+  } catch (error) {
+    console.error('Error marking notification as read:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// Editar notificación
+router.put('/notifications/:id', async (req, res) => {
+  const { id } = req.params;
+  const { user_id, notification, state } = req.body;
+
+  try {
+    const query = `
+      UPDATE notifications
+      SET user_id = $1, notification = $2, state = $3
+      WHERE id = $4 RETURNING *
+    `;
+    const values = [user_id, notification, state, id];
+    const result = await pool.query(query, values);
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({ success: false, message: "Notification not found" });
+    }
+
+    res.status(200).json({ success: true, message: "Notification updated successfully", notification: result.rows[0] });
+  } catch (error) {
+    console.error("Error updating notification:", error);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+});
+
+// Eliminar notificación
+router.delete('/notifications/:id', async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const query = `
+      DELETE FROM notifications
+      WHERE id = $1 RETURNING *
+    `;
+    const values = [id];
+    const result = await pool.query(query, values);
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({ success: false, message: "Notification not found" });
+    }
+
+    res.status(200).json({ success: true, message: "Notification deleted successfully" });
+  } catch (error) {
+    console.error("Error deleting notification:", error);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+});
+
+// Ruta para obtener notificaciones de un usuario
+router.get('/notifications/:userId', async (req, res) => {
+  const { userId } = req.params;
+
+  try {
+    const query = `
+      SELECT * FROM notifications WHERE user_id = $1
+    `;
+    const values = [userId];
+    const result = await pool.query(query, values);
+
+    res.status(200).json({ success: true, notifications: result.rows });
+  } catch (error) {
+    console.error("Error fetching notifications:", error);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+});
+
+// Marcar una notificación como leída
+router.put('/notifications/:id/read', async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const query = 'UPDATE notifications SET is_read = TRUE WHERE id = $1 RETURNING *';
+    const result = await pool.query(query, [id]);
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({ success: false, message: 'Notification not found' });
+    }
+
+    res.json({ success: true, notification: result.rows[0] });
+  } catch (error) {
+    console.error('Error marking notification as read:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
 module.exports = router;
