@@ -1,3 +1,4 @@
+const axios = require('axios');
 const express = require('express');
 const bcrypt = require('bcrypt');
 const multer = require('multer');
@@ -157,7 +158,7 @@ router.post('/register', uploadImage, async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 10);
     await pool.query(
       'INSERT INTO users (id, name, lastname, rol, email, phone, password, image, color) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)',
-      [id, name, lastname, rol, email, phone, hashedPassword, imageUrl, color]
+      [id, name, lastname, rol, email, phone, hashedPassword, imageUrl, color? color : "rgb(86, 197, 4)"]
     );
     res.json({ success: true, message: "User registered successfully", profilePicURL: imageUrl });
   } catch (error) {
@@ -383,16 +384,79 @@ router.delete('/services/:id', async (req, res) => {
   }
 });
 
-// Crear producto
-router.post('/products', async (req, res) => {
-  const { name, description_type, dose, residual_duration, safety_data_sheet, technical_sheet, health_registration, emergency_card } = req.body;
+const fs = require('fs'); // Añadir esto al inicio para manejar el sistema de archivos
+
+const productsStorage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    const uploadPath = path.join(__dirname, '..', 'uploads');
+    
+    // Verificar si la carpeta existe, si no, crearla
+    if (!fs.existsSync(uploadPath)) {
+      fs.mkdirSync(uploadPath, { recursive: true });
+    }
+    
+    cb(null, uploadPath);
+  },
+  filename: function (req, file, cb) {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, uniqueSuffix + path.extname(file.originalname));
+  }
+});
+
+// Configuración de Multer para procesar archivos sin guardarlos localmente
+const uploadProductFiles = multer({
+  limits: { fileSize: 50 * 1024 * 1024 } // Límite de 50 MB
+}).fields([
+  { name: 'safety_data_sheet', maxCount: 1 },
+  { name: 'technical_sheet', maxCount: 1 },
+  { name: 'health_registration', maxCount: 1 },
+  { name: 'emergency_card', maxCount: 1 }
+]);
+
+
+// Ruta para crear producto
+router.post('/products', uploadProductFiles, async (req, res) => {
+  const { name, description_type, dose, residual_duration } = req.body;
+  let fileUrls = {};
+
+  const uploadFileToDrive = async (fileBuffer, filename, mimeType) => {
+    const fileData = fileBuffer.toString('base64');
+    try {
+      const response = await axios.post(
+        'https://script.google.com/macros/s/AKfycbypyU3rkJJHmFwvzeXCfWpeflEeSOryJYLn8HMs3cykpd6sAQMBl4xsRwtbeRPQkG6b/exec',
+        { fileData, filename, mimeType },
+        { timeout: 60000 }  // Aumenta el tiempo de espera a 60 segundos
+      );
+      return response.data.fileUrl;
+    } catch (error) {
+      console.error(`Error uploading ${filename} to Google Drive:`, error.message);
+      return null;
+    }
+  };  
+
+  if (req.files.safety_data_sheet) {
+    const file = req.files.safety_data_sheet[0];
+    fileUrls.safety_data_sheet = await uploadFileToDrive(file.buffer, file.originalname, file.mimetype);
+  }
+  if (req.files.technical_sheet) {
+    const file = req.files.technical_sheet[0];
+    fileUrls.technical_sheet = await uploadFileToDrive(file.buffer, file.originalname, file.mimetype);
+  }
+  if (req.files.health_registration) {
+    const file = req.files.health_registration[0];
+    fileUrls.health_registration = await uploadFileToDrive(file.buffer, file.originalname, file.mimetype);
+  }
+  if (req.files.emergency_card) {
+    const file = req.files.emergency_card[0];
+    fileUrls.emergency_card = await uploadFileToDrive(file.buffer, file.originalname, file.mimetype);
+  }
 
   try {
     const query = `
       INSERT INTO products (name, description_type, dose, residual_duration, safety_data_sheet, technical_sheet, health_registration, emergency_card)
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *
     `;
-    const values = [name, description_type, dose, residual_duration, safety_data_sheet, technical_sheet, health_registration, emergency_card];
+    const values = [name, description_type, dose, residual_duration, fileUrls.safety_data_sheet, fileUrls.technical_sheet, fileUrls.health_registration, fileUrls.emergency_card];
     const result = await pool.query(query, values);
 
     res.status(201).json({ success: true, message: "Product created successfully", product: result.rows[0] });

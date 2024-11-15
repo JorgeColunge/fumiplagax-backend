@@ -23,7 +23,7 @@ app.use(cors({
 }));
 
 // Configuración de middleware
-app.use(bodyParser.json({ limit: '10mb' })); // Ajusta el límite si es necesario
+app.use(bodyParser.json({ limit: '50mb' })); // Ajusta el límite si es necesario
 
 // Rutas de API
 app.use('/api', routes);
