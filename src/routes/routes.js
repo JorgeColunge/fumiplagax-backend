@@ -794,25 +794,30 @@ const inspectionFileFilter = (req, file, cb) => {
   }
 };
 
-// Configuración del middleware de Multer
 const uploadInspectionImages = multer({
   storage: inspectionStorage,
   fileFilter: inspectionFileFilter,
   limits: { fileSize: 5 * 1024 * 1024 }, // Límite de 5MB por archivo
-}).array('images', 10); // Campo de entrada 'images' y máximo 10 archivos
+}).fields([
+  { name: "tech_signature", maxCount: 1 },
+  { name: "client_signature", maxCount: 1 },
+  { name: "findingsImages", maxCount: 20 },
+  { name: "stationImages", maxCount: 20 },
+  { name: "images", maxCount: 20 }, // Nuevo campo para imágenes genéricas
+]);
 
 
-// Ruta para guardar inspecciones
 router.post('/inspections/:inspectionId/save', uploadInspectionImages, async (req, res) => {
   try {
     const { inspectionId } = req.params;
-    const { generalObservations, findingsByType, productsByType, stationsFindings } = req.body;
+    const { generalObservations, findingsByType, productsByType, stationsFindings, signatures } = req.body;
 
     console.log('Datos recibidos en el body:', {
       generalObservations,
       findingsByType,
       productsByType,
       stationsFindings,
+      signatures,
     });
 
     // Parsear datos de strings a objetos si es necesario
@@ -820,27 +825,59 @@ router.post('/inspections/:inspectionId/save', uploadInspectionImages, async (re
       typeof findingsByType === 'string' ? JSON.parse(findingsByType) : findingsByType;
     const parsedStationsFindings =
       typeof stationsFindings === 'string' ? JSON.parse(stationsFindings) : stationsFindings;
+    const parsedSignatures =
+      typeof signatures === 'string' ? JSON.parse(signatures) : signatures;
 
     console.log('findingsByType parseado:', JSON.stringify(parsedFindingsByType, null, 2));
     console.log('stationsFindings parseado:', JSON.stringify(parsedStationsFindings, null, 2));
 
-    // Validar si se recibieron archivos e inicializar rutas de imágenes
-    const imagePaths = req.files
-      ? req.files.map((file) => `/media/inspections/${file.filename}`)
-      : [];
-    console.log('Rutas de imágenes procesadas:', imagePaths);
+    // Procesar imágenes recibidas
+    const techSignaturePath = req.files.tech_signature
+      ? `/media/inspections/${req.files.tech_signature[0].filename}`
+      : parsedSignatures?.technician?.signature;
 
-    let imageIndex = 0; // Índice para las rutas de imágenes
+    const clientSignaturePath = req.files.client_signature
+      ? `/media/inspections/${req.files.client_signature[0].filename}`
+      : parsedSignatures?.client?.signature;
+
+    const findingsImagePaths = req.files.findingsImages
+      ? req.files.findingsImages.map((file) => `/media/inspections/${file.filename}`)
+      : [];
+    const stationImagePaths = req.files.stationImages
+      ? req.files.stationImages.map((file) => `/media/inspections/${file.filename}`)
+      : [];
+    const genericImagePaths = req.files.images
+      ? req.files.images.map((file) => `/media/inspections/${file.filename}`)
+      : [];
+
+    console.log('Rutas de imágenes procesadas:', {
+      techSignaturePath,
+      clientSignaturePath,
+      findingsImagePaths,
+      stationImagePaths,
+      genericImagePaths, // Mostrar las imágenes genéricas procesadas
+    });
+
+    // Reconstruir el objeto signatures
+    const updatedSignatures = {
+      client: {
+        id: parsedSignatures?.client?.id || null,
+        name: parsedSignatures?.client?.name || null,
+        position: parsedSignatures?.client?.position || null,
+        signature: clientSignaturePath,
+      },
+      technician: {
+        name: parsedSignatures?.technician?.name || "Técnico",
+        signature: techSignaturePath,
+      },
+    };
 
     // Asociar imágenes a `findingsByType`
+    let imageIndex = 0;
     Object.keys(parsedFindingsByType).forEach((type) => {
-      parsedFindingsByType[type] = parsedFindingsByType[type].map((finding, index) => {
-        console.log(`Procesando findingsByType [${type}] índice ${index}:`, finding);
-
-        // Verificar si la foto es temporal (blob) o está vacía
-        if ((!finding.photo || finding.photo.startsWith('blob:')) && imagePaths[imageIndex]) {
-          finding.photo = imagePaths[imageIndex];
-          console.log(`Imagen asociada a findingsByType [${type}] índice ${index}: ${imagePaths[imageIndex]}`);
+      parsedFindingsByType[type] = parsedFindingsByType[type].map((finding) => {
+        if ((!finding.photo || finding.photo.startsWith('blob:')) && findingsImagePaths[imageIndex]) {
+          finding.photo = findingsImagePaths[imageIndex];
           imageIndex++;
         }
         return finding;
@@ -849,22 +886,18 @@ router.post('/inspections/:inspectionId/save', uploadInspectionImages, async (re
 
     // Asociar imágenes a `stationsFindings`
     parsedStationsFindings.forEach((finding, index) => {
-      console.log(`Procesando stationsFindings, índice ${index}:`, finding);
-
-      if ((!finding.photo || finding.photo.startsWith('blob:')) && imagePaths[imageIndex]) {
-        finding.photo = imagePaths[imageIndex];
-        console.log(`Imagen asociada a stationsFindings, índice ${index}: ${imagePaths[imageIndex]}`);
-        imageIndex++;
+      if ((!finding.photo || finding.photo.startsWith('blob:')) && stationImagePaths[index]) {
+        finding.photo = stationImagePaths[index];
       }
-
-      console.log('stationsFindings después de asociar imagen:', finding);
     });
 
-    // Crear el objeto findingsData para almacenar en la base de datos
+    // Construir el objeto final de datos, incluyendo imágenes genéricas
     const findingsData = {
       findingsByType: parsedFindingsByType,
       productsByType: typeof productsByType === 'string' ? JSON.parse(productsByType) : productsByType,
       stationsFindings: parsedStationsFindings,
+      signatures: updatedSignatures, // Usar el objeto signatures reconstruido
+      genericImages: genericImagePaths, // Agregar imágenes genéricas al objeto
     };
 
     console.log('findingsData preparado para guardar en la base de datos:', JSON.stringify(findingsData, null, 2));
@@ -895,13 +928,20 @@ router.post('/inspections/:inspectionId/save', uploadInspectionImages, async (re
       success: true,
       message: 'Inspección guardada exitosamente',
       inspection: result.rows[0],
-      uploadedImages: imagePaths,
+      uploadedImages: {
+        techSignature: techSignaturePath,
+        clientSignature: clientSignaturePath,
+        findingsImages: findingsImagePaths,
+        stationImages: stationImagePaths,
+        genericImages: genericImagePaths, // Retornar las imágenes genéricas procesadas
+      },
     });
   } catch (error) {
     console.error('Error al guardar la inspección:', error);
     res.status(500).json({ success: false, message: 'Error al guardar la inspección' });
   }
 });
+
 
 
 // Marcar una notificación como leída
