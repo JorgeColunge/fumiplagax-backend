@@ -38,26 +38,20 @@ const uploadImage = multer({
 
 // Ruta para actualizar el perfil del usuario (datos y foto)
 router.post('/updateProfile', uploadImage, async (req, res) => {
-  const { name, lastname, email, phone, userId } = req.body;
+  const { name, lastname, email, phone, userId, color } = req.body;
 
-  if (!userId) {
-    return res.status(400).json({ message: 'User ID is required' });
-  }
-
-  // Construye la URL de la imagen si se subió un archivo
   let imageUrl = null;
   if (req.file) {
     imageUrl = `/media/images/${req.file.filename}`;
-  }  
+  }
 
   try {
-    // Consulta para actualizar el perfil del usuario
     const query = `
       UPDATE users 
-      SET name = $1, lastname = $2, email = $3, phone = $4, image = COALESCE($5, image) 
-      WHERE id = $6
+      SET name = $1, lastname = $2, email = $3, phone = $4, color = $5, image = COALESCE($6, image) 
+      WHERE id = $7
     `;
-    const values = [name, lastname, email, phone, imageUrl, userId];
+    const values = [name, lastname, email, phone, color || '#ffffff', imageUrl, userId];
     await pool.query(query, values);
 
     res.json({ message: 'Perfil actualizado exitosamente', profilePicURL: imageUrl });
@@ -155,11 +149,20 @@ router.post('/register', uploadImage, async (req, res) => {
       return res.status(400).json({ success: false, message: "User already exists" });
     }
 
-    const hashedPassword = await bcrypt.hash(password, 10);
-    await pool.query(
-      'INSERT INTO users (id, name, lastname, rol, email, phone, password, image, color) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)',
-      [id, name, lastname, rol, email, phone, hashedPassword, imageUrl, color? color : "rgb(86, 197, 4)"]
-    );
+// Función para generar un color hexadecimal aleatorio
+// Función para generar colores vibrantes aleatorios
+const getVibrantColor = () => {
+  const r = Math.floor(Math.random() * 156) + 100; // Rojo (100-255)
+  const g = Math.floor(Math.random() * 156) + 100; // Verde (100-255)
+  const b = Math.floor(Math.random() * 156) + 100; // Azul (100-255)
+  return `rgb(${r}, ${g}, ${b})`;
+};
+
+await pool.query(
+  'INSERT INTO users (id, name, lastname, rol, email, phone, password, image, color) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)',
+  [id, name, lastname, rol, email, phone, hashedPassword, imageUrl, color ? color : getRandomColor()]
+);
+
     res.json({ success: true, message: "User registered successfully", profilePicURL: imageUrl });
   } catch (error) {
     console.error("Database error:", error);
@@ -416,7 +419,13 @@ const uploadProductFiles = multer({
 
 // Ruta para crear producto
 router.post('/products', uploadProductFiles, async (req, res) => {
-  const { name, description_type, dose, residual_duration } = req.body;
+  const { name, description_type, dose, residual_duration, category } = req.body;
+
+  console.log("Categorías:", category);
+
+  // Convierte el arreglo de categorías en una cadena separada por comas
+  const formattedCategory = Array.isArray(category) ? category.join(", ") : category;
+
   let fileUrls = {};
 
   const uploadFileToDrive = async (fileBuffer, filename, mimeType) => {
@@ -425,14 +434,14 @@ router.post('/products', uploadProductFiles, async (req, res) => {
       const response = await axios.post(
         'https://script.google.com/macros/s/AKfycbypyU3rkJJHmFwvzeXCfWpeflEeSOryJYLn8HMs3cykpd6sAQMBl4xsRwtbeRPQkG6b/exec',
         { fileData, filename, mimeType },
-        { timeout: 60000 }  // Aumenta el tiempo de espera a 60 segundos
+        { timeout: 60000 } // Aumenta el tiempo de espera a 60 segundos
       );
       return response.data.fileUrl;
     } catch (error) {
       console.error(`Error uploading ${filename} to Google Drive:`, error.message);
       return null;
     }
-  };  
+  };
 
   if (req.files.safety_data_sheet) {
     const file = req.files.safety_data_sheet[0];
@@ -453,10 +462,21 @@ router.post('/products', uploadProductFiles, async (req, res) => {
 
   try {
     const query = `
-      INSERT INTO products (name, description_type, dose, residual_duration, safety_data_sheet, technical_sheet, health_registration, emergency_card)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *
+      INSERT INTO products (name, description_type, dose, residual_duration, category, safety_data_sheet, technical_sheet, health_registration, emergency_card)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *
     `;
-    const values = [name, description_type, dose, residual_duration, fileUrls.safety_data_sheet, fileUrls.technical_sheet, fileUrls.health_registration, fileUrls.emergency_card];
+    const values = [
+      name,
+      description_type,
+      dose,
+      residual_duration,
+      formattedCategory, // Aquí se utiliza la categoría formateada
+      fileUrls.safety_data_sheet,
+      fileUrls.technical_sheet,
+      fileUrls.health_registration,
+      fileUrls.emergency_card,
+    ];
+
     const result = await pool.query(query, values);
 
     res.status(201).json({ success: true, message: "Product created successfully", product: result.rows[0] });
