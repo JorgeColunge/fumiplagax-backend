@@ -211,22 +211,82 @@ router.get('/users/:id', async (req, res) => {
   }
 });
 
-// Crear cliente
+// Crear cliente con geolocalización
 router.post('/clients', async (req, res) => {
-  const { name, address, phone, email, representative, document_type, document_number, contact_name, contact_phone, rut } = req.body;
+  const {
+    name,
+    address,
+    department,
+    city,
+    phone,
+    email,
+    representative,
+    document_type,
+    document_number,
+    contact_name,
+    contact_phone,
+    rut,
+  } = req.body;
+
+  // Concatenar dirección completa
+  const fullAddress = `${address}, ${city}, ${department}`;
 
   try {
+    // Obtener geolocalización
+    const response = await axios.get(
+      `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(
+        fullAddress
+      )}&key=${process.env.GOOGLE_MAPS_API_KEY}`
+    );
+
+    if (response.data.status !== 'OK') {
+      console.error('Geocoding error:', response.data.status);
+      return res.status(400).json({
+        success: false,
+        message: 'Error al obtener geolocalización. Verifica la dirección proporcionada.',
+      });
+    }
+
+    const { lat, lng } = response.data.results[0].geometry.location;
+
+    // Insertar cliente en la base de datos
     const query = `
-      INSERT INTO clients (name, address, phone, email, representative, document_type, document_number, contact_name, contact_phone, rut)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *
+      INSERT INTO clients (
+        name, address, department, city, phone, email, representative,
+        document_type, document_number, contact_name, contact_phone, rut,
+        latitude, longitude
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14) RETURNING *
     `;
-    const values = [name, address, phone, email, representative, document_type, document_number, contact_name, contact_phone, rut];
+    const values = [
+      name,
+      address,
+      department,
+      city,
+      phone,
+      email,
+      representative,
+      document_type,
+      document_number,
+      contact_name,
+      contact_phone,
+      rut,
+      lat,
+      lng,
+    ];
     const result = await pool.query(query, values);
 
-    res.status(201).json({ success: true, message: "Client created successfully", client: result.rows[0] });
+    res.status(201).json({
+      success: true,
+      message: 'Cliente creado exitosamente con geolocalización',
+      client: result.rows[0],
+    });
   } catch (error) {
-    console.error("Error creating client:", error);
-    res.status(500).json({ success: false, message: "Server error" });
+    console.error('Error creating client:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error del servidor al crear el cliente',
+    });
   }
 });
 
@@ -260,27 +320,117 @@ router.get('/clients/:id', async (req, res) => {
 // Editar cliente
 router.put('/clients/:id', async (req, res) => {
   const { id } = req.params;
-  const { name, address, phone, email, representative, document_type, document_number, contact_name, contact_phone, rut } = req.body;
+  const {
+    name,
+    address,
+    department,
+    city,
+    phone,
+    email,
+    representative,
+    document_type,
+    document_number,
+    contact_name,
+    contact_phone,
+    rut,
+  } = req.body;
 
   try {
+    let latitude = null;
+    let longitude = null;
+
+    // Verificar si hay cambios en los datos de dirección
+    if (address || city || department) {
+      // Concatenar dirección completa
+      const fullAddress = `${address}, ${city}, ${department}`;
+
+      // Obtener geolocalización
+      const response = await axios.get(
+        `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(
+          fullAddress
+        )}&key=${process.env.GOOGLE_MAPS_API_KEY}`
+      );
+
+      if (response.data.status !== 'OK') {
+        console.error('Geocoding error:', response.data.status);
+        return res.status(400).json({
+          success: false,
+          message: 'Error al obtener geolocalización. Verifica la dirección proporcionada.',
+        });
+      }
+
+      const location = response.data.results[0].geometry.location;
+      latitude = location.lat;
+      longitude = location.lng;
+    }
+
+    // Construir la consulta SQL dinámicamente según si hay geolocalización
+    const fields = [
+      'name = $1',
+      'address = $2',
+      'department = $3',
+      'city = $4',
+      'phone = $5',
+      'email = $6',
+      'representative = $7',
+      'document_type = $8',
+      'document_number = $9',
+      'contact_name = $10',
+      'contact_phone = $11',
+      'rut = $12',
+    ];
+
+    const values = [
+      name,
+      address,
+      department,
+      city,
+      phone,
+      email,
+      representative,
+      document_type,
+      document_number,
+      contact_name,
+      contact_phone,
+      rut,
+    ];
+
+    if (latitude !== null && longitude !== null) {
+      fields.push('latitude = $13', 'longitude = $14');
+      values.push(latitude, longitude);
+    }
+
+    values.push(id);
+
     const query = `
       UPDATE clients
-      SET name = $1, address = $2, phone = $3, email = $4, representative = $5, document_type = $6, document_number = $7,
-          contact_name = $8, contact_phone = $9, rut = $10
-      WHERE id = $11 RETURNING *
+      SET ${fields.join(', ')}
+      WHERE id = $${values.length} RETURNING *
     `;
-    const values = [name, address, phone, email, representative, document_type, document_number, contact_name, contact_phone, rut, id];
+
     const result = await pool.query(query, values);
 
     if (result.rows.length === 0) {
-      return res.status(404).json({ success: false, message: "Client not found" });
+      return res.status(404).json({
+        success: false,
+        message: 'Cliente no encontrado',
+      });
     }
-    res.json({ success: true, message: "Client updated successfully", client: result.rows[0] });
+
+    res.json({
+      success: true,
+      message: 'Cliente actualizado exitosamente',
+      client: result.rows[0],
+    });
   } catch (error) {
-    console.error("Error updating client:", error);
-    res.status(500).json({ success: false, message: "Server error" });
+    console.error('Error al actualizar cliente:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error del servidor al actualizar el cliente',
+    });
   }
 });
+
 
 // Eliminar cliente
 router.delete('/clients/:id', async (req, res) => {
