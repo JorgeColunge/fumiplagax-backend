@@ -145,19 +145,21 @@ router.post('/register', uploadImage, async (req, res) => {
       return res.status(400).json({ success: false, message: "User already exists" });
     }
 
-// Función para generar un color hexadecimal aleatorio
-// Función para generar colores vibrantes aleatorios
-const getVibrantColor = () => {
-  const r = Math.floor(Math.random() * 156) + 100; // Rojo (100-255)
-  const g = Math.floor(Math.random() * 156) + 100; // Verde (100-255)
-  const b = Math.floor(Math.random() * 156) + 100; // Azul (100-255)
-  return `rgb(${r}, ${g}, ${b})`;
-};
+    // Genera la contraseña encriptada
+    const hashedPassword = await bcrypt.hash(password, 10);
 
-await pool.query(
-  'INSERT INTO users (id, name, lastname, rol, email, phone, password, image, color) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)',
-  [id, name, lastname, rol, email, phone, hashedPassword, imageUrl, color ? color : getRandomColor()]
-);
+    // Función para generar colores vibrantes aleatorios
+    const getVibrantColor = () => {
+      const r = Math.floor(Math.random() * 156) + 100; // Rojo (100-255)
+      const g = Math.floor(Math.random() * 156) + 100; // Verde (100-255)
+      const b = Math.floor(Math.random() * 156) + 100; // Azul (100-255)
+      return `rgb(${r}, ${g}, ${b})`;
+    };
+
+    await pool.query(
+      'INSERT INTO users (id, name, lastname, rol, email, phone, password, image, color) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)',
+      [id, name, lastname, rol, email, phone, hashedPassword, imageUrl, color ? color : getVibrantColor()]
+    );
 
     res.json({ success: true, message: "User registered successfully", profilePicURL: imageUrl });
   } catch (error) {
