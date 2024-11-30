@@ -123,26 +123,22 @@ router.post('/login', async (req, res) => {
 });
 
 router.post('/register', uploadImage, async (req, res) => {
-  // Agrega console.log para ver qué datos recibe el servidor
   console.log("Received body:", req.body);
   console.log("Received file:", req.file);
 
   const { id, name, lastname, rol, email, phone, password, color } = req.body;
 
-  // Comprobación de campos obligatorios y log de error si falta alguno
   if (!id || !name || !lastname || !rol || !email || !phone || !password) {
     console.error("Missing fields:", { id, name, lastname, rol, email, phone, password });
     return res.status(400).json({ success: false, message: "All fields are required" });
   }
 
-  // Construcción de la URL de la imagen si se subió un archivo
   let imageUrl = null;
   if (req.file) {
     imageUrl = `/media/images/${req.file.filename}`;
   }
 
   try {
-    // Verifica si el usuario ya existe en la base de datos
     const userCheck = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
     if (userCheck.rows.length > 0) {
       console.error("User already exists with email:", email);
@@ -169,7 +165,6 @@ await pool.query(
     res.status(500).json({ success: false, message: "Server error" });
   }
 });
-
 
 // Nueva ruta para obtener todos los usuarios registrados
 router.get('/users', async (req, res) => {
