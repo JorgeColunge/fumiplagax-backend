@@ -36,7 +36,6 @@ const uploadImage = multer({
   limits: { fileSize: 5 * 1024 * 1024 }
 }).single('image'); // Cambiamos `.fields` por `.single`
 
-// Ruta para actualizar el perfil del usuario (datos y foto)
 router.post('/updateProfile', uploadImage, async (req, res) => {
   const { name, lastname, email, phone, userId, color } = req.body;
 
@@ -46,12 +45,52 @@ router.post('/updateProfile', uploadImage, async (req, res) => {
   }
 
   try {
+    // Construir partes dinámicas para la consulta
+    const fields = [];
+    const values = [];
+    let index = 1;
+
+    if (name) {
+      fields.push(`name = $${index++}`);
+      values.push(name);
+    }
+    if (lastname) {
+      fields.push(`lastname = $${index++}`);
+      values.push(lastname);
+    }
+    if (email) {
+      fields.push(`email = $${index++}`);
+      values.push(email);
+    }
+    if (phone) {
+      fields.push(`phone = $${index++}`);
+      values.push(phone);
+    }
+    if (color) {
+      fields.push(`color = $${index++}`);
+      values.push(color);
+    }
+    if (imageUrl) {
+      fields.push(`image = $${index++}`);
+      values.push(imageUrl);
+    }
+
+    // Agregar el userId como condición al final
+    values.push(userId);
+
+    // Verificar si hay campos para actualizar
+    if (fields.length === 0) {
+      return res.status(400).json({ message: 'No se enviaron datos para actualizar' });
+    }
+
+    // Construir consulta SQL dinámica
     const query = `
       UPDATE users 
-      SET name = $1, lastname = $2, email = $3, phone = $4, color = $5, image = COALESCE($6, image) 
-      WHERE id = $7
+      SET ${fields.join(', ')}
+      WHERE id = $${index}
     `;
-    const values = [name, lastname, email, phone, color || '#ffffff', imageUrl, userId];
+
+    // Ejecutar consulta
     await pool.query(query, values);
 
     res.json({ message: 'Perfil actualizado exitosamente', profilePicURL: imageUrl });
