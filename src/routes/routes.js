@@ -842,15 +842,74 @@ router.get('/service-schedule/:id', async (req, res) => {
   }
 });
 
-// Ruta para crear un nuevo registro
 router.post('/service-schedule', async (req, res) => {
   const { service_id, date, start_time, end_time } = req.body;
+
   try {
+    // Insertar el registro en la tabla de programación de servicios
     const result = await pool.query(
-      'INSERT INTO service_schedule (service_id, date, start_time, end_time) VALUES ($1, $2, $3, $4) RETURNING *',
+      'INSERT INTO service_schedule (service_id, date, start_time, end_time) VALUES ($1, $2, $3, $4) RETURNING id, service_id, date, start_time, end_time',
       [service_id, date, start_time, end_time]
     );
-    res.status(201).json({ success: true, message: "Registro creado con éxito", data: result.rows[0] });
+
+    // Obtener información del servicio
+    const serviceQuery = await pool.query('SELECT * FROM services WHERE id = $1', [service_id]);
+    const service = serviceQuery.rows[0];
+
+    if (!service) {
+      return res.status(404).json({ success: false, message: "Servicio no encontrado" });
+    }
+
+    const { responsible } = service;
+
+    // Obtener información del responsable
+    const responsibleQuery = await pool.query('SELECT * FROM users WHERE id = $1', [responsible]);
+    const responsibleData = responsibleQuery.rows[0];
+
+    if (!responsibleData) {
+      return res.status(404).json({ success: false, message: "Responsable no encontrado" });
+    }
+
+    // Crear el evento para el frontend
+    const newEvent = {
+      id: result.rows[0].id,
+      service_id: service_id,
+      start: `${date}T${start_time}`,
+      end: `${date}T${end_time}`,
+      title: `Servicio ${service_id}`,
+      responsible,
+      serviceType: service.service_type,
+      color: responsibleData.color,
+    };
+
+    // Emitir evento al responsable asignado
+    req.io.to(responsible.toString()).emit('newEvent', newEvent);
+    console.log(`Evento emitido al responsable ${responsible}:`, newEvent);
+
+    // Generar notificación
+    const notificationMessage = `Tu servicio ${service_id} ha sido agendado para el ${date} a las ${start_time}.`;
+
+    const notificationQuery = `
+      INSERT INTO notifications (user_id, notification, state)
+      VALUES ($1, $2, $3) RETURNING *
+    `;
+    const notificationValues = [responsible, notificationMessage, 'pending'];
+    const notificationResult = await pool.query(notificationQuery, notificationValues);
+
+    // Emitir la notificación al responsable
+    req.io.to(responsible.toString()).emit('notification', {
+      user_id: responsible,
+      notification: notificationResult.rows[0],
+    });
+    console.log(`Notificación emitida al responsable ${responsible}:`, notificationMessage);
+
+    // Responder con éxito
+    res.status(201).json({
+      success: true,
+      message: "Registro creado con éxito",
+      data: result.rows[0],
+      notification: notificationResult.rows[0],
+    });
   } catch (error) {
     console.error("Error al crear el registro:", error);
     res.status(500).json({ success: false, message: "Error en el servidor", error: error.message });
@@ -1180,8 +1239,8 @@ router.put('/notifications/:id/read', async (req, res) => {
   const { id } = req.params;
 
   try {
-    const query = 'UPDATE notifications SET is_read = TRUE WHERE id = $1 RETURNING *';
-    const result = await pool.query(query, [id]);
+    const query = 'UPDATE notifications SET state = $1 WHERE id = $2 RETURNING *';
+    const result = await pool.query(query, ['read', id]);
 
     if (result.rowCount === 0) {
       return res.status(404).json({ success: false, message: 'Notification not found' });
@@ -1228,8 +1287,7 @@ router.delete('/notifications/:id', async (req, res) => {
       DELETE FROM notifications
       WHERE id = $1 RETURNING *
     `;
-    const values = [id];
-    const result = await pool.query(query, values);
+    const result = await pool.query(query, [id]);
 
     if (result.rowCount === 0) {
       return res.status(404).json({ success: false, message: "Notification not found" });
@@ -1242,7 +1300,7 @@ router.delete('/notifications/:id', async (req, res) => {
   }
 });
 
-// Ruta para obtener notificaciones de un usuario
+// Obtener notificaciones de un usuario
 router.get('/notifications/:userId', async (req, res) => {
   const { userId } = req.params;
 
@@ -1257,25 +1315,6 @@ router.get('/notifications/:userId', async (req, res) => {
   } catch (error) {
     console.error("Error fetching notifications:", error);
     res.status(500).json({ success: false, message: "Server error" });
-  }
-});
-
-// Marcar una notificación como leída
-router.put('/notifications/:id/read', async (req, res) => {
-  const { id } = req.params;
-
-  try {
-    const query = 'UPDATE notifications SET is_read = TRUE WHERE id = $1 RETURNING *';
-    const result = await pool.query(query, [id]);
-
-    if (result.rowCount === 0) {
-      return res.status(404).json({ success: false, message: 'Notification not found' });
-    }
-
-    res.json({ success: true, notification: result.rows[0] });
-  } catch (error) {
-    console.error('Error marking notification as read:', error);
-    res.status(500).json({ success: false, message: 'Server error' });
   }
 });
 
