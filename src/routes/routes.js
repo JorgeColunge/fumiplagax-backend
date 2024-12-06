@@ -556,19 +556,30 @@ router.put('/services/:id', async (req, res) => {
   }
 });
 
-// Eliminar servicio
+// Eliminar servicio junto con inspecciones y programación de servicios relacionados
 router.delete('/services/:id', async (req, res) => {
   const { id } = req.params;
 
   try {
+    // Eliminar programación de servicios relacionados
+    await pool.query('DELETE FROM service_schedule WHERE service_id = $1', [id]);
+    console.log(`Service schedule entries for service ${id} deleted.`);
+
+    // Eliminar inspecciones relacionadas con el servicio
+    await pool.query('DELETE FROM inspections WHERE service_id = $1', [id]);
+    console.log(`Inspections for service ${id} deleted.`);
+
+    // Eliminar el servicio
     const result = await pool.query('DELETE FROM services WHERE id = $1 RETURNING *', [id]);
 
     if (result.rows.length === 0) {
       return res.status(404).json({ success: false, message: "Service not found" });
     }
-    res.json({ success: true, message: "Service deleted successfully" });
+
+    console.log(`Service ${id} deleted successfully.`);
+    res.json({ success: true, message: "Service, related inspections, and service schedule entries deleted successfully" });
   } catch (error) {
-    console.error("Error deleting service:", error);
+    console.error("Error deleting service and related data:", error);
     res.status(500).json({ success: false, message: "Server error" });
   }
 });
