@@ -915,7 +915,7 @@ router.post('/service-schedule', async (req, res) => {
       service_id: service_id,
       start: `${date}T${start_time}`,
       end: `${date}T${end_time}`,
-      title: `Servicio ${service_id}`,
+      title: `${service_id}`,
       responsible,
       serviceType: service.service_type,
       color: responsibleData.color,
