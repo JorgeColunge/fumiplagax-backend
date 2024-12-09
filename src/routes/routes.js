@@ -584,8 +584,6 @@ router.delete('/services/:id', async (req, res) => {
   }
 });
 
-const fs = require('fs'); // Añadir esto al inicio para manejar el sistema de archivos
-
 const productsStorage = multer.diskStorage({
   destination: function (req, file, cb) {
     const uploadPath = path.join(__dirname, '..', 'uploads');
