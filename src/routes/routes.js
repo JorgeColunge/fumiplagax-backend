@@ -2,6 +2,7 @@ const axios = require('axios');
 const express = require('express');
 const bcrypt = require('bcrypt');
 const multer = require('multer');
+const fs = require('fs');
 const path = require('path');
 const router = express.Router();
 const pool = require('../config/dbConfig');
@@ -1363,6 +1364,47 @@ router.get('/notifications/:userId', async (req, res) => {
   } catch (error) {
     console.error("Error fetching notifications:", error);
     res.status(500).json({ success: false, message: "Server error" });
+  }
+});
+
+// Configuración de almacenamiento para documentos RUT
+const rutStorage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    const uploadPath = path.join(__dirname, '..', '..', 'public', 'media', 'documents', 'clients', 'rut');
+
+    // Verificar si la carpeta existe, si no, crearla
+    if (!fs.existsSync(uploadPath)) {
+      fs.mkdirSync(uploadPath, { recursive: true });
+    }
+
+    cb(null, uploadPath);
+  },
+  filename: function (req, file, cb) {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, uniqueSuffix + path.extname(file.originalname));
+  }
+});
+
+// Middleware de Multer para documentos RUT
+const uploadRutFile = multer({
+  storage: rutStorage,
+  limits: { fileSize: 50 * 1024 * 1024 }, // Límite de 5 MB
+}).single('rut');
+
+// Ruta para subir el archivo RUT
+router.post('/clients/upload-rut', uploadRutFile, async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: "No se ha subido ningún archivo" });
+    }
+
+    // Construye la URL del archivo
+    const fileUrl = `/media/documents/clients/rut/${req.file.filename}`;
+
+    res.json({ success: true, fileUrl, message: "Archivo RUT subido exitosamente" });
+  } catch (error) {
+    console.error("Error al subir el archivo RUT:", error);
+    res.status(500).json({ success: false, message: "Error al subir el archivo RUT" });
   }
 });
 
