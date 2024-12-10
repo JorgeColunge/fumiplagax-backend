@@ -1408,4 +1408,190 @@ router.post('/clients/upload-rut', uploadRutFile, async (req, res) => {
   }
 });
 
+// Configuración de almacenamiento para los archivos de facturación
+const billingStorage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    const uploadPath = path.join(__dirname, '..', '..', 'public', 'media', 'billing');
+
+    // Verificar si la carpeta existe, si no, crearla
+    if (!fs.existsSync(uploadPath)) {
+      fs.mkdirSync(uploadPath, { recursive: true });
+    }
+
+    cb(null, uploadPath);
+  },
+  filename: function (req, file, cb) {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, uniqueSuffix + path.extname(file.originalname));
+  }
+});
+
+// Middleware de Multer para archivos de facturación
+const uploadBillingFile = multer({
+  storage: billingStorage,
+  limits: { fileSize: 50 * 1024 * 1024 }, // Límite de 50 MB
+}).single('file');
+
+router.post('/billing', uploadBillingFile, async (req, res) => {
+  try {
+    const { billingData } = req.body; // Se espera que sea un string en JSON
+    const fileUrl = req.file ? `/media/documents/billing/${req.file.filename}` : null;
+
+    if (!billingData || !fileUrl) {
+      return res.status(400).json({
+        success: false,
+        message: "Datos incompletos: Se requiere billingData y un archivo comprobante.",
+      });
+    }
+
+    // Intentar parsear billingData a JSON
+    let parsedBillingData;
+    try {
+      parsedBillingData = JSON.parse(billingData);
+    } catch (error) {
+      console.error('Error al parsear billingData:', error);
+      return res.status(400).json({
+        success: false,
+        message: "El formato de billingData no es válido JSON.",
+      });
+    }
+
+    // Log para verificar los datos antes de la inserción
+    console.log('Datos de facturación procesados:', parsedBillingData);
+    console.log('URL del archivo:', fileUrl);
+
+    // Inserción en la base de datos
+    const query = `
+      INSERT INTO billing (client_id, billing_data, file_url, billing_date)
+      VALUES ($1, $2, $3, NOW()) RETURNING *
+    `;
+    const values = [
+      parsedBillingData[0].client_id, // ID del cliente
+      JSON.stringify(parsedBillingData), // Asegurar que sea un string JSON
+      fileUrl, // URL del archivo comprobante
+    ];
+
+    const result = await pool.query(query, values);
+
+    res.status(201).json({
+      success: true,
+      message: "Factura creada exitosamente.",
+      billing: result.rows[0],
+    });
+  } catch (error) {
+    console.error('Error al crear factura:', error);
+    res.status(500).json({
+      success: false,
+      message: "Error en el servidor al crear la factura.",
+      error: error.message,
+    });
+  }
+});
+
+// Ruta para obtener todas las facturas
+router.get('/billing', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT * FROM billing');
+    res.json(result.rows);
+  } catch (error) {
+    console.error("Error al obtener facturas:", error);
+    res.status(500).json({ success: false, message: "Error en el servidor", error: error.message });
+  }
+});
+
+// Ruta para obtener una factura por ID
+router.get('/billing/:id', async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const result = await pool.query('SELECT * FROM billing WHERE id = $1', [id]);
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, message: "Factura no encontrada" });
+    }
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error("Error al obtener factura:", error);
+    res.status(500).json({ success: false, message: "Error en el servidor", error: error.message });
+  }
+});
+
+// Ruta para editar una factura por ID
+router.put('/billing/:id', uploadBillingFile, async (req, res) => {
+  const { id } = req.params;
+  const { billingData } = req.body;
+
+  // Validación de datos
+  if (!billingData && !req.file) {
+    return res.status(400).json({
+      success: false,
+      message: "Se requiere al menos datos de facturación o un archivo actualizado.",
+    });
+  }
+
+  try {
+    const billingDataJson = billingData ? JSON.parse(billingData) : null;
+    const fileUrl = req.file ? `/media/billing/${req.file.filename}` : null;
+
+    const query = `
+      UPDATE billing
+      SET 
+        billing_data = COALESCE($1, billing_data),
+        file_url = COALESCE($2, file_url),
+        billing_date = NOW()
+      WHERE id = $3 RETURNING *
+    `;
+    const values = [
+      billingDataJson ? billingDataJson : null,
+      fileUrl,
+      id,
+    ];
+
+    const result = await pool.query(query, values);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, message: "Factura no encontrada" });
+    }
+
+    res.json({
+      success: true,
+      message: "Factura actualizada exitosamente",
+      billing: result.rows[0],
+    });
+  } catch (error) {
+    console.error("Error al actualizar factura:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error en el servidor",
+      error: error.message,
+    });
+  }
+});
+
+// Ruta para eliminar una factura por ID
+router.delete('/billing/:id', async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const query = 'DELETE FROM billing WHERE id = $1 RETURNING *';
+    const result = await pool.query(query, [id]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, message: "Factura no encontrada" });
+    }
+
+    res.json({
+      success: true,
+      message: "Factura eliminada exitosamente",
+      billing: result.rows[0],
+    });
+  } catch (error) {
+    console.error("Error al eliminar factura:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error en el servidor",
+      error: error.message,
+    });
+  }
+});
+
 module.exports = router;
