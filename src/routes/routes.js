@@ -2,24 +2,19 @@ const axios = require('axios');
 const express = require('express');
 const bcrypt = require('bcrypt');
 const multer = require('multer');
+const sharp = require('sharp');
 const fs = require('fs');
 const path = require('path');
 const router = express.Router();
 const pool = require('../config/dbConfig');
+const { v4: uuidv4 } = require('uuid');
 const QRCode = require('qrcode');
+const { uploadFile, getSignedUrl, deleteObject  } = require('../config/s3Service');
 
-// Configuración de almacenamiento con Multer
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, path.join(__dirname, '..', '..', 'public', 'media', 'images'));
-  },
-  filename: function (req, file, cb) {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, uniqueSuffix + path.extname(file.originalname));
-  }
-});
+// Configuración de almacenamiento con Multer (en memoria para subir a S3)
+const storage = multer.memoryStorage();
 
-// Definición de fileFilter para permitir solo imágenes (jpeg, jpg, png, gif)
+// Configuración del filtro para permitir solo imágenes
 const fileFilter = (req, file, cb) => {
   const allowedTypes = /jpeg|jpg|png|gif/;
   const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
@@ -32,110 +27,140 @@ const fileFilter = (req, file, cb) => {
   }
 };
 
+// Middleware de multer para manejar imágenes en memoria
 const uploadImage = multer({
   storage: storage,
   fileFilter: fileFilter,
-  limits: { fileSize: 5 * 1024 * 1024 }
-}).single('image'); // Cambiamos `.fields` por `.single`
+  limits: { fileSize: 5 * 1024 * 1024 }, // Límite de 5 MB
+}).single('image');
 
-router.post('/updateProfile', uploadImage, async (req, res) => {
-  const { name, lastname, email, phone, userId, color } = req.body;
-
-  let imageUrl = null;
-  if (req.file) {
-    imageUrl = `/media/images/${req.file.filename}`;
+// Middleware para comprimir imágenes usando sharp
+const compressImage = async (req, res, next) => {
+  if (!req.file) {
+    return next();
   }
 
   try {
+    // Generar un nombre único para la imagen procesada
+    const compressedFileName = `${uuidv4()}.jpeg`;
+
+    // Comprimir y redimensionar la imagen usando sharp
+    const compressedImageBuffer = await sharp(req.file.buffer)
+      .resize(150, 150) // Cambia el tamaño de la imagen a 150x150 píxeles
+      .jpeg({ quality: 80 }) // Comprimir en formato JPEG con calidad 80
+      .toBuffer();
+
+    // Reemplazar el archivo original con la versión comprimida
+    req.file.buffer = compressedImageBuffer;
+    req.file.originalname = compressedFileName;
+
+    next();
+  } catch (error) {
+    console.error('Error al comprimir la imagen:', error);
+    res.status(500).json({ message: 'Error al procesar la imagen' });
+  }
+};
+
+router.post('/updateProfile', uploadImage, compressImage, async (req, res) => {
+  const { name, lastname, email, phone, userId, color } = req.body;
+
+  let imageUrl = null;
+
+  try {
+    // Subir nueva imagen y eliminar la anterior si se proporciona
+    if (req.file) {
+      const result = await pool.query('SELECT image FROM users WHERE id = $1', [userId]);
+      const previousImage = result.rows[0]?.image;
+
+      if (previousImage && previousImage.includes('.amazonaws.com/')) {
+        const bucketName = 'fumiplagax';
+        const previousKey = previousImage.split('.amazonaws.com/')[1];
+        await deleteObject(bucketName, previousKey); // Eliminar la imagen anterior
+        console.log(`Imagen anterior eliminada: ${previousKey}`);
+      }
+
+      const bucketName = 'fumiplagax';
+      const key = `profile_pictures/${Date.now()}-${req.file.originalname}`;
+      const uploadResult = await uploadFile(bucketName, key, req.file.buffer);
+      imageUrl = uploadResult.Location; // URL pública generada por S3
+    }
+
     // Construir partes dinámicas para la consulta
     const fields = [];
     const values = [];
     let index = 1;
 
-    if (name) {
-      fields.push(`name = $${index++}`);
-      values.push(name);
-    }
-    if (lastname) {
-      fields.push(`lastname = $${index++}`);
-      values.push(lastname);
-    }
-    if (email) {
-      fields.push(`email = $${index++}`);
-      values.push(email);
-    }
-    if (phone) {
-      fields.push(`phone = $${index++}`);
-      values.push(phone);
-    }
-    if (color) {
-      fields.push(`color = $${index++}`);
-      values.push(color);
-    }
-    if (imageUrl) {
-      fields.push(`image = $${index++}`);
-      values.push(imageUrl);
-    }
-
-    // Agregar el userId como condición al final
+    if (name) fields.push(`name = $${index++}`) && values.push(name);
+    if (lastname) fields.push(`lastname = $${index++}`) && values.push(lastname);
+    if (email) fields.push(`email = $${index++}`) && values.push(email);
+    if (phone) fields.push(`phone = $${index++}`) && values.push(phone);
+    if (color) fields.push(`color = $${index++}`) && values.push(color);
+    if (imageUrl) fields.push(`image = $${index++}`) && values.push(imageUrl);
     values.push(userId);
 
-    // Verificar si hay campos para actualizar
     if (fields.length === 0) {
       return res.status(400).json({ message: 'No se enviaron datos para actualizar' });
     }
 
-    // Construir consulta SQL dinámica
-    const query = `
-      UPDATE users 
-      SET ${fields.join(', ')}
-      WHERE id = $${index}
-    `;
-
-    // Ejecutar consulta
+    const query = `UPDATE users SET ${fields.join(', ')} WHERE id = $${index}`;
     await pool.query(query, values);
+
+    // Generar enlace prefirmado para la nueva imagen
+    if (imageUrl) {
+      const bucketName = 'fumiplagax';
+      const key = imageUrl.split('.amazonaws.com/')[1];
+      imageUrl = await getSignedUrl(bucketName, key); // Generar enlace prefirmado
+    }
 
     res.json({ message: 'Perfil actualizado exitosamente', profilePicURL: imageUrl });
   } catch (error) {
-    console.error("Error updating profile:", error);
+    console.error('Error al actualizar el perfil:', error);
     res.status(500).json({ message: 'Error al actualizar el perfil' });
   }
 });
 
-// Ruta para subir y almacenar la URL de la imagen (sin actualizar otros datos)
-router.post('/upload', (req, res) => {
-  uploadImage(req, res, async (err) => {
-    if (err) {
-      console.error("Error uploading image:", err.message);
-      return res.status(400).json({ message: err.message });
+
+// Ruta para subir y almacenar solo la URL de la imagen
+router.post('/upload', uploadImage, compressImage, async (req, res) => {
+  const { userId } = req.body;
+
+  if (!userId) {
+    return res.status(400).json({ message: 'Se requiere un ID de usuario para subir la imagen.' });
+  }
+
+  if (!req.file) {
+    return res.status(400).json({ message: 'No se subió ningún archivo' });
+  }
+
+  try {
+    // Subir archivo a S3
+    const bucketName = 'fumiplagax'; // Cambia esto por el nombre de tu bucket
+    const key = `profile_pictures/${Date.now()}-${req.file.originalname}`; // Ruta única en S3
+    const result = await uploadFile(bucketName, key, req.file.buffer);
+
+    // URL pública del archivo en S3
+    const imageUrl = result.Location;
+
+    // Obtener la imagen anterior para eliminarla si existe
+    const userResult = await pool.query('SELECT image FROM users WHERE id = $1', [userId]);
+    const previousImage = userResult.rows[0]?.image;
+
+    if (previousImage && previousImage.includes('.amazonaws.com/')) {
+      const previousKey = previousImage.split('.amazonaws.com/')[1];
+      await deleteObject(bucketName, previousKey); // Eliminar la imagen anterior
+      console.log(`Imagen anterior eliminada: ${previousKey}`);
     }
 
-    const userId = req.body.userId;
-    console.log("Received User ID:", userId);
+    // Actualizar la base de datos con la URL de la imagen
+    const updateQuery = 'UPDATE users SET image = $1 WHERE id = $2';
+    const values = [imageUrl, userId];
+    await pool.query(updateQuery, values);
 
-    if (!userId) {
-      console.error("User ID is missing in request");
-      return res.status(400).json({ message: 'User ID is required to upload the image.' });
-    }
-
-    if (!req.file) {
-      console.error("No file found after upload");
-      return res.status(400).json({ message: "No file uploaded" });
-    }
-
-    const imageUrl = `/media/images/${req.file.filename}`;
-    try {
-      const updateQuery = 'UPDATE users SET image = $1 WHERE id = $2';
-      const values = [imageUrl, userId];
-      await pool.query(updateQuery, values);
-
-      console.log("Image URL stored in database for user:", userId);
-      res.json({ profilePicURL: imageUrl, message: 'Imagen subida y URL almacenada correctamente' });
-    } catch (dbError) {
-      console.error("Error updating database:", dbError);
-      res.status(500).json({ message: 'Error storing image URL in database' });
-    }
-  });
+    res.json({ profilePicURL: imageUrl, message: 'Imagen subida y URL almacenada correctamente' });
+  } catch (error) {
+    console.error('Error al subir la imagen a S3 o actualizar la base de datos:', error);
+    res.status(500).json({ message: 'Error al subir la imagen o almacenar la URL' });
+  }
 });
 
 // Ruta de inicio de sesión
@@ -163,7 +188,7 @@ router.post('/login', async (req, res) => {
   }
 });
 
-router.post('/register', uploadImage, async (req, res) => {
+router.post('/register', uploadImage, compressImage, async (req, res) => {
   console.log("Received body:", req.body);
   console.log("Received file:", req.file);
 
@@ -175,18 +200,29 @@ router.post('/register', uploadImage, async (req, res) => {
   }
 
   let imageUrl = null;
-  if (req.file) {
-    imageUrl = `/media/images/${req.file.filename}`;
-  }
 
   try {
+    // Verificar si el usuario ya existe
     const userCheck = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
     if (userCheck.rows.length > 0) {
       console.error("User already exists with email:", email);
       return res.status(400).json({ success: false, message: "User already exists" });
     }
 
-    // Genera la contraseña encriptada
+    // Subir la imagen al bucket S3 si se proporciona
+    if (req.file) {
+      try {
+        const bucketName = 'fumiplagax';
+        const key = `profile_pictures/${Date.now()}-${req.file.originalname}`;
+        const uploadResult = await uploadFile(bucketName, key, req.file.buffer);
+        imageUrl = uploadResult.Location; // URL pública generada por S3
+      } catch (uploadError) {
+        console.error("Error uploading image to S3:", uploadError);
+        imageUrl = null; // Establecer la URL como null en caso de error
+      }
+    }
+
+    // Generar la contraseña encriptada
     const hashedPassword = await bcrypt.hash(password, 10);
 
     // Función para generar colores vibrantes aleatorios
@@ -197,24 +233,77 @@ router.post('/register', uploadImage, async (req, res) => {
       return `rgb(${r}, ${g}, ${b})`;
     };
 
+    // Insertar el nuevo usuario en la base de datos
     await pool.query(
       'INSERT INTO users (id, name, lastname, rol, email, phone, password, image, color) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)',
       [id, name, lastname, rol, email, phone, hashedPassword, imageUrl, color ? color : getVibrantColor()]
     );
 
-    res.json({ success: true, message: "User registered successfully", profilePicURL: imageUrl });
+    // Generar URL prefirmada para la imagen, si existe
+    let preSignedImageUrl = null;
+    if (imageUrl) {
+      try {
+        const bucketName = 'fumiplagax';
+        const key = imageUrl.includes('.amazonaws.com/')
+          ? imageUrl.split('.amazonaws.com/')[1]
+          : null;
+
+        if (key) {
+          preSignedImageUrl = await getSignedUrl(bucketName, key); // Generar enlace prefirmado
+        } else {
+          console.warn("Invalid S3 image URL format:", imageUrl);
+        }
+      } catch (signedUrlError) {
+        console.error("Error generating signed URL:", signedUrlError);
+        preSignedImageUrl = null; // Establecer como null en caso de error
+      }
+    }
+
+    res.json({
+      success: true,
+      message: "User registered successfully",
+      profilePicURL: preSignedImageUrl || imageUrl || null,
+    });
   } catch (error) {
-    console.error("Database error:", error);
+    console.error("Database or S3 error:", error);
     res.status(500).json({ success: false, message: "Server error" });
   }
 });
 
+
 // Nueva ruta para obtener todos los usuarios registrados
 router.get('/users', async (req, res) => {
   try {
-    // Selecciona los campos que deseas devolver, por ejemplo: id, nombre, apellido, email, rol
     const result = await pool.query('SELECT * FROM users');
-    res.json(result.rows); // Enviar la lista de usuarios como JSON
+    const users = result.rows;
+
+    // Generar URLs prefirmadas para las imágenes de cada usuario
+    for (let user of users) {
+      if (user.image) {
+        try {
+          const bucketName = 'fumiplagax';
+
+          // Validar si la URL contiene el key esperado
+          const key = user.image.includes('.amazonaws.com/')
+            ? user.image.split('.amazonaws.com/')[1]
+            : null;
+
+          if (key) {
+            user.image = await getSignedUrl(bucketName, key); // Generar enlace prefirmado
+          } else {
+            console.warn(`El usuario con ID ${user.id} tiene una imagen malformada.`);
+            user.image = null; // Dejar la imagen como null si está malformada
+          }
+        } catch (err) {
+          console.error(`Error generando URL prefirmada para el usuario con ID ${user.id}:`, err);
+          user.image = null; // Manejar errores y dejar la imagen como null
+        }
+      } else {
+        user.image = null; // Dejar como null si no tiene imagen
+      }
+    }
+
+    res.json(users);
   } catch (error) {
     console.error("Error al obtener usuarios:", error);
     res.status(500).json({ message: 'Error al obtener usuarios' });
@@ -237,12 +326,40 @@ router.delete('/users/:id', async (req, res) => {
 // Ruta para obtener un usuario por ID
 router.get('/users/:id', async (req, res) => {
   const { id } = req.params;
+
   try {
     const result = await pool.query('SELECT * FROM users WHERE id = $1', [id]);
     if (result.rows.length === 0) {
       return res.status(404).json({ message: 'Usuario no encontrado' });
     }
-    res.json(result.rows[0]);
+
+    const user = result.rows[0];
+
+    // Generar URL prefirmada si el usuario tiene una imagen válida
+    if (user.image) {
+      try {
+        const bucketName = 'fumiplagax';
+
+        // Validar si la URL contiene el key esperado
+        const key = user.image.includes('.amazonaws.com/')
+          ? user.image.split('.amazonaws.com/')[1]
+          : null;
+
+        if (key) {
+          user.image = await getSignedUrl(bucketName, key); // Generar enlace prefirmado
+        } else {
+          console.warn(`El usuario con ID ${user.id} tiene una imagen malformada.`);
+          user.image = null; // Dejar la imagen como null si está malformada
+        }
+      } catch (err) {
+        console.error(`Error generando URL prefirmada para el usuario con ID ${user.id}:`, err);
+        user.image = null; // Manejar errores y dejar la imagen como null
+      }
+    } else {
+      user.image = null; // Dejar como null si no tiene imagen
+    }
+
+    res.json(user);
   } catch (error) {
     console.error("Error al obtener usuario:", error);
     res.status(500).json({ message: 'Error al obtener el usuario' });
