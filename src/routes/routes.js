@@ -6,6 +6,7 @@ const fs = require('fs');
 const path = require('path');
 const router = express.Router();
 const pool = require('../config/dbConfig');
+const QRCode = require('qrcode');
 
 // Configuración de almacenamiento con Multer
 const storage = multer.diskStorage({
@@ -1030,16 +1031,43 @@ router.post('/stations', async (req, res) => {
   const { description, category, type, control_method, client_id, qr_code } = req.body;
 
   try {
-    const adjustedQrCode = qr_code === '' ? null : qr_code; // Convertir cadena vacía a NULL
-
     const query = `
-      INSERT INTO stations (description, category, type, control_method, client_id, qr_code)
-      VALUES ($1, $2, $3, $4, $5, $6) RETURNING *
+      INSERT INTO stations (description, category, type, control_method, client_id)
+      VALUES ($1, $2, $3, $4, $5) RETURNING *
     `;
-    const values = [description, category, type, control_method, client_id, adjustedQrCode];
+    const values = [description, category, type, control_method, client_id];
     const result = await pool.query(query, values);
 
-    res.status(201).json({ success: true, station: result.rows[0] });
+    const station = result.rows[0]; // Obtener la estación creada
+    const stationId = station.id;
+
+    // Generar el código QR basado en el ID de la estación
+    const qrData = qr_code || `Station-${stationId}`; // Usa el qr_code proporcionado o genera uno único
+    const qrPath = path.join(__dirname, '..', '..', 'public', 'media', 'stations');
+    const qrFilename = `${Date.now()}-${Math.round(Math.random() * 1E9)}.png`;
+    const qrFullPath = path.join(qrPath, qrFilename);
+
+    // Asegúrate de que el directorio exista
+    if (!fs.existsSync(qrPath)) {
+      fs.mkdirSync(qrPath, { recursive: true });
+    }
+
+    // Generar y guardar la imagen del QR
+    await QRCode.toFile(qrFullPath, qrData, { width: 300 });
+
+    // Guardar el QR como una URL relativa en la base de datos
+    const qrUrl = `/media/stations/${qrFilename}`;
+
+    const updateQuery = `
+      UPDATE stations SET qr_code = $1 WHERE id = $2
+    `;
+    await pool.query(updateQuery, [qrUrl, stationId]);
+
+    // Añadir la URL del QR al objeto estación
+    station.qr_code = qrUrl;
+
+    // Responder al frontend con toda la información de la estación
+    res.status(201).json({ success: true, station });
   } catch (error) {
     console.error('Error creating station:', error);
     res.status(500).json({ success: false, message: 'Error creating station', error: error.message });
