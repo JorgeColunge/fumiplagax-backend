@@ -37,7 +37,17 @@ const uploadImage = multer({
   limits: { fileSize: 5 * 1024 * 1024 }
 }).single('image'); // Cambiamos `.fields` por `.single`
 
-router.post('/updateProfile', uploadImage, async (req, res) => {
+const authorizeRoles = (allowedRoles) => {
+  return (req, res, next) => {
+    const user = req.user; // Asegúrate de que el usuario esté disponible en la solicitud, puedes obtenerlo de un middleware de autenticación.
+    if (!user || !allowedRoles.includes(user.rol)) {
+      return res.status(403).json({ message: 'Acceso denegado. No tienes permisos para acceder a esta ruta.' });
+    }
+    next();
+  };
+};
+
+router.post('/updateProfile', authorizeRoles(["Técnico", "Comercial", "Supervisor Técnico", "Administrador", "Superadministrador"]), uploadImage, async (req, res) => {
   const { name, lastname, email, phone, userId, color } = req.body;
 
   let imageUrl = null;
@@ -162,7 +172,7 @@ router.post('/login', async (req, res) => {
   }
 });
 
-router.post('/register', uploadImage, async (req, res) => {
+router.post('/register', authorizeRoles(["Técnico", "Comercial", "Supervisor Técnico", "Administrador", "Superadministrador"]),uploadImage, async (req, res) => {
   console.log("Received body:", req.body);
   console.log("Received file:", req.file);
 
@@ -209,9 +219,7 @@ router.post('/register', uploadImage, async (req, res) => {
 });
 
 // Nueva ruta para obtener todos los usuarios registrados
-const roleCheck = require('../middlewares/roleCheck');
-
-router.get('/users', roleCheck(['Administrador', 'Superadministrador']), async (req, res) => {
+router.post('/users', authorizeRoles(["Administrador", "Superadministrador"]), async (req, res) => {
   try {
     // Selecciona los campos que deseas devolver, por ejemplo: id, nombre, apellido, email, rol
     const result = await pool.query('SELECT * FROM users');
@@ -330,7 +338,7 @@ router.post('/clients', async (req, res) => {
 });
 
 // Obtener todos los clientes
-router.get('/clients', roleCheck(['Comercial', 'Supervisor Técnico', 'Administrador', 'Superadministrador']), async (req, res) => {
+router.get('/clients', authorizeRoles(["Comercial", "Supervisor Técnico", "Administrador", "Superadministrador"]), async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM clients');
     res.json(result.rows);
@@ -508,7 +516,7 @@ router.post('/services', async (req, res) => {
 });
 
 // Obtener todos los servicios
-router.get('/services', roleCheck(['Comercial', 'Supervisor Técnico', 'Administrador', 'Superadministrador']), async (req, res) => {
+router.get('/services', async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM services');
     res.json(result.rows);
@@ -685,7 +693,7 @@ router.post('/products', uploadProductFiles, async (req, res) => {
 });
 
 // Obtener todos los productos
-router.get('/products', async (req, res) => {
+router.get('/products', authorizeRoles(["Supervisor Técnico", "Administrador", "Superadministrador"]), async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM products');
     res.json(result.rows);
@@ -1491,7 +1499,7 @@ router.post('/billing', uploadBillingFile, async (req, res) => {
 });
 
 // Ruta para obtener todas las facturas
-router.get('/billing', roleCheck(['Administrador', 'Superadministrador']), async (req, res) => {
+router.post('/billing', authorizeRoles(["Administrador", "Superadministrador"]), uploadBillingFile, async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM billing');
     res.json(result.rows);
