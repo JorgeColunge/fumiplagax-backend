@@ -1739,4 +1739,291 @@ router.delete('/billing/:id', async (req, res) => {
   }
 });
 
+// Ruta para guardar mapas en la tabla client_maps
+router.post('/maps', uploadImage, compressImage, async (req, res) => {
+  const { client_id, description } = req.body;
+
+  if (!client_id || !description || !req.file) {
+    return res.status(400).json({ success: false, message: 'Faltan datos obligatorios' });
+  }
+
+  try {
+    // Subir la imagen a S3
+    const bucketName = 'fumiplagax';
+    const key = `client_maps/${Date.now()}-${req.file.originalname}`; // Clave única para S3
+    const s3Url = `https://${bucketName}.s3.${process.env.AWS_REGION}.amazonaws.com/${key}`; // Construir URL de S3
+
+    await uploadFile(bucketName, key, req.file.buffer); // Subir el archivo
+
+    // Insertar la URL de S3 en la base de datos
+    const query = `INSERT INTO client_maps (id, client_id, image, description) VALUES ($1, $2, $3, $4) RETURNING *`;
+    const values = [uuidv4(), client_id, s3Url, description];
+    const result = await pool.query(query, values);
+
+    // Generar una URL prefirmada para la respuesta
+    const signedUrl = await getSignedUrl(bucketName, key);
+
+    res.status(201).json({
+      success: true,
+      message: 'Mapa guardado exitosamente',
+      map: {
+        ...result.rows[0], // Datos del mapa guardado
+        image: signedUrl, // Reemplazar la URL con la prefirmada para la respuesta
+      },
+    });
+  } catch (error) {
+    console.error('Error al guardar el mapa:', error);
+    res.status(500).json({ success: false, message: 'Error al guardar el mapa' });
+  }
+});
+
+// Ruta para obtener todos los mapas de un cliente
+router.get('/maps/:client_id', async (req, res) => {
+  const { client_id } = req.params;
+
+  try {
+    const query = `SELECT * FROM client_maps WHERE client_id = $1`;
+    const result = await pool.query(query, [client_id]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'No se encontraron mapas para este cliente' });
+    }
+
+    // Generar enlace prefirmado para cada imagen si es necesario
+    const maps = await Promise.all(
+      result.rows.map(async (map) => {
+
+        if (
+          map.image &&
+          !map.image.includes('X-Amz-Algorithm') // Verifica si la URL ya está prefirmada
+        ) {
+          const bucketName = 'fumiplagax';
+          const key = map.image.split('.amazonaws.com/')[1];
+
+          try {
+            map.image = await getSignedUrl(bucketName, key); // Generar enlace prefirmado
+          } catch (err) {
+            console.error(`[ERROR] Error generando URL prefirmada para la imagen ${key}:`, err);
+            map.image = null; // Si hay un error, dejar la URL como null
+          }
+        } else {
+        }
+
+        return map;
+      })
+    );
+
+    res.json({ success: true, maps });
+  } catch (error) {
+    console.error('[ERROR] Error al obtener mapas:', error);
+    res.status(500).json({ success: false, message: 'Error al obtener mapas' });
+  }
+});
+
+
+// Ruta para actualizar un mapa
+router.put('/maps/:id', uploadImage, compressImage, async (req, res) => {
+  const { id } = req.params;
+  const { description } = req.body;
+
+  try {
+    const bucketName = 'fumiplagax';
+    let s3Url = null;
+    let signedUrl = null;
+
+    // Verificar si se subió una nueva imagen
+    if (req.file) {
+      const key = `client_maps/${Date.now()}-${req.file.originalname}`;
+      await uploadFile(bucketName, key, req.file.buffer);
+
+      // Construir la URL pública de S3
+      s3Url = `https://${bucketName}.s3.${process.env.AWS_REGION}.amazonaws.com/${key}`;
+
+      // Generar enlace prefirmado para la nueva imagen
+      signedUrl = await getSignedUrl(bucketName, key);
+
+      // Eliminar la imagen anterior si existe
+      const previousImageQuery = await pool.query('SELECT image FROM client_maps WHERE id = $1', [id]);
+      const previousImage = previousImageQuery.rows[0]?.image;
+      if (previousImage && previousImage.includes('.amazonaws.com/')) {
+        const previousKey = previousImage.split('.amazonaws.com/')[1];
+        await deleteObject(bucketName, previousKey);
+        console.log(`[INFO] Imagen anterior eliminada: ${previousKey}`);
+      }
+    }
+
+    // Actualizar los datos del mapa
+    const fields = [];
+    const values = [];
+    let index = 1;
+
+    if (description) fields.push(`description = $${index++}`) && values.push(description);
+    if (s3Url) fields.push(`image = $${index++}`) && values.push(s3Url);
+    values.push(id);
+
+    if (fields.length === 0) {
+      return res.status(400).json({ success: false, message: 'No se enviaron datos para actualizar' });
+    }
+
+    const query = `UPDATE client_maps SET ${fields.join(', ')} WHERE id = $${index} RETURNING *`;
+    const result = await pool.query(query, values);
+
+    // Devolver el mapa actualizado con la URL prefirmada
+    const updatedMap = result.rows[0];
+    updatedMap.image = signedUrl || updatedMap.image; // Reemplazar la URL pública con la prefirmada en la respuesta
+
+    res.json({ success: true, message: 'Mapa actualizado exitosamente', map: updatedMap });
+  } catch (error) {
+    console.error('[ERROR] Error al actualizar el mapa:', error);
+    res.status(500).json({ success: false, message: 'Error al actualizar el mapa' });
+  }
+});
+
+
+// Ruta para eliminar un mapa
+router.delete('/maps/:id', async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    // Obtener la imagen asociada al mapa
+    const query = `SELECT image FROM client_maps WHERE id = $1`;
+    const result = await pool.query(query, [id]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Mapa no encontrado' });
+    }
+
+    const imageUrl = result.rows[0].image;
+
+    // Eliminar la imagen de S3
+    if (imageUrl) {
+      const bucketName = 'fumiplagax';
+
+      // Extraer la clave del objeto S3 a partir de la URL pública
+      const keyMatch = imageUrl.match(/client_maps\/.+$/); // Buscar "client_maps/" y todo lo que sigue
+      if (keyMatch) {
+        const key = keyMatch[0]; // Obtener la clave
+        await deleteObject(bucketName, key); // Eliminar el objeto de S3
+      } else {
+        console.warn(`[WARNING] No se pudo extraer la clave de la URL: ${imageUrl}`);
+      }
+    }
+
+    // Eliminar el registro de la base de datos
+    const deleteQuery = `DELETE FROM client_maps WHERE id = $1 RETURNING *`;
+    const deleteResult = await pool.query(deleteQuery, [id]);
+
+    res.json({ success: true, message: 'Mapa eliminado exitosamente', map: deleteResult.rows[0] });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Error al eliminar el mapa' });
+  }
+});
+
+router.get('/rules', async (req, res) => {
+  try {
+    const rulesData = await pool.query('SELECT * FROM rules'); // Cambia esto según tu base de datos
+    res.json(rulesData.rows);
+  } catch (error) {
+    console.error('Error al obtener las normas:', error);
+    res.status(500).json({ success: false, message: 'Error en el servidor' });
+  }
+});
+
+// Obtener todas las reglas
+router.get('/rules', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT * FROM rules');
+    res.json(result.rows);
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send('Error al obtener las reglas');
+  }
+});
+
+// Agregar una nueva regla
+router.post('/rules', async (req, res) => {
+  const { rule, description, categoryId } = req.body; // categoryId es el id de la categoría seleccionada
+  try {
+    const result = await pool.query(
+      `INSERT INTO rules (rule, description, category) 
+       VALUES ($1, $2, $3) 
+       RETURNING *`,
+      [rule || 'Norma', description || 'Descripción', categoryId]
+    );
+    res.status(201).json(result.rows[0]);
+  } catch (error) {
+    console.error('Error al agregar la norma:', error.message);
+    res.status(500).json({ success: false, message: 'Error al agregar la norma' });
+  }
+});
+
+// Editar una regla
+router.put('/rules/:id', async (req, res) => {
+  const { id } = req.params;
+  const { rule, description, category } = req.body;
+  try {
+    await pool.query(
+      'UPDATE rules SET rule = $1, description = $2, category = $3 WHERE id = $4',
+      [rule, description, category, id]
+    );
+    res.send('Regla actualizada correctamente');
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send('Error al actualizar la regla');
+  }
+});
+
+// Eliminar una regla
+router.delete('/rules/:id', async (req, res) => {
+  const { id } = req.params;
+  try {
+    await pool.query('DELETE FROM rules WHERE id = $1', [id]);
+    res.send('Regla eliminada correctamente');
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send('Error al eliminar la regla');
+  }
+});
+
+// Ruta para agregar una nueva categoría
+router.post('/rules/categories', async (req, res) => {
+  const { category } = req.body;
+
+  if (!category) {
+    return res.status(400).json({ success: false, message: 'El nombre de la categoría es obligatorio' });
+  }
+
+  try {
+    // Inserta la categoría en la tabla rules_category
+    const result = await pool.query(
+      `INSERT INTO rules_category (category) 
+       VALUES ($1) 
+       ON CONFLICT (category) DO NOTHING 
+       RETURNING id, category`,
+      [category.trim()]
+    );
+
+    if (result.rowCount === 0) {
+      return res.status(409).json({ success: false, message: 'La categoría ya existe' });
+    }
+
+    res.status(201).json({ success: true, category: result.rows[0] });
+  } catch (error) {
+    console.error('Error al agregar la categoría:', error.message);
+    res.status(500).json({ success: false, message: 'Error en el servidor' });
+  }
+});
+
+// Ruta para obtener todas las categorías únicas
+router.get('/rules/categories', async (req, res) => {
+  try {
+    // Consulta para obtener todas las categorías con su id y nombre
+    const result = await pool.query('SELECT id, category AS name FROM rules_category WHERE category IS NOT NULL');
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error al obtener las categorías:', error.message);
+    res.status(500).json({ success: false, message: 'Error en el servidor' });
+  }
+});
+
 module.exports = router;
