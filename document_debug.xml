@@ -1,0 +1,707 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:document xmlns:wpc="http://schemas.microsoft.com/office/word/2010/wordprocessingCanvas" xmlns:cx="http://schemas.microsoft.com/office/drawing/2014/chartex" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:m="http://schemas.openxmlformats.org/officeDocument/2006/math" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:wp14="http://schemas.microsoft.com/office/word/2010/wordprocessingDrawing" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:w10="urn:schemas-microsoft-com:office:word" xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:w14="http://schemas.microsoft.com/office/word/2010/wordml" xmlns:w15="http://schemas.microsoft.com/office/word/2012/wordml" xmlns:w16se="http://schemas.microsoft.com/office/word/2015/wordml/symex" xmlns:wpg="http://schemas.microsoft.com/office/word/2010/wordprocessingGroup" xmlns:wpi="http://schemas.microsoft.com/office/word/2010/wordprocessingInk" xmlns:wne="http://schemas.microsoft.com/office/word/2006/wordml" xmlns:wps="http://schemas.microsoft.com/office/word/2010/wordprocessingShape" mc:Ignorable="w14 w15 w16se wp14" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture">
+    <w:body>
+        <w:p w:rsidR="00CF7287" w:rsidRDefault="00CF7287">
+            <w:pPr>
+                <w:spacing w:after="0" w:line="240" w:lineRule="auto"/>
+                <w:jc w:val="both"/>
+                <w:rPr>
+                    <w:rFonts w:ascii="Arial" w:eastAsia="Arial" w:hAnsi="Arial" w:cs="Arial"/>
+                    <w:b/>
+                </w:rPr>
+            </w:pPr>
+        </w:p>
+        <w:p w:rsidR="00CF7287" w:rsidRDefault="00A100B9">
+            <w:pPr>
+                <w:spacing w:after="0" w:line="240" w:lineRule="auto"/>
+                <w:jc w:val="center"/>
+                <w:rPr>
+                    <w:rFonts w:ascii="Roboto" w:eastAsia="Roboto" w:hAnsi="Roboto" w:cs="Roboto"/>
+                    <w:b/>
+                    <w:color w:val="0F0F0F"/>
+                    <w:sz w:val="24"/>
+                    <w:szCs w:val="24"/>
+                </w:rPr>
+            </w:pPr>
+            <w:r>
+                <w:rPr>
+                    <w:rFonts w:ascii="Roboto" w:eastAsia="Roboto" w:hAnsi="Roboto" w:cs="Roboto"/>
+                    <w:b/>
+                    <w:color w:val="0F0F0F"/>
+                    <w:sz w:val="24"/>
+                    <w:szCs w:val="24"/>
+                </w:rPr>
+                <w:t>Consolidado de Estaciones</w:t>
+            </w:r>
+        </w:p>
+        <w:p w:rsidR="00CF7287" w:rsidRDefault="00CF7287">
+            <w:pPr>
+                <w:spacing w:after="0" w:line="240" w:lineRule="auto"/>
+                <w:jc w:val="both"/>
+                <w:rPr>
+                    <w:rFonts w:ascii="Roboto" w:eastAsia="Roboto" w:hAnsi="Roboto" w:cs="Roboto"/>
+                    <w:color w:val="0F0F0F"/>
+                    <w:sz w:val="24"/>
+                    <w:szCs w:val="24"/>
+                </w:rPr>
+            </w:pPr>
+        </w:p>
+        <w:p w:rsidR="00CF7287" w:rsidRDefault="00A100B9">
+            <w:pPr>
+                <w:spacing w:after="0" w:line="240" w:lineRule="auto"/>
+                <w:jc w:val="both"/>
+                <w:rPr>
+                    <w:rFonts w:ascii="Roboto" w:eastAsia="Roboto" w:hAnsi="Roboto" w:cs="Roboto"/>
+                    <w:color w:val="0F0F0F"/>
+                    <w:sz w:val="24"/>
+                    <w:szCs w:val="24"/>
+                </w:rPr>
+            </w:pPr>
+            <w:r>
+                <w:rPr>
+                    <w:rFonts w:ascii="Roboto" w:eastAsia="Roboto" w:hAnsi="Roboto" w:cs="Roboto"/>
+                    <w:color w:val="0F0F0F"/>
+                    <w:sz w:val="24"/>
+                    <w:szCs w:val="24"/>
+                </w:rPr>
+                <w:t>En el siguiente documento se reflejan las estaciones registradas para el cliente Axioma Robotics.</w:t>
+            </w:r>
+        </w:p>
+        <w:p w:rsidR="00CF7287" w:rsidRDefault="00CF7287">
+            <w:pPr>
+                <w:spacing w:after="0" w:line="240" w:lineRule="auto"/>
+                <w:jc w:val="both"/>
+                <w:rPr>
+                    <w:rFonts w:ascii="Roboto" w:eastAsia="Roboto" w:hAnsi="Roboto" w:cs="Roboto"/>
+                    <w:color w:val="0F0F0F"/>
+                    <w:sz w:val="24"/>
+                    <w:szCs w:val="24"/>
+                </w:rPr>
+            </w:pPr>
+            <w:bookmarkStart w:id="0" w:name="_GoBack"/>
+            <w:bookmarkEnd w:id="0"/>
+        </w:p>
+        <w:p w:rsidR="00A100B9" w:rsidRDefault="00A100B9">
+            <w:pPr>
+                <w:spacing w:after="0" w:line="240" w:lineRule="auto"/>
+                <w:jc w:val="both"/>
+                <w:rPr>
+                    <w:rFonts w:ascii="Roboto" w:eastAsia="Roboto" w:hAnsi="Roboto" w:cs="Roboto"/>
+                    <w:color w:val="0F0F0F"/>
+                    <w:sz w:val="24"/>
+                    <w:szCs w:val="24"/>
+                </w:rPr>
+            </w:pPr>
+        </w:p>
+        <w:p w:rsidR="00CF7287" w:rsidRDefault="00A100B9">
+            <w:pPr>
+                <w:spacing w:after="0" w:line="240" w:lineRule="auto"/>
+                <w:jc w:val="center"/>
+                <w:rPr>
+                    <w:rFonts w:ascii="Roboto" w:eastAsia="Roboto" w:hAnsi="Roboto" w:cs="Roboto"/>
+                    <w:b/>
+                    <w:color w:val="0F0F0F"/>
+                    <w:sz w:val="24"/>
+                    <w:szCs w:val="24"/>
+                </w:rPr>
+            </w:pPr>
+            <w:r>
+                <w:rPr>
+                    <w:rFonts w:ascii="Roboto" w:eastAsia="Roboto" w:hAnsi="Roboto" w:cs="Roboto"/>
+                    <w:b/>
+                    <w:color w:val="0F0F0F"/>
+                    <w:sz w:val="24"/>
+                    <w:szCs w:val="24"/>
+                </w:rPr>
+                <w:t>Estaciones de Roedores</w:t>
+            </w:r>
+        </w:p>
+        <w:p w:rsidR="00CF7287" w:rsidRDefault="00CF7287">
+            <w:pPr>
+                <w:spacing w:after="0" w:line="240" w:lineRule="auto"/>
+                <w:jc w:val="both"/>
+                <w:rPr>
+                    <w:rFonts w:ascii="Roboto" w:eastAsia="Roboto" w:hAnsi="Roboto" w:cs="Roboto"/>
+                    <w:color w:val="0F0F0F"/>
+                    <w:sz w:val="24"/>
+                    <w:szCs w:val="24"/>
+                </w:rPr>
+            </w:pPr>
+        </w:p>
+        <w:tbl>
+            <w:tr w:rsidR="00CF7287">
+                <w:tc>
+                    <w:tcPr>
+                        <w:tcW w:w="4677" w:type="dxa"/>
+                        <w:shd w:val="clear" w:color="auto" w:fill="auto"/>
+                        <w:tcMar>
+                            <w:top w:w="100" w:type="dxa"/>
+                            <w:left w:w="100" w:type="dxa"/>
+                            <w:bottom w:w="100" w:type="dxa"/>
+                            <w:right w:w="100" w:type="dxa"/>
+                        </w:tcMar>
+                        <w:tcBorders>
+                            <w:top w:val="single" w:sz="4" w:space="0" w:color="auto"/>
+                            <w:bottom w:val="single" w:sz="4" w:space="0" w:color="auto"/>
+                            <w:left w:val="single" w:sz="4" w:space="0" w:color="auto"/>
+                            <w:right w:val="single" w:sz="4" w:space="0" w:color="auto"/>
+                        </w:tcBorders>
+                    </w:tcPr>
+                    <w:p w:rsidR="00CF7287" w:rsidRDefault="0063029C" w:rsidP="00A100B9">
+                        <w:pPr>
+                            <w:widowControl w:val="0"/>
+                            <w:pBdr>
+                                <w:top w:val="nil"/>
+                                <w:left w:val="nil"/>
+                                <w:bottom w:val="nil"/>
+                                <w:right w:val="nil"/>
+                                <w:between w:val="nil"/>
+                            </w:pBdr>
+                            <w:spacing w:after="0" w:line="240" w:lineRule="auto"/>
+                            <w:jc w:val="center"/>
+                            <w:rPr>
+                                <w:rFonts w:ascii="Roboto" w:eastAsia="Roboto" w:hAnsi="Roboto" w:cs="Roboto"/>
+                                <w:color w:val="0F0F0F"/>
+                                <w:sz w:val="24"/>
+                                <w:szCs w:val="24"/>
+                            </w:rPr>
+                        </w:pPr>
+                        <w:r>
+                            <w:rPr>
+                                <w:rFonts w:ascii="Roboto" w:eastAsia="Roboto" w:hAnsi="Roboto" w:cs="Roboto"/>
+                                <w:color w:val="0F0F0F"/>
+                                <w:sz w:val="24"/>
+                                <w:szCs w:val="24"/>
+                            </w:rPr>
+                            <w:t>Descripción</w:t>
+                        </w:r>
+                        <w:r w:rsidR="00A100B9">
+                            <w:rPr>
+                                <w:rFonts w:ascii="Roboto" w:eastAsia="Roboto" w:hAnsi="Roboto" w:cs="Roboto"/>
+                                <w:color w:val="0F0F0F"/>
+                                <w:sz w:val="24"/>
+                                <w:szCs w:val="24"/>
+                            </w:rPr>
+                            <w:t xml:space="preserve"> Roedores</w:t>
+                        </w:r>
+                    </w:p>
+                </w:tc>
+                <w:tc>
+                    <w:tcPr>
+                        <w:tcW w:w="4677" w:type="dxa"/>
+                        <w:shd w:val="clear" w:color="auto" w:fill="auto"/>
+                        <w:tcMar>
+                            <w:top w:w="100" w:type="dxa"/>
+                            <w:left w:w="100" w:type="dxa"/>
+                            <w:bottom w:w="100" w:type="dxa"/>
+                            <w:right w:w="100" w:type="dxa"/>
+                        </w:tcMar>
+                        <w:tcBorders>
+                            <w:top w:val="single" w:sz="4" w:space="0" w:color="auto"/>
+                            <w:bottom w:val="single" w:sz="4" w:space="0" w:color="auto"/>
+                            <w:left w:val="single" w:sz="4" w:space="0" w:color="auto"/>
+                            <w:right w:val="single" w:sz="4" w:space="0" w:color="auto"/>
+                        </w:tcBorders>
+                    </w:tcPr>
+                    <w:p w:rsidR="00CF7287" w:rsidRDefault="00A100B9">
+                        <w:pPr>
+                            <w:widowControl w:val="0"/>
+                            <w:pBdr>
+                                <w:top w:val="nil"/>
+                                <w:left w:val="nil"/>
+                                <w:bottom w:val="nil"/>
+                                <w:right w:val="nil"/>
+                                <w:between w:val="nil"/>
+                            </w:pBdr>
+                            <w:spacing w:after="0" w:line="240" w:lineRule="auto"/>
+                            <w:jc w:val="center"/>
+                            <w:rPr>
+                                <w:rFonts w:ascii="Roboto" w:eastAsia="Roboto" w:hAnsi="Roboto" w:cs="Roboto"/>
+                                <w:color w:val="0F0F0F"/>
+                                <w:sz w:val="24"/>
+                                <w:szCs w:val="24"/>
+                            </w:rPr>
+                        </w:pPr>
+                        <w:r>
+                            <w:rPr>
+                                <w:rFonts w:ascii="Roboto" w:eastAsia="Roboto" w:hAnsi="Roboto" w:cs="Roboto"/>
+                                <w:color w:val="0F0F0F"/>
+                                <w:sz w:val="24"/>
+                                <w:szCs w:val="24"/>
+                            </w:rPr>
+                            <w:t>QR</w:t>
+                        </w:r>
+                    </w:p>
+                </w:tc>
+            </w:tr>
+            <w:tr>
+                <w:tc>
+                    <w:tcPr>
+                        <w:tcBorders>
+                            <w:top w:val="single" w:sz="4" w:space="0" w:color="auto"/>
+                            <w:bottom w:val="single" w:sz="4" w:space="0" w:color="auto"/>
+                            <w:left w:val="single" w:sz="4" w:space="0" w:color="auto"/>
+                            <w:right w:val="single" w:sz="4" w:space="0" w:color="auto"/>
+                        </w:tcBorders>
+                    </w:tcPr>
+                    <w:p>
+                        <w:pPr>
+                            <w:spacing w:before="150"/>
+                        </w:pPr>
+                        <w:r>
+                            <w:t>1</w:t>
+                        </w:r>
+                    </w:p>
+                </w:tc>
+                <w:tc>
+                    <w:tcPr>
+                        <w:tcBorders>
+                            <w:top w:val="single" w:sz="4" w:space="0" w:color="auto"/>
+                            <w:bottom w:val="single" w:sz="4" w:space="0" w:color="auto"/>
+                            <w:left w:val="single" w:sz="4" w:space="0" w:color="auto"/>
+                            <w:right w:val="single" w:sz="4" w:space="0" w:color="auto"/>
+                        </w:tcBorders>
+                    </w:tcPr>
+                    <w:p>
+                        <w:pPr>
+                            <w:spacing w:before="150"/>
+                        </w:pPr>
+                        <w:r>
+                            <w:drawing>
+                                <wp:inline>
+                                    <wp:extent cx="2806200" cy="2806200"/>
+                                    <wp:docPr id="10" name="Picture 1734625616826.png"/>
+                                    <a:graphic>
+                                        <a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture">
+                                            <pic:pic>
+                                                <pic:nvPicPr>
+                                                    <pic:cNvPr id="0" name="Picture 1734625616826.png"/>
+                                                    <pic:cNvPicPr/>
+                                                </pic:nvPicPr>
+                                                <pic:blipFill>
+                                                    <a:blip r:embed="rId10"/>
+                                                    <a:stretch>
+                                                        <a:fillRect/>
+                                                    </a:stretch>
+                                                </pic:blipFill>
+                                                <pic:spPr>
+                                                    <a:xfrm>
+                                                        <a:off x="0" y="0"/>
+                                                        <a:ext cx="2806200" cy="2806200"/>
+                                                    </a:xfrm>
+                                                    <a:prstGeom prst="rect">
+                                                        <a:avLst/>
+                                                    </a:prstGeom>
+                                                </pic:spPr>
+                                            </pic:pic>
+                                        </a:graphicData>
+                                    </a:graphic>
+                                </wp:inline>
+                            </w:drawing>
+                        </w:r>
+                    </w:p>
+                </w:tc>
+            </w:tr>
+            <w:tr>
+                <w:tc>
+                    <w:tcPr>
+                        <w:tcBorders>
+                            <w:top w:val="single" w:sz="4" w:space="0" w:color="auto"/>
+                            <w:bottom w:val="single" w:sz="4" w:space="0" w:color="auto"/>
+                            <w:left w:val="single" w:sz="4" w:space="0" w:color="auto"/>
+                            <w:right w:val="single" w:sz="4" w:space="0" w:color="auto"/>
+                        </w:tcBorders>
+                    </w:tcPr>
+                    <w:p>
+                        <w:pPr>
+                            <w:spacing w:before="150"/>
+                        </w:pPr>
+                        <w:r>
+                            <w:t>2</w:t>
+                        </w:r>
+                    </w:p>
+                </w:tc>
+                <w:tc>
+                    <w:tcPr>
+                        <w:tcBorders>
+                            <w:top w:val="single" w:sz="4" w:space="0" w:color="auto"/>
+                            <w:bottom w:val="single" w:sz="4" w:space="0" w:color="auto"/>
+                            <w:left w:val="single" w:sz="4" w:space="0" w:color="auto"/>
+                            <w:right w:val="single" w:sz="4" w:space="0" w:color="auto"/>
+                        </w:tcBorders>
+                    </w:tcPr>
+                    <w:p>
+                        <w:pPr>
+                            <w:spacing w:before="150"/>
+                        </w:pPr>
+                        <w:r>
+                            <w:drawing>
+                                <wp:inline>
+                                    <wp:extent cx="2806200" cy="2806200"/>
+                                    <wp:docPr id="11" name="Picture 1734625617132.png"/>
+                                    <a:graphic>
+                                        <a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture">
+                                            <pic:pic>
+                                                <pic:nvPicPr>
+                                                    <pic:cNvPr id="0" name="Picture 1734625617132.png"/>
+                                                    <pic:cNvPicPr/>
+                                                </pic:nvPicPr>
+                                                <pic:blipFill>
+                                                    <a:blip r:embed="rId11"/>
+                                                    <a:stretch>
+                                                        <a:fillRect/>
+                                                    </a:stretch>
+                                                </pic:blipFill>
+                                                <pic:spPr>
+                                                    <a:xfrm>
+                                                        <a:off x="0" y="0"/>
+                                                        <a:ext cx="2806200" cy="2806200"/>
+                                                    </a:xfrm>
+                                                    <a:prstGeom prst="rect">
+                                                        <a:avLst/>
+                                                    </a:prstGeom>
+                                                </pic:spPr>
+                                            </pic:pic>
+                                        </a:graphicData>
+                                    </a:graphic>
+                                </wp:inline>
+                            </w:drawing>
+                        </w:r>
+                    </w:p>
+                </w:tc>
+            </w:tr>
+        </w:tbl>
+        <w:p w:rsidR="00CF7287" w:rsidRDefault="00CF7287">
+            <w:pPr>
+                <w:spacing w:after="0" w:line="240" w:lineRule="auto"/>
+                <w:jc w:val="both"/>
+                <w:rPr>
+                    <w:rFonts w:ascii="Roboto" w:eastAsia="Roboto" w:hAnsi="Roboto" w:cs="Roboto"/>
+                    <w:color w:val="0F0F0F"/>
+                    <w:sz w:val="24"/>
+                    <w:szCs w:val="24"/>
+                </w:rPr>
+            </w:pPr>
+        </w:p>
+        <w:p w:rsidR="00A100B9" w:rsidRDefault="00A100B9">
+            <w:pPr>
+                <w:spacing w:after="0" w:line="240" w:lineRule="auto"/>
+                <w:jc w:val="both"/>
+                <w:rPr>
+                    <w:rFonts w:ascii="Roboto" w:eastAsia="Roboto" w:hAnsi="Roboto" w:cs="Roboto"/>
+                    <w:color w:val="0F0F0F"/>
+                    <w:sz w:val="24"/>
+                    <w:szCs w:val="24"/>
+                </w:rPr>
+            </w:pPr>
+        </w:p>
+        <w:p w:rsidR="00A100B9" w:rsidRDefault="00A100B9" w:rsidP="00A100B9">
+            <w:pPr>
+                <w:spacing w:after="0" w:line="240" w:lineRule="auto"/>
+                <w:jc w:val="center"/>
+                <w:rPr>
+                    <w:rFonts w:ascii="Roboto" w:eastAsia="Roboto" w:hAnsi="Roboto" w:cs="Roboto"/>
+                    <w:b/>
+                    <w:color w:val="0F0F0F"/>
+                    <w:sz w:val="24"/>
+                    <w:szCs w:val="24"/>
+                </w:rPr>
+            </w:pPr>
+            <w:r>
+                <w:rPr>
+                    <w:rFonts w:ascii="Roboto" w:eastAsia="Roboto" w:hAnsi="Roboto" w:cs="Roboto"/>
+                    <w:b/>
+                    <w:color w:val="0F0F0F"/>
+                    <w:sz w:val="24"/>
+                    <w:szCs w:val="24"/>
+                </w:rPr>
+                <w:t xml:space="preserve">Estaciones de </w:t>
+            </w:r>
+            <w:r>
+                <w:rPr>
+                    <w:rFonts w:ascii="Roboto" w:eastAsia="Roboto" w:hAnsi="Roboto" w:cs="Roboto"/>
+                    <w:b/>
+                    <w:color w:val="0F0F0F"/>
+                    <w:sz w:val="24"/>
+                    <w:szCs w:val="24"/>
+                </w:rPr>
+                <w:t>Aéreas</w:t>
+            </w:r>
+        </w:p>
+        <w:p w:rsidR="00A100B9" w:rsidRDefault="00A100B9" w:rsidP="00A100B9">
+            <w:pPr>
+                <w:spacing w:after="0" w:line="240" w:lineRule="auto"/>
+                <w:jc w:val="both"/>
+                <w:rPr>
+                    <w:rFonts w:ascii="Roboto" w:eastAsia="Roboto" w:hAnsi="Roboto" w:cs="Roboto"/>
+                    <w:color w:val="0F0F0F"/>
+                    <w:sz w:val="24"/>
+                    <w:szCs w:val="24"/>
+                </w:rPr>
+            </w:pPr>
+        </w:p>
+        <w:tbl>
+            <w:tr w:rsidR="00A100B9" w:rsidTr="00D54F57">
+                <w:tc>
+                    <w:tcPr>
+                        <w:tcW w:w="4677" w:type="dxa"/>
+                        <w:shd w:val="clear" w:color="auto" w:fill="auto"/>
+                        <w:tcMar>
+                            <w:top w:w="100" w:type="dxa"/>
+                            <w:left w:w="100" w:type="dxa"/>
+                            <w:bottom w:w="100" w:type="dxa"/>
+                            <w:right w:w="100" w:type="dxa"/>
+                        </w:tcMar>
+                        <w:tcBorders>
+                            <w:top w:val="single" w:sz="4" w:space="0" w:color="auto"/>
+                            <w:bottom w:val="single" w:sz="4" w:space="0" w:color="auto"/>
+                            <w:left w:val="single" w:sz="4" w:space="0" w:color="auto"/>
+                            <w:right w:val="single" w:sz="4" w:space="0" w:color="auto"/>
+                        </w:tcBorders>
+                    </w:tcPr>
+                    <w:p w:rsidR="00A100B9" w:rsidRDefault="00A100B9" w:rsidP="00D54F57">
+                        <w:pPr>
+                            <w:widowControl w:val="0"/>
+                            <w:pBdr>
+                                <w:top w:val="nil"/>
+                                <w:left w:val="nil"/>
+                                <w:bottom w:val="nil"/>
+                                <w:right w:val="nil"/>
+                                <w:between w:val="nil"/>
+                            </w:pBdr>
+                            <w:spacing w:after="0" w:line="240" w:lineRule="auto"/>
+                            <w:jc w:val="center"/>
+                            <w:rPr>
+                                <w:rFonts w:ascii="Roboto" w:eastAsia="Roboto" w:hAnsi="Roboto" w:cs="Roboto"/>
+                                <w:color w:val="0F0F0F"/>
+                                <w:sz w:val="24"/>
+                                <w:szCs w:val="24"/>
+                            </w:rPr>
+                        </w:pPr>
+                        <w:r>
+                            <w:rPr>
+                                <w:rFonts w:ascii="Roboto" w:eastAsia="Roboto" w:hAnsi="Roboto" w:cs="Roboto"/>
+                                <w:color w:val="0F0F0F"/>
+                                <w:sz w:val="24"/>
+                                <w:szCs w:val="24"/>
+                            </w:rPr>
+                            <w:t>Descripción Aéreas</w:t>
+                        </w:r>
+                    </w:p>
+                </w:tc>
+                <w:tc>
+                    <w:tcPr>
+                        <w:tcW w:w="4677" w:type="dxa"/>
+                        <w:shd w:val="clear" w:color="auto" w:fill="auto"/>
+                        <w:tcMar>
+                            <w:top w:w="100" w:type="dxa"/>
+                            <w:left w:w="100" w:type="dxa"/>
+                            <w:bottom w:w="100" w:type="dxa"/>
+                            <w:right w:w="100" w:type="dxa"/>
+                        </w:tcMar>
+                        <w:tcBorders>
+                            <w:top w:val="single" w:sz="4" w:space="0" w:color="auto"/>
+                            <w:bottom w:val="single" w:sz="4" w:space="0" w:color="auto"/>
+                            <w:left w:val="single" w:sz="4" w:space="0" w:color="auto"/>
+                            <w:right w:val="single" w:sz="4" w:space="0" w:color="auto"/>
+                        </w:tcBorders>
+                    </w:tcPr>
+                    <w:p w:rsidR="00A100B9" w:rsidRDefault="00A100B9" w:rsidP="00D54F57">
+                        <w:pPr>
+                            <w:widowControl w:val="0"/>
+                            <w:pBdr>
+                                <w:top w:val="nil"/>
+                                <w:left w:val="nil"/>
+                                <w:bottom w:val="nil"/>
+                                <w:right w:val="nil"/>
+                                <w:between w:val="nil"/>
+                            </w:pBdr>
+                            <w:spacing w:after="0" w:line="240" w:lineRule="auto"/>
+                            <w:jc w:val="center"/>
+                            <w:rPr>
+                                <w:rFonts w:ascii="Roboto" w:eastAsia="Roboto" w:hAnsi="Roboto" w:cs="Roboto"/>
+                                <w:color w:val="0F0F0F"/>
+                                <w:sz w:val="24"/>
+                                <w:szCs w:val="24"/>
+                            </w:rPr>
+                        </w:pPr>
+                        <w:r>
+                            <w:rPr>
+                                <w:rFonts w:ascii="Roboto" w:eastAsia="Roboto" w:hAnsi="Roboto" w:cs="Roboto"/>
+                                <w:color w:val="0F0F0F"/>
+                                <w:sz w:val="24"/>
+                                <w:szCs w:val="24"/>
+                            </w:rPr>
+                            <w:t>QR</w:t>
+                        </w:r>
+                    </w:p>
+                </w:tc>
+            </w:tr>
+            <w:tr>
+                <w:tc>
+                    <w:tcPr>
+                        <w:tcBorders>
+                            <w:top w:val="single" w:sz="4" w:space="0" w:color="auto"/>
+                            <w:bottom w:val="single" w:sz="4" w:space="0" w:color="auto"/>
+                            <w:left w:val="single" w:sz="4" w:space="0" w:color="auto"/>
+                            <w:right w:val="single" w:sz="4" w:space="0" w:color="auto"/>
+                        </w:tcBorders>
+                    </w:tcPr>
+                    <w:p>
+                        <w:pPr>
+                            <w:spacing w:before="150"/>
+                        </w:pPr>
+                        <w:r>
+                            <w:t>1</w:t>
+                        </w:r>
+                    </w:p>
+                </w:tc>
+                <w:tc>
+                    <w:tcPr>
+                        <w:tcBorders>
+                            <w:top w:val="single" w:sz="4" w:space="0" w:color="auto"/>
+                            <w:bottom w:val="single" w:sz="4" w:space="0" w:color="auto"/>
+                            <w:left w:val="single" w:sz="4" w:space="0" w:color="auto"/>
+                            <w:right w:val="single" w:sz="4" w:space="0" w:color="auto"/>
+                        </w:tcBorders>
+                    </w:tcPr>
+                    <w:p>
+                        <w:pPr>
+                            <w:spacing w:before="150"/>
+                        </w:pPr>
+                        <w:r>
+                            <w:drawing>
+                                <wp:inline>
+                                    <wp:extent cx="2806200" cy="2806200"/>
+                                    <wp:docPr id="12" name="Picture 1734625617478.png"/>
+                                    <a:graphic>
+                                        <a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture">
+                                            <pic:pic>
+                                                <pic:nvPicPr>
+                                                    <pic:cNvPr id="0" name="Picture 1734625617478.png"/>
+                                                    <pic:cNvPicPr/>
+                                                </pic:nvPicPr>
+                                                <pic:blipFill>
+                                                    <a:blip r:embed="rId12"/>
+                                                    <a:stretch>
+                                                        <a:fillRect/>
+                                                    </a:stretch>
+                                                </pic:blipFill>
+                                                <pic:spPr>
+                                                    <a:xfrm>
+                                                        <a:off x="0" y="0"/>
+                                                        <a:ext cx="2806200" cy="2806200"/>
+                                                    </a:xfrm>
+                                                    <a:prstGeom prst="rect">
+                                                        <a:avLst/>
+                                                    </a:prstGeom>
+                                                </pic:spPr>
+                                            </pic:pic>
+                                        </a:graphicData>
+                                    </a:graphic>
+                                </wp:inline>
+                            </w:drawing>
+                        </w:r>
+                    </w:p>
+                </w:tc>
+            </w:tr>
+            <w:tr>
+                <w:tc>
+                    <w:tcPr>
+                        <w:tcBorders>
+                            <w:top w:val="single" w:sz="4" w:space="0" w:color="auto"/>
+                            <w:bottom w:val="single" w:sz="4" w:space="0" w:color="auto"/>
+                            <w:left w:val="single" w:sz="4" w:space="0" w:color="auto"/>
+                            <w:right w:val="single" w:sz="4" w:space="0" w:color="auto"/>
+                        </w:tcBorders>
+                    </w:tcPr>
+                    <w:p>
+                        <w:pPr>
+                            <w:spacing w:before="150"/>
+                        </w:pPr>
+                        <w:r>
+                            <w:t>2</w:t>
+                        </w:r>
+                    </w:p>
+                </w:tc>
+                <w:tc>
+                    <w:tcPr>
+                        <w:tcBorders>
+                            <w:top w:val="single" w:sz="4" w:space="0" w:color="auto"/>
+                            <w:bottom w:val="single" w:sz="4" w:space="0" w:color="auto"/>
+                            <w:left w:val="single" w:sz="4" w:space="0" w:color="auto"/>
+                            <w:right w:val="single" w:sz="4" w:space="0" w:color="auto"/>
+                        </w:tcBorders>
+                    </w:tcPr>
+                    <w:p>
+                        <w:pPr>
+                            <w:spacing w:before="150"/>
+                        </w:pPr>
+                        <w:r>
+                            <w:drawing>
+                                <wp:inline>
+                                    <wp:extent cx="2806200" cy="2806200"/>
+                                    <wp:docPr id="13" name="Picture 1734625617786.png"/>
+                                    <a:graphic>
+                                        <a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture">
+                                            <pic:pic>
+                                                <pic:nvPicPr>
+                                                    <pic:cNvPr id="0" name="Picture 1734625617786.png"/>
+                                                    <pic:cNvPicPr/>
+                                                </pic:nvPicPr>
+                                                <pic:blipFill>
+                                                    <a:blip r:embed="rId13"/>
+                                                    <a:stretch>
+                                                        <a:fillRect/>
+                                                    </a:stretch>
+                                                </pic:blipFill>
+                                                <pic:spPr>
+                                                    <a:xfrm>
+                                                        <a:off x="0" y="0"/>
+                                                        <a:ext cx="2806200" cy="2806200"/>
+                                                    </a:xfrm>
+                                                    <a:prstGeom prst="rect">
+                                                        <a:avLst/>
+                                                    </a:prstGeom>
+                                                </pic:spPr>
+                                            </pic:pic>
+                                        </a:graphicData>
+                                    </a:graphic>
+                                </wp:inline>
+                            </w:drawing>
+                        </w:r>
+                    </w:p>
+                </w:tc>
+            </w:tr>
+        </w:tbl>
+        <w:p w:rsidR="00A100B9" w:rsidRDefault="00A100B9" w:rsidP="00A100B9">
+            <w:pPr>
+                <w:spacing w:after="0" w:line="240" w:lineRule="auto"/>
+                <w:jc w:val="both"/>
+                <w:rPr>
+                    <w:rFonts w:ascii="Roboto" w:eastAsia="Roboto" w:hAnsi="Roboto" w:cs="Roboto"/>
+                    <w:color w:val="0F0F0F"/>
+                    <w:sz w:val="24"/>
+                    <w:szCs w:val="24"/>
+                </w:rPr>
+            </w:pPr>
+        </w:p>
+        <w:p w:rsidR="00CF7287" w:rsidRDefault="00CF7287">
+            <w:pPr>
+                <w:spacing w:after="0" w:line="240" w:lineRule="auto"/>
+                <w:jc w:val="both"/>
+                <w:rPr>
+                    <w:rFonts w:ascii="Arial" w:eastAsia="Arial" w:hAnsi="Arial" w:cs="Arial"/>
+                </w:rPr>
+            </w:pPr>
+        </w:p>
+        <w:sectPr w:rsidR="00CF7287">
+            <w:headerReference w:type="default" r:id="rId6"/>
+            <w:footerReference w:type="default" r:id="rId7"/>
+            <w:pgSz w:w="12240" w:h="15840"/>
+            <w:pgMar w:top="1417" w:right="1467" w:bottom="1417" w:left="1418" w:header="708" w:footer="708" w:gutter="0"/>
+            <w:pgNumType w:start="1"/>
+            <w:cols w:space="720"/>
+        </w:sectPr>
+    </w:body>
+</w:document>

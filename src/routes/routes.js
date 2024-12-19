@@ -8,6 +8,11 @@ const path = require('path');
 const router = express.Router();
 const pool = require('../config/dbConfig');
 const { v4: uuidv4 } = require('uuid');
+const PizZip = require('pizzip');
+const { xml2js, js2xml } = require('xml-js');
+const Docxtemplater = require('docxtemplater');
+const mammoth = require('mammoth');
+const vm = require('vm');
 const QRCode = require('qrcode');
 const { uploadFile, getSignedUrl, deleteObject  } = require('../config/s3Service');
 
@@ -1121,7 +1126,30 @@ router.delete('/service-schedule/:id', async (req, res) => {
 router.get('/stations', async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM stations');
-    res.json(result.rows);
+    const stations = result.rows;
+
+    // Generar URLs prefirmadas solo si qr_code es válido
+    for (let station of stations) {
+      if (station.qr_code && station.qr_code.includes('.amazonaws.com/')) {
+        const bucketName = 'fumiplagax';
+        const key = station.qr_code.split('.amazonaws.com/')[1];
+
+        if (key) {
+          try {
+            station.qr_code = await getSignedUrl(bucketName, key);
+          } catch (urlError) {
+            console.warn(`Failed to generate signed URL for station ID ${station.id}:`, urlError);
+            station.qr_code = null; // En caso de error, se asigna null
+          }
+        } else {
+          station.qr_code = null; // Si la clave no es válida
+        }
+      } else {
+        station.qr_code = null; // Si no existe qr_code o está mal formado
+      }
+    }
+
+    res.json(stations);
   } catch (error) {
     console.error("Error fetching stations:", error);
     res.status(500).json({ success: false, message: "Server error" });
@@ -1136,7 +1164,29 @@ router.get('/stations/:id', async (req, res) => {
     if (result.rows.length === 0) {
       return res.status(404).json({ success: false, message: "Station not found" });
     }
-    res.json(result.rows[0]);
+
+    const station = result.rows[0];
+
+    // Generar URL prefirmada solo si qr_code es válido
+    if (station.qr_code && station.qr_code.includes('.amazonaws.com/')) {
+      const bucketName = 'fumiplagax';
+      const key = station.qr_code.split('.amazonaws.com/')[1];
+
+      if (key) {
+        try {
+          station.qr_code = await getSignedUrl(bucketName, key);
+        } catch (urlError) {
+          console.warn(`Failed to generate signed URL for station ID ${station.id}:`, urlError);
+          station.qr_code = null; // En caso de error, se asigna null
+        }
+      } else {
+        station.qr_code = null; // Si la clave no es válida
+      }
+    } else {
+      station.qr_code = null; // Si no existe qr_code o está mal formado
+    }
+
+    res.json(station);
   } catch (error) {
     console.error("Error fetching station:", error);
     res.status(500).json({ success: false, message: "Server error" });
@@ -1158,30 +1208,26 @@ router.post('/stations', async (req, res) => {
     const station = result.rows[0]; // Obtener la estación creada
     const stationId = station.id;
 
-    // Generar el código QR basado en el ID de la estación
-    const qrData = qr_code || `Station-${stationId}`; // Usa el qr_code proporcionado o genera uno único
-    const qrPath = path.join(__dirname, '..', '..', 'public', 'media', 'stations');
-    const qrFilename = `${Date.now()}-${Math.round(Math.random() * 1E9)}.png`;
-    const qrFullPath = path.join(qrPath, qrFilename);
+    // Generar el código QR en memoria
+    const qrData = qr_code || `Station-${stationId}`;
+    const qrBuffer = await QRCode.toBuffer(qrData, { width: 300 });
 
-    // Asegúrate de que el directorio exista
-    if (!fs.existsSync(qrPath)) {
-      fs.mkdirSync(qrPath, { recursive: true });
-    }
+    // Subir el archivo QR a S3
+    const bucketName = 'fumiplagax'; // Tu bucket S3
+    const key = `stations/${Date.now()}-${uuidv4()}.png`;
 
-    // Generar y guardar la imagen del QR
-    await QRCode.toFile(qrFullPath, qrData, { width: 300 });
+    const uploadResult = await uploadFile(bucketName, key, qrBuffer);
+    const qrUrl = uploadResult.Location; // URL pública de S3
 
-    // Guardar el QR como una URL relativa en la base de datos
-    const qrUrl = `/media/stations/${qrFilename}`;
-
-    const updateQuery = `
-      UPDATE stations SET qr_code = $1 WHERE id = $2
-    `;
+    // Actualizar la base de datos con la URL del QR
+    const updateQuery = `UPDATE stations SET qr_code = $1 WHERE id = $2`;
     await pool.query(updateQuery, [qrUrl, stationId]);
 
-    // Añadir la URL del QR al objeto estación
-    station.qr_code = qrUrl;
+    // Generar URL prefirmada del QR
+    const preSignedUrl = await getSignedUrl(bucketName, key);
+
+    // Añadir la URL prefirmada al objeto estación
+    station.qr_code = preSignedUrl;
 
     // Responder al frontend con toda la información de la estación
     res.status(201).json({ success: true, station });
@@ -1195,22 +1241,29 @@ router.post('/stations', async (req, res) => {
 // Actualizar una estación existente
 router.put('/stations/:id', async (req, res) => {
   const { id } = req.params;
-  const { description, category, type, control_method, client_id, qr_code } = req.body;
+  const { description, category, type, control_method, client_id } = req.body;
 
   try {
     const query = `
       UPDATE stations
-      SET description = $1, category = $2, type = $3, control_method = $4, client_id = $5, qr_code = $6
-      WHERE id = $7 RETURNING *
+      SET description = $1, category = $2, type = $3, control_method = $4, client_id = $5
+      WHERE id = $6 RETURNING *
     `;
-    const values = [description, category, type, control_method, client_id, qr_code, id];
+    const values = [description, category, type, control_method, client_id, id];
     const result = await pool.query(query, values);
 
     if (result.rows.length === 0) {
       return res.status(404).json({ success: false, message: "Station not found" });
     }
 
-    res.json({ success: true, message: "Station updated successfully", station: result.rows[0] });
+    const station = result.rows[0];
+    if (station.qr_code) {
+      const bucketName = 'fumiplagax';
+      const key = station.qr_code.split('.amazonaws.com/')[1];
+      station.qr_code = await getSignedUrl(bucketName, key);
+    }
+
+    res.json({ success: true, message: "Station updated successfully", station });
   } catch (error) {
     console.error("Error updating station:", error);
     res.status(500).json({ success: false, message: "Server error" });
@@ -1246,7 +1299,27 @@ router.get('/stations/client/:client_id', async (req, res) => {
       return res.status(404).json({ success: false, message: "No stations found for the specified client" });
     }
 
-    res.json(result.rows);
+    const stations = result.rows;
+
+    // Generar URLs prefirmadas solo si hay una clave válida en qr_code
+    for (let station of stations) {
+      if (station.qr_code && station.qr_code.includes('.amazonaws.com/')) {
+        const bucketName = 'fumiplagax';
+        const keyParts = station.qr_code.split('.amazonaws.com/'); // Extraer clave
+        const key = keyParts[1] || null;
+
+        if (key) {
+          station.qr_code = await getSignedUrl(bucketName, key);
+        } else {
+          console.warn(`Invalid QR Code URL format for station ID ${station.id}`);
+          station.qr_code = null;
+        }
+      } else {
+        station.qr_code = null; // Si no existe, establecer como null
+      }
+    }
+
+    res.json(stations);
   } catch (error) {
     console.error("Error fetching stations by client_id:", error);
     res.status(500).json({ success: false, message: "Server error" });
@@ -1736,6 +1809,995 @@ router.delete('/billing/:id', async (req, res) => {
       message: "Error en el servidor",
       error: error.message,
     });
+  }
+});
+
+const templateFilter = (req, file, cb) => {
+  if (file.mimetype === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
+    cb(null, true);
+  } else {
+    cb(new Error('Solo se permiten archivos .docx'));
+  }
+};
+
+const uploadDocx = multer({
+  storage,
+  templateFilter,
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10 MB límite
+}).single('file');
+
+const bucketName = 'fumiplagax';
+const templatesPath = 'documents/templates/';
+
+// Ruta para crear una nueva plantilla
+router.post('/upload-template', uploadDocx, async (req, res) => {
+  const { templateData } = req.body; // Recibimos el JSON de la plantilla
+
+  if (!req.file || !templateData) {
+    return res.status(400).json({ message: 'Faltan datos requeridos' });
+  }
+
+  try {
+    // Parsear el templateData recibido como JSON
+    const parsedTemplateData = JSON.parse(templateData);
+    const { nombrePlantilla, variables, tablas } = parsedTemplateData;
+
+    if (!nombrePlantilla || !variables || !tablas) {
+      return res.status(400).json({ message: 'Datos de la plantilla incompletos' });
+    }
+
+    // Subir el archivo a S3
+    const key = `${templatesPath}${uuidv4()}-${req.file.originalname}`;
+    const uploadResult = await uploadFile(bucketName, key, req.file.buffer);
+
+    // Guardar los datos en la base de datos
+    const query = `
+      INSERT INTO plantillas (nombre, datos, url_archivo, fecha_creacion)
+      VALUES ($1, $2, $3, NOW()) RETURNING *;
+    `;
+    const values = [
+      nombrePlantilla,
+      { variables, tablas }, // Guardamos las variables y tablas como JSON
+      uploadResult.Location,
+    ];
+
+    const result = await pool.query(query, values);
+
+    res.status(201).json({ message: 'Plantilla creada con éxito', plantilla: result.rows[0] });
+  } catch (error) {
+    console.error('Error al subir la plantilla:', error);
+    res.status(500).json({ message: 'Error al crear la plantilla' });
+  }
+});
+
+// Ruta para editar una plantilla
+router.put('/update-template/:id', uploadDocx, async (req, res) => {
+  const { id } = req.params;
+  const { nombre, templateData } = req.body;
+
+  if (!nombre || !templateData) {
+    return res.status(400).json({ message: 'Faltan datos requeridos' });
+  }
+
+  try {
+    // Obtener información previa de la plantilla
+    const query = 'SELECT url_archivo FROM plantillas WHERE id = $1';
+    const previousResult = await pool.query(query, [id]);
+
+    if (previousResult.rows.length === 0) {
+      return res.status(404).json({ message: 'Plantilla no encontrada' });
+    }
+
+    const previousUrl = previousResult.rows[0].url_archivo;
+
+    let newUrl = previousUrl;
+
+    // Si se sube un nuevo archivo, reemplazar el anterior
+    if (req.file) {
+      const previousKey = previousUrl.split('.amazonaws.com/')[1];
+      await deleteObject(bucketName, previousKey);
+
+      const key = `${templatesPath}${uuidv4()}-${req.file.originalname}`;
+      const uploadResult = await uploadFile(bucketName, key, req.file.buffer);
+      newUrl = uploadResult.Location;
+    }
+
+    // Actualizar la plantilla en la base de datos
+    const updateQuery = `
+      UPDATE plantillas SET nombre = $1, datos = $2, url_archivo = $3
+      WHERE id = $4 RETURNING *;
+    `;
+    const values = [nombre, JSON.parse(templateData), newUrl, id];
+    const result = await pool.query(updateQuery, values);
+
+    res.json({ message: 'Plantilla actualizada', plantilla: result.rows[0] });
+  } catch (error) {
+    console.error('Error al actualizar la plantilla:', error);
+    res.status(500).json({ message: 'Error al actualizar la plantilla' });
+  }
+});
+
+// Ruta para eliminar una plantilla
+router.delete('/delete-template/:id', async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    // Obtener información de la plantilla
+    const query = 'SELECT url_archivo FROM plantillas WHERE id = $1';
+    const result = await pool.query(query, [id]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: 'Plantilla no encontrada' });
+    }
+
+    const fileUrl = result.rows[0].url_archivo;
+    const fileKey = fileUrl.split('.amazonaws.com/')[1];
+
+    // Eliminar archivo de S3
+    await deleteObject(bucketName, fileKey);
+
+    // Eliminar registro de la base de datos
+    const deleteQuery = 'DELETE FROM plantillas WHERE id = $1';
+    await pool.query(deleteQuery, [id]);
+
+    res.json({ message: 'Plantilla eliminada correctamente' });
+  } catch (error) {
+    console.error('Error al eliminar la plantilla:', error);
+    res.status(500).json({ message: 'Error al eliminar la plantilla' });
+  }
+});
+
+// Ruta para obtener información de una plantilla
+router.get('/get-template/:id', async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const query = 'SELECT * FROM plantillas WHERE id = $1';
+    const result = await pool.query(query, [id]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: 'Plantilla no encontrada' });
+    }
+
+    const plantilla = result.rows[0];
+
+    // Generar URL prefirmada
+    const key = plantilla.url_archivo.split('.amazonaws.com/')[1];
+    const signedUrl = await getSignedUrl(bucketName, key);
+
+    res.json({ plantilla, signedUrl });
+  } catch (error) {
+    console.error('Error al obtener la plantilla:', error);
+    res.status(500).json({ message: 'Error al obtener la plantilla' });
+  }
+});
+
+router.get('/get-templates', async (req, res) => {
+  try {
+    const query = 'SELECT id, nombre FROM plantillas ORDER BY fecha_creacion DESC';
+    const result = await pool.query(query);
+
+    res.json({ templates: result.rows });
+  } catch (error) {
+    console.error('Error al obtener plantillas:', error);
+    res.status(500).json({ message: 'Error al obtener plantillas' });
+  }
+});
+
+// Función para transformar las entidades
+const transformEntity = (entity) => {
+  const entityMapping = {
+    cliente: 'clients',
+    servicio: 'services',
+    usuario: 'users',
+    inspección: 'inspections',
+  };
+  return entityMapping[entity] || entity;
+};
+
+// Ruta principal para almacenar configuración y código generado
+router.post('/save-configuration', async (req, res) => {
+  const { templateId, variables, tablas, entity } = req.body;
+
+  try {
+    console.log("=== Iniciando almacenamiento de configuración ===");
+
+    // Validar entradas requeridas
+    if (!entity || !templateId || !variables) {
+      return res.status(400).json({ message: "Faltan campos requeridos: 'entity', 'templateId' o 'variables'." });
+    }
+
+    // Transformar la entidad a su forma plural
+    const transformedEntity = transformEntity(entity);
+    console.log("Entidad transformada:", transformedEntity);
+
+    // Generar código dinámico
+    const generatedCode = `
+            const createDocument_${transformedEntity} = async (idEntity) => {
+              console.log("ID de la entidad recibida:", idEntity);
+
+              // Definición de valores preconfigurados
+              const entity = "${transformedEntity}";
+              const templateId = "${templateId}";
+              let variables = ${JSON.stringify(variables, null, 2)};
+              let tablas = ${JSON.stringify(tablas, null, 2)};
+
+              let defaultWidthEMU = 990000; // Ancho en EMU
+              let cellWidthEMU = defaultWidthEMU; // Variable global para el ancho de celda
+
+              const isImageUrl = (url) => {
+                const isImage = /\.(png|jpe?g|gif|bmp|webp|svg)$/i.test(url);
+                console.log(\`Verificando si "\${url}" es una URL de imagen: \${isImage}\`);
+                return isImage;
+              };
+
+
+              const addImageToDocx = async (zip, imageUrl, imageName) => {
+                const response = await fetch(imageUrl);
+                if (!response.ok) {
+                  throw new Error(\`Error al descargar la imagen: \${imageUrl}\`);
+                }
+              
+                const imageBuffer = await response.arrayBuffer();
+              
+                // Agregar la imagen al archivo ZIP en \`word/media/\`
+                zip.file(\`word/media/\${imageName}\`, Buffer.from(imageBuffer));
+              };
+              
+              const addImageRelationship = (zip, imageName) => {
+                const relsPath = "word/_rels/document.xml.rels";
+                const relationshipType = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/image";
+                let relsXml;
+              
+                // 1. Verificar si el archivo document.xml.rels existe
+                if (zip.files[relsPath]) {
+                  console.log("El archivo 'document.xml.rels' existe. Cargando contenido...");
+                  relsXml = zip.files[relsPath].asText();
+                } else {
+                  console.warn("El archivo 'document.xml.rels' no existe. Creando uno nuevo...");
+                  relsXml = \`<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"></Relationships>\`;
+                  zip.file(relsPath, relsXml);
+                }
+              
+                // 2. Obtener el ID máximo existente en el archivo de relaciones
+                const existingIds = [...relsXml.matchAll(/Id="rId(\\d+)"/g)].map((match) => parseInt(match[1], 10));
+                const maxExistingId = existingIds.length > 0 ? Math.max(...existingIds) : 0;
+                let uniqueId = \`rId\${maxExistingId + 1}\`;
+              
+                console.log(\`Generando nueva relación con ID: \${uniqueId}\`);
+              
+                // 3. Verificar si la imagen ya está referenciada
+                if (relsXml.includes(\`media/\${imageName}\`)) {
+                  console.warn(\`La relación para '\${imageName}' ya existe. No se agregará duplicado.\`);
+                  const existingIdMatch = relsXml.match(new RegExp(\`Id="(rId\\d+)"[^>]*Target="media/\${imageName}"\`));
+                  const existingId = existingIdMatch ? existingIdMatch[1] : uniqueId;
+                  return existingId; // Devolver el ID existente
+                }
+              
+                // 4. Insertar la nueva relación
+                const updatedRelsXml = relsXml.replace(
+                  "</Relationships>",
+                  \`<Relationship Id="\${uniqueId}" Type="\${relationshipType}" Target="media/\${imageName}"/></Relationships>\`
+                );
+              
+                // 5. Guardar el archivo actualizado en el ZIP
+                zip.file(relsPath, updatedRelsXml);
+                console.log(\`Nueva relación añadida para '\${imageName}' con ID '\${uniqueId}'.\`);
+              
+                return uniqueId; // Devolver el nuevo ID
+              };    
+
+              // Consultar campos dinámicos de las entidades "clients", "stations" y "client_maps"
+              if (entity === "clients") {
+                const queryClientData = 'SELECT * FROM clients WHERE id = $1';
+                const resultClientData = await pool.query(queryClientData, [idEntity]);
+
+                if (resultClientData.rows.length === 0) {
+                  throw new Error(\`No se encontró la entidad "clients" con ID: \${idEntity}\`);
+                }
+
+                const clientData = resultClientData.rows[0];
+                console.log("Datos de la entidad 'clients' obtenidos:", clientData);
+
+                const queryStationsData = 'SELECT * FROM stations WHERE client_id = $1';
+                const resultStationsData = await pool.query(queryStationsData, [idEntity]);
+                const stationsData = resultStationsData.rows.length > 0 ? resultStationsData.rows : [];
+
+                const queryClientMapsData = 'SELECT * FROM client_maps WHERE client_id = $1';
+                const resultClientMapsData = await pool.query(queryClientMapsData, [idEntity]);
+                const clientMapsData = resultClientMapsData.rows.length > 0 ? resultClientMapsData.rows : [];
+
+                console.log("Datos de la entidad 'stations' obtenidos:", stationsData);
+                console.log("Datos de la entidad 'client_maps' obtenidos:", clientMapsData);
+
+                // Función auxiliar para actualizar valores según tipo de datos
+                const updateValue = (data, field, type) => {
+                  if (data && data.hasOwnProperty(field)) {
+                    console.log(\`Valor encontrado para "\${field}" en "\${type}": \${data[field]}\`);
+                    return data[field];
+                  } else {
+                    console.warn(\`El campo "\${field}" no existe en la entidad "\${type}".\`);
+                    return "No encontrado";
+                  }
+                };
+
+                // Procesar variables
+                Object.entries(variables).forEach(([key, value]) => {
+                  if (value.startsWith("Cliente-")) {
+                    const field = value.split('-')[1];
+                    variables[key] = updateValue(clientData, field, "clients");
+                  } else if (value.startsWith("Mapas-")) {
+                    const field = value.split('-')[1];
+                    variables[key] = clientMapsData[0] ? updateValue(clientMapsData[0], field, "client_maps") : "No encontrado";
+                  } else if (value.startsWith("Estaciones Aéreas-") || value.startsWith("Estaciones Roedores-")) {
+                    const field = value.split('-')[1];
+                    variables[key] = stationsData[0] ? updateValue(stationsData[0], field, "stations") : "No encontrado";
+                  }
+                });
+
+                console.log("Variables actualizadas después de las consultas:", variables);
+
+                // Procesar tablas
+                tablas.forEach((tabla) => {
+                  console.log(\`\\n=== Procesando tabla: \${tabla.nombre} ===\`);
+                  tabla.cuerpo = tabla.cuerpo.map((row) =>
+                    row.map((field) => {
+                      if (field.startsWith("Cliente-")) {
+                        const clientField = field.split('-')[1];
+                        return updateValue(clientData, clientField, "clients");
+                      } else if (field.startsWith("Mapas-")) {
+                        const mapField = field.split('-')[1];
+                        return clientMapsData[0] ? updateValue(clientMapsData[0], mapField, "client_maps") : "No encontrado";
+                      } else if (field.startsWith("Estaciones Aéreas-") || field.startsWith("Estaciones Roedores-")) {
+                        const stationField = field.split('-')[1];
+                        return stationsData[0] ? updateValue(stationsData[0], stationField, "stations") : "No encontrado";
+                      } else {
+                        return field; // Mantener valor original si no coincide con ningún prefijo
+                      }
+                    })
+                  );
+                  console.log(\`Tabla "\${tabla.nombre}" actualizada:\`, tabla.cuerpo);
+                });
+              }
+
+              // 1. Obtener plantilla desde S3
+              console.log("Obteniendo plantilla...");
+              const queryTemplate = 'SELECT * FROM plantillas WHERE id = $1';
+              const resultTemplate = await pool.query(queryTemplate, [templateId]);
+
+              if (resultTemplate.rows.length === 0) {
+                throw new Error("Plantilla no encontrada.");
+              }
+
+              const plantilla = resultTemplate.rows[0];
+              const plantillaKey = decodeURIComponent(plantilla.url_archivo.split('.amazonaws.com/')[1]);
+              console.log("Clave decodificada de la plantilla en S3:", plantillaKey);
+
+              const signedUrl = await getSignedUrl(bucketName, plantillaKey);
+              console.log("URL firmada generada:", signedUrl);
+              const response = await fetch(signedUrl);
+              if (!response.ok) throw new Error("Error al descargar la plantilla.");
+
+              const plantillaBuffer = Buffer.from(await response.arrayBuffer());
+              const zip = new PizZip(plantillaBuffer);
+              let documentXml = zip.files['word/document.xml'].asText();
+
+              // 2. Procesar XML
+              console.log("Procesando documento XML...");
+              const parsedXml = xml2js(documentXml, { compact: false, spaces: 4 });
+
+              // Función para normalizar nodos de texto distribuidos
+              const normalizeTextNodes = (nodes) => {
+                nodes.forEach((node) => {
+                  if (node.type === 'element' && node.name === 'w:p' && Array.isArray(node.elements)) {
+                    let combinedText = '';
+                    let variableNodes = [];
+                    let isVariableOpen = false;
+
+                    node.elements.forEach((child) => {
+                      if (child.type === 'element' && child.name === 'w:r' && Array.isArray(child.elements)) {
+                        child.elements.forEach((grandchild) => {
+                          if (grandchild.type === 'element' && grandchild.name === 'w:t' && grandchild.elements) {
+                            const text = grandchild.elements[0]?.text || '';
+
+                            if (text.includes('{{')) {
+                              isVariableOpen = true;
+                              combinedText = text;
+                              variableNodes.push({ parent: child, node: grandchild });
+                            } else if (isVariableOpen) {
+                              combinedText += text;
+                              variableNodes.push({ parent: child, node: grandchild });
+
+                              if (text.includes('}}')) {
+                                isVariableOpen = false;
+
+                                const firstNode = variableNodes[0];
+                                if (firstNode) firstNode.node.elements[0].text = combinedText;
+
+                                variableNodes.slice(1).forEach(({ parent, node }) => {
+                                  const indexToRemove = parent.elements.indexOf(node);
+                                  if (indexToRemove > -1) parent.elements.splice(indexToRemove, 1);
+                                });
+
+                                combinedText = '';
+                                variableNodes = [];
+                              }
+                            }
+                          }
+                        });
+                      }
+                    });
+                  }
+
+                  if (node.elements) normalizeTextNodes(node.elements);
+                });
+              };
+
+              // Función para reemplazar variables en el documento XML
+              const replaceVariables = (nodes) => {
+                nodes.forEach((node) => {
+                  if (node.type === 'element' && node.name === 'w:t' && node.elements) {
+                    let text = node.elements[0]?.text || '';
+                    Object.entries(variables).forEach(([key, value]) => {
+                      const regex = new RegExp(\`{{\s*\${key}\s*}}\`, 'g');
+                      text = text.replace(regex, value);
+                    });
+                    text = text.replace(/{{.*?}}/g, ''); // Eliminar llaves residuales no reemplazadas
+                    node.elements[0].text = text;
+                  }
+                  if (node.elements) replaceVariables(node.elements);
+                });
+              };
+
+              // Función para crear una fila de tabla con bordes opcionales
+              const createRow = (values, withBorders = true) => ({
+                type: 'element',
+                name: 'w:tr',
+                elements: values.map((value) => ({
+                  type: 'element',
+                  name: 'w:tc',
+                  elements: [
+                    ...(withBorders
+                      ? [
+                          {
+                            type: 'element',
+                            name: 'w:tcPr',
+                            elements: [
+                              {
+                                type: 'element',
+                                name: 'w:tcBorders',
+                                elements: [
+                                  { name: 'w:top', type: 'element', attributes: { 'w:val': 'single', 'w:sz': '4', 'w:space': '0', 'w:color': 'auto' } },
+                                  { name: 'w:bottom', type: 'element', attributes: { 'w:val': 'single', 'w:sz': '4', 'w:space': '0', 'w:color': 'auto' } },
+                                  { name: 'w:left', type: 'element', attributes: { 'w:val': 'single', 'w:sz': '4', 'w:space': '0', 'w:color': 'auto' } },
+                                  { name: 'w:right', type: 'element', attributes: { 'w:val': 'single', 'w:sz': '4', 'w:space': '0', 'w:color': 'auto' } },
+                                ],
+                              },
+                            ],
+                          },
+                        ]
+                      : []),
+                    {
+                      type: 'element',
+                      name: 'w:p',
+                      elements: [
+                        {
+                          type: 'element',
+                          name: 'w:pPr', // Propiedades del párrafo
+                          elements: [
+                            {
+                              type: 'element',
+                              name: 'w:spacing',
+                              attributes: {
+                                'w:before': '150', // Margen superior de 200 twips (~0.14 pulgadas)
+                              },
+                            },
+                          ],
+                        },
+                        {
+                          type: 'element',
+                          name: 'w:r',
+                          elements: [
+                            {
+                              type: 'element',
+                              name: 'w:t',
+                              elements: [{ type: 'text', text: value }],
+                            },
+                          ],
+                        },
+                      ],
+                    },
+                  ],
+                })),
+              });
+
+              // Función para agregar bordes a una fila (encabezado)
+              const addBordersToRow = (row) => {
+                row.elements.forEach((cell) => {
+                  if (cell.name === 'w:tc') {
+                    if (!cell.elements) cell.elements = [];
+
+                    // Buscar o crear propiedades de celda
+                    let tcPr = cell.elements.find((el) => el.name === 'w:tcPr');
+                    if (!tcPr) {
+                      tcPr = { type: 'element', name: 'w:tcPr', elements: [] };
+                      cell.elements.unshift(tcPr); // Agregar al inicio si no existe
+                    }
+
+                    // Verificar si ya existen bordes, si no, agregarlos
+                    let tcBorders = tcPr.elements.find((el) => el.name === 'w:tcBorders');
+                    if (!tcBorders) {
+                      tcBorders = {
+                        type: 'element',
+                        name: 'w:tcBorders',
+                        elements: [
+                          { name: 'w:top', type: 'element', attributes: { 'w:val': 'single', 'w:sz': '4', 'w:space': '0', 'w:color': 'auto' } },
+                          { name: 'w:bottom', type: 'element', attributes: { 'w:val': 'single', 'w:sz': '4', 'w:space': '0', 'w:color': 'auto' } },
+                          { name: 'w:left', type: 'element', attributes: { 'w:val': 'single', 'w:sz': '4', 'w:space': '0', 'w:color': 'auto' } },
+                          { name: 'w:right', type: 'element', attributes: { 'w:val': 'single', 'w:sz': '4', 'w:space': '0', 'w:color': 'auto' } },
+                        ],
+                      };
+                      tcPr.elements.push(tcBorders); // Agregar bordes a las propiedades
+                    }
+                  }
+                });
+              };
+
+              // Función auxiliar para extraer textos de una fila
+              const extractRowTexts = (rowNode) => {
+                return rowNode.elements
+                  .filter((child) => child.name === 'w:tc')
+                  .map((cell) => {
+                    const paragraphs = cell.elements?.filter((child) => child.name === 'w:p') || [];
+                    let cellText = '';
+
+                    paragraphs.forEach((p) => {
+                      const runs = p.elements?.filter((child) => child.name === 'w:r') || [];
+                      runs.forEach((run) => {
+                        const textElement = run.elements?.find((child) => child.name === 'w:t');
+                        if (textElement && textElement.elements && textElement.elements[0]) {
+                          cellText += textElement.elements[0].text.trim();
+                        }
+                      });
+                    });
+
+                    return cellText || '';
+                  });
+              };
+
+              // Función para reemplazar valores en las tablas
+              const replaceTableValues = (nodes, tables) => {
+                nodes.forEach((node) => {
+                  if (node.type === 'element' && node.name === 'w:tbl') {
+                    console.log("=== Tabla detectada ===");
+
+                    tables.forEach(({ encabezado, cuerpo }) => {
+                      // Extraer las filas de la tabla
+                      const tableRows = node.elements.filter((child) => child.name === 'w:tr');
+                      if (!tableRows.length) {
+                        console.log("No se encontraron filas en la tabla.");
+                        return;
+                      }
+
+                      // Validar si el encabezado coincide
+                      const headerRow = tableRows[0]; // Primera fila de la tabla
+                      const headerTexts = extractRowTexts(headerRow);
+
+                      console.log("Encabezado encontrado en tabla:", headerTexts);
+                      console.log("Encabezado esperado:", encabezado.flat());
+
+                      // Función para calcular la distancia de Levenshtein
+                      const levenshteinDistance = (a, b) => {
+                        const matrix = Array.from({ length: a.length + 1 }, (_, i) => [i]);
+                        for (let j = 1; j <= b.length; j++) matrix[0][j] = j;
+
+                        for (let i = 1; i <= a.length; i++) {
+                          for (let j = 1; j <= b.length; j++) {
+                            const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+                            matrix[i][j] = Math.min(
+                              matrix[i - 1][j] + 1,
+                              matrix[i][j - 1] + 1,
+                              matrix[i - 1][j - 1] + cost
+                            );
+                          }
+                        }
+                        return matrix[a.length][b.length];
+                      };
+
+                      // Función para limpiar el texto y calcular similitud
+                      const areHeadersSimilar = (text1, text2, threshold = 2) => {
+                        const normalize = (text) => text.replace(/[s​‌‍﻿]/g, '').toLowerCase();
+                        const distance = levenshteinDistance(normalize(text1), normalize(text2));
+                        return distance <= threshold; // Permite diferencias de hasta "threshold" caracteres
+                      };
+
+                      // Comparación con similitud flexible
+                      const isMatchingTable = headerTexts.every((text, index) => {
+                        const expectedHeader = encabezado.flat()[index] || '';
+                        const isSimilar = areHeadersSimilar(text, expectedHeader);
+                        console.log(\`Comparando: '\${text}' con '\${expectedHeader}' -> Similitud: \${isSimilar}\`);
+                        return isSimilar;
+                      });
+
+                      if (isMatchingTable) {
+                        console.log("La tabla coincide con el encabezado. Reemplazando filas...");
+
+                        // Agregar bordes al encabezado original sin perder estilos
+                        addBordersToRow(headerRow);
+
+                        // Mantener el encabezado original modificado
+                        const updatedRows = [headerRow];
+
+                        // Generar las filas nuevas del cuerpo
+                        cuerpo.forEach((rowValues) => {
+                          const newRow = createRow(rowValues);
+                          updatedRows.push(newRow);
+                        });
+
+                        // Reemplazar las filas antiguas con el encabezado y nuevas filas
+                        node.elements = updatedRows;
+
+                        console.log("Tabla actualizada correctamente.");
+                      } else {
+                        console.log("La tabla no coincide con el encabezado esperado. Se omite.");
+                      }
+                    });
+                  }
+
+                  // Procesar hijos recursivamente
+                  if (node.elements) replaceTableValues(node.elements, tables);
+                });
+              };
+
+              const replaceImageUrlsWithImages = async (zip) => {
+                const documentPath = "word/document.xml";
+                let documentXml = zip.files[documentPath].asText();
+
+                // Convertir el documento en un objeto XML
+                const parsedXml = xml2js(documentXml, { compact: false, spaces: 4 });
+
+                // Función para encontrar un nodo ancestro específico
+                let defaultWidthEMU = 990000; // Valor por defecto en EMU
+            let cellWidthEMU = defaultWidthEMU; // Variable global para el ancho actual de la celda
+
+            // Función para encontrar un nodo ancestro específico y obtener el ancho de la celda
+            const findAncestorNode = (node, ancestorName) => {
+              let currentNode = node;
+              console.log(\`Iniciando búsqueda de ancestro "\${ancestorName}" para el nodo actual: \${node.name}\`);
+
+              while (currentNode) {
+                  console.log(\`Revisando ancestro: \${currentNode.name}\`);
+                  if (currentNode.name === ancestorName) {
+                      if (ancestorName === "w:tc") { // Detectar si estamos en una celda
+                          const widthFound = findCellWidth(currentNode);
+                          if (widthFound) return true;
+
+                          // Si no encontramos el ancho, buscar en la primera celda de la columna
+                          const columnWidth = findWidthInFirstColumnCell(currentNode);
+                          if (columnWidth) {
+                              cellWidthEMU = columnWidth;
+                              console.log(\`Ancho de la primera celda de la columna asignado: \${cellWidthEMU} EMU\`);
+                              return true;
+                          }
+                      }
+                      return true; // Ancestro encontrado
+                  }
+                  currentNode = currentNode.parent; // Subir al nodo padre
+              }
+
+              console.warn(\`No se encontró el ancestro "\${ancestorName}" ni su ancho. Usando valor por defecto.\`);
+              cellWidthEMU = defaultWidthEMU;
+              return false;
+            };
+
+            // Función auxiliar para obtener el ancho directo de la celda
+            const findCellWidth = (cellNode) => {
+              const tcPr = cellNode.elements?.find(el => el.name === "w:tcPr");
+              if (tcPr) {
+                  const tcW = tcPr.elements?.find(el => el.name === "w:tcW");
+                  if (tcW && tcW.attributes?.["w:w"]) {
+                      const widthTwips = parseInt(tcW.attributes["w:w"], 10);
+                      cellWidthEMU = widthTwips * 600; // Convertir twips a EMU
+                      console.log(\`Ancho de celda encontrado: \${cellWidthEMU} EMU\`);
+                      return true;
+                  }
+              }
+              return false;
+            };
+
+            // Función auxiliar para buscar el ancho en la primera celda de la columna
+            const findWidthInFirstColumnCell = (cellNode) => {
+              const rowNode = cellNode.parent; // Nodo de fila actual (w:tr)
+              const tableNode = rowNode?.parent; // Nodo de tabla (w:tbl)
+
+              if (tableNode) {
+                  const firstRow = tableNode.elements?.find(el => el.name === "w:tr"); // Primera fila
+                  if (firstRow) {
+                      const columnIndex = rowNode.elements.indexOf(cellNode); // Posición de la celda actual en su fila
+                      const firstCell = firstRow.elements?.filter(el => el.name === "w:tc")[columnIndex]; // Celda correspondiente
+                      if (firstCell) {
+                          console.log(\`Buscando ancho en la primera celda de la columna en índice: \${columnIndex}\`);
+                          const tcPr = firstCell.elements?.find(el => el.name === "w:tcPr");
+                          const tcW = tcPr?.elements?.find(el => el.name === "w:tcW");
+                          if (tcW && tcW.attributes?.["w:w"]) {
+                              const widthTwips = parseInt(tcW.attributes["w:w"], 10);
+                              return widthTwips * 600; // Convertir twips a EMU
+                          }
+                      }
+                  }
+              }
+              return null;
+            };
+
+                // Procesar nodos recursivamente para buscar y reemplazar URLs con imágenes
+                const processNodesForImages = async (nodes, parentNode = null) => {
+                  for (const node of nodes) {
+                      if (node && typeof node === "object") {
+                          node.parent = parentNode; // Asignar referencia al nodo padre
+                      }
+              
+                      console.log(\`Procesando nodo: <\${node.name}>\`);
+                      if (parentNode) {
+                          console.log(\`Nodo padre inmediato: <\${parentNode.name}>\`);
+                      }
+              
+                      if (node.type === "element" && node.name === "w:t" && node.elements) {
+                          const text = node.elements[0]?.text || "";
+                          console.log(\`Contenido del nodo <w:t>: "\${text}"\`);
+              
+                          // Verificar si el nodo está dentro de una celda de tabla
+                          const isInTableCell = findAncestorNode(node, "w:tc");
+                          console.log(\`¿Está dentro de una celda de tabla?: \${isInTableCell}\`);
+              
+                          // Si el texto es una URL de imagen, realizar el reemplazo
+                          if (isImageUrl(text)) {
+                              console.log(\`Se detectó una URL de imagen: \${text}\`);
+                              const imageKey = decodeURIComponent(text.split('.amazonaws.com/')[1]);
+                              console.log("Clave decodificada de la imagen en S3:", imageKey);
+              
+                              // Obtener URL firmada de la imagen
+                              const imageUrl = await getSignedUrl(bucketName, imageKey);
+                              console.log(\`URL firmada para la imagen: \${imageUrl}\`);
+              
+                              // Descargar imagen y obtener sus dimensiones
+                              const response = await fetch(imageUrl);
+                              if (!response.ok) throw new Error(\`Error al descargar la imagen: \${imageUrl}\`);
+                              const imageBuffer = await response.arrayBuffer();
+                              const { width, height } = await sharp(Buffer.from(imageBuffer)).metadata();
+              
+                              // Agregar la imagen al documento
+                              const imageName = \`\${Date.now()}.png\`;
+                              await addImageToDocx(zip, imageUrl, imageName);
+                              console.log(\`Imagen agregada a "word/media/\${imageName}"\`);
+              
+                              // Obtener ancho de la celda si está en tabla, de lo contrario usar default
+                              const aspectRatio = height / width;
+                              const newHeightEMU = Math.round(cellWidthEMU * aspectRatio);
+              
+                              console.log(\`Ajuste de imagen - Ancho: \${cellWidthEMU} EMU, Altura: \${newHeightEMU} EMU\`);
+              
+                              // Generar el ID de la relación para la imagen
+                              const imageId = addImageRelationship(zip, imageName);
+                              console.log("ID de relación generado:", imageId);
+              
+                              // Reemplazar el nodo con la imagen ajustada
+                              node.name = "w:drawing";
+                              node.elements = [
+                                  {
+                                      type: "element",
+                                      name: "wp:inline",
+                                      elements: [
+                                          {
+                                              type: "element",
+                                              name: "wp:extent",
+                                              attributes: { cx: cellWidthEMU, cy: newHeightEMU },
+                                          },
+                                          {
+                                              type: "element",
+                                              name: "wp:docPr",
+                                              attributes: { id: imageId.replace("rId", ""), name: \`Picture \${imageName}\` },
+                                          },
+                                          {
+                                              type: "element",
+                                              name: "a:graphic",
+                                              elements: [
+                                                  {
+                                                      type: "element",
+                                                      name: "a:graphicData",
+                                                      attributes: { uri: "http://schemas.openxmlformats.org/drawingml/2006/picture" },
+                                                      elements: [
+                                                          {
+                                                              type: "element",
+                                                              name: "pic:pic",
+                                                              elements: [
+                                                                  {
+                                                                      type: "element",
+                                                                      name: "pic:nvPicPr",
+                                                                      elements: [
+                                                                          { type: "element", name: "pic:cNvPr", attributes: { id: "0", name: \`Picture \${imageName}\` } },
+                                                                          { type: "element", name: "pic:cNvPicPr" },
+                                                                      ],
+                                                                  },
+                                                                  {
+                                                                      type: "element",
+                                                                      name: "pic:blipFill",
+                                                                      elements: [
+                                                                          { type: "element", name: "a:blip", attributes: { "r:embed": imageId } },
+                                                                          { type: "element", name: "a:stretch", elements: [{ type: "element", name: "a:fillRect" }] },
+                                                                      ],
+                                                                  },
+                                                                  {
+                                                                      type: "element",
+                                                                      name: "pic:spPr",
+                                                                      elements: [
+                                                                          {
+                                                                              type: "element",
+                                                                              name: "a:xfrm",
+                                                                              elements: [
+                                                                                  { type: "element", name: "a:off", attributes: { x: "0", y: "0" } },
+                                                                                  { type: "element", name: "a:ext", attributes: { cx: cellWidthEMU, cy: newHeightEMU } },
+                                                                              ],
+                                                                          },
+                                                                          { type: "element", name: "a:prstGeom", attributes: { prst: "rect" }, elements: [{ type: "element", name: "a:avLst" }] },
+                                                                      ],
+                                                                  },
+                                                              ],
+                                                          },
+                                                      ],
+                                                  },
+                                              ],
+                                          },
+                                      ],
+                                  },
+                              ];
+                              console.log(
+                                  isInTableCell
+                                      ? "La imagen está dentro de una celda de tabla y se ha ajustado."
+                                      : "La imagen está fuera de una tabla y tiene el tamaño por defecto."
+                              );
+                          }
+                      }
+              
+                      // Procesar nodos hijos de forma recursiva
+                      if (node.elements) {
+                          await processNodesForImages(node.elements, node);
+                      }
+                  }
+              };
+
+                console.log("=== Iniciando proceso de reemplazo de URLs por imágenes ===");
+                // Agregar namespaces necesarios
+                parsedXml.elements[0].attributes = {
+                  ...parsedXml.elements[0].attributes,
+                  "xmlns:a": "http://schemas.openxmlformats.org/drawingml/2006/main",
+                  "xmlns:pic": "http://schemas.openxmlformats.org/drawingml/2006/picture"
+                };
+                await processNodesForImages(parsedXml.elements, null);
+                console.log("=== Proceso de reemplazo de URLs por imágenes completado ===");
+
+                // Guardar el XML actualizado para depuración
+                const updatedXml = js2xml(parsedXml, { compact: false, spaces: 4 });
+                console.log("======>>>>>>>>Guardando XML modificado para depuración<<<<<<<<=======");
+                console.log(updatedXml);
+                const fs = require("fs");
+                fs.writeFileSync("document_debug.xml", updatedXml);
+                console.log("Archivo 'document_debug.xml' guardado exitosamente.");
+
+                // Actualizar el documento en el ZIP
+                zip.file(documentPath, updatedXml);
+            };
+            
+              // Procesar y reemplazar variables y tablas
+              console.log("Procesando documento XML...");
+              normalizeTextNodes(parsedXml.elements);
+              replaceVariables(parsedXml.elements); // Reemplaza variables
+              replaceTableValues(parsedXml.elements, tablas); // Reemplaza valores en tablas
+
+              // Guardar el documento con las variables y tablas reemplazadas
+              let updatedXml = js2xml(parsedXml, { compact: false, spaces: 4 });
+              zip.file("word/document.xml", updatedXml);
+
+              // Reemplazar URLs con imágenes en el documento actualizado
+              console.log("Revisando y reemplazando imágenes en el documento...");
+              await replaceImageUrlsWithImages(zip);
+
+              const updatedBuffer = zip.generate({ type: 'nodebuffer' });
+              const newKey = \`documents/generated/\${Date.now()}-generated.docx\`;
+              const uploadResult = await uploadFile(bucketName, newKey, updatedBuffer);
+
+              console.log("Documento generado con éxito:", uploadResult.Location);
+              return uploadResult.Location;
+            };
+          `;
+
+    console.log("=== Código generado ===");
+    console.log(generatedCode);
+
+    // Guardar la configuración y el código generado en la base de datos
+    const insertQuery = `
+      INSERT INTO document_configuration (template_id, configuration, generated_code, created_at, entity)
+      VALUES ($1, $2, $3, NOW(), $4)
+    `;
+
+    const configuration = {
+      variables,
+      tablas,
+    };
+
+    await pool.query(insertQuery, [
+      templateId,
+      JSON.stringify(configuration),
+      generatedCode,
+      transformedEntity,
+    ]);
+
+    console.log("Configuración y código almacenados correctamente en la base de datos.");
+    res.status(201).json({ message: 'Configuración guardada correctamente.' });
+  } catch (error) {
+    console.error("Error al almacenar la configuración:", error.message);
+    res.status(500).json({ message: 'Error interno del servidor', error: error.message });
+  }
+});
+
+// Ruta para ejecutar código dinámico almacenado
+router.post('/create-document-client', async (req, res) => {
+  const { idEntity, id } = req.body; // Recibir ID de la entidad e ID de configuración
+  try {
+    console.log("=== Iniciando ejecución de configuración almacenada ===");
+
+    // Validar entradas requeridas
+    if (!idEntity || !id) {
+      return res.status(400).json({ message: "Los campos 'idEntity' y 'id' son obligatorios." });
+    }
+
+    console.log("ID de la entidad recibido:", idEntity);
+    console.log("ID de configuración recibido:", id);
+
+    // Consultar la configuración en la base de datos
+    const query = 'SELECT generated_code FROM document_configuration WHERE id = $1';
+    const result = await pool.query(query, [id]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: "Configuración no encontrada." });
+    }
+
+    const { generated_code } = result.rows[0];
+    console.log("Código generado obtenido de la base de datos.");
+
+    // Preparar el sandbox
+    const sandbox = {
+      console: console, // Permite console.log
+      require: require, // Permite require
+      idEntity: idEntity, // ID de la entidad
+      pool: pool, // Conexión a la base de datos
+      fetch: fetch, // Para descargar archivos desde S3
+      PizZip: require('pizzip'), // Librería para manejar archivos .docx
+      xml2js: require('xml-js').xml2js, // Parsear XML a JSON
+      js2xml: require('xml-js').js2xml, // Convertir JSON a XML
+      getSignedUrl: getSignedUrl, // Función para obtener URLs firmadas de S3
+      uploadFile: uploadFile, // Función para subir archivos a S3
+      bucketName: "fumiplagax", // Nombre del bucket S3
+      Buffer: Buffer, // Agregar Buffer al sandbox
+      sharp,
+    };    
+
+     // Crear un script envolviendo el código generado en una función `async`
+     const script = new vm.Script(`
+      (async () => {
+        ${generated_code}
+        return await createDocument_clients(idEntity);
+      })();
+    `);
+
+    const context = vm.createContext(sandbox);
+    script.runInContext(context);
+
+    console.log("Código ejecutado exitosamente.");
+
+    res.status(200).json({ message: "Código ejecutado correctamente.", executed: true });
+  } catch (error) {
+    console.error("Error al ejecutar el código generado:", error.message);
+    res.status(500).json({ message: "Error interno del servidor", error: error.message });
   }
 });
 
