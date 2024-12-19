@@ -3,6 +3,7 @@ const express = require('express');
 const bcrypt = require('bcrypt');
 const multer = require('multer');
 const sharp = require('sharp');
+const moment = require('moment');
 const fs = require('fs');
 const path = require('path');
 const router = express.Router();
@@ -2394,8 +2395,13 @@ router.post('/save-configuration', async (req, res) => {
                 const resultClientMapsData = await pool.query(queryClientMapsData, [idEntity]);
                 const clientMapsData = resultClientMapsData.rows.length > 0 ? resultClientMapsData.rows : [];
 
+                const queryServicesData = 'SELECT * FROM services WHERE client_id = $1';
+                const resultServicesData = await pool.query(queryServicesData, [idEntity]);
+                const servicesData = resultServicesData.rows.length > 0 ? resultServicesData.rows : [];
+
                 console.log("Datos de la entidad 'stations' obtenidos:", stationsData);
                 console.log("Datos de la entidad 'client_maps' obtenidos:", clientMapsData);
+                console.log("Datos de la entidad 'services' obtenidos:", servicesData);
 
                 // Función auxiliar para actualizar valores según tipo de datos
                 const updateValue = (data, field, type) => {
@@ -2408,6 +2414,40 @@ router.post('/save-configuration', async (req, res) => {
                   }
                 };
 
+                // Función para filtrar servicios por período y tipo
+                const filterServices = (services, periodo, tipoServicio) => {
+                  const now = moment();
+                  let filteredServices = services;
+
+                  if (periodo !== "all") {
+                    filteredServices = services.filter(service => {
+                      const serviceDate = moment(service.created_at);
+                      switch (periodo) {
+                        case "this_year":
+                          return serviceDate.isSame(now, 'year');
+                        case "last_3_months":
+                          return serviceDate.isAfter(now.clone().subtract(3, 'months'));
+                        case "last_month":
+                          return serviceDate.isSame(now.clone().subtract(1, 'month'), 'month');
+                        case "this_week":
+                          return serviceDate.isSame(now, 'week');
+                        default:
+                          return false;
+                      }
+                    });
+                  }
+
+                  // Convertir \`service_type\` en un array y buscar \`tipoServicio\`
+                  return filteredServices.filter(service => {
+                    const serviceTypes = service.service_type
+                      .replace(/^{|}$/g, '') // Eliminar las llaves {}
+                      .split(',') // Dividir por comas
+                      .map(type => type.trim().replace(/"/g, '')); // Eliminar comillas y espacios
+
+                    return serviceTypes.includes(tipoServicio);
+                  });
+                };
+
                 // Procesar variables
                 Object.entries(variables).forEach(([key, value]) => {
                   if (value.startsWith("Cliente-")) {
@@ -2416,9 +2456,44 @@ router.post('/save-configuration', async (req, res) => {
                   } else if (value.startsWith("Mapas-")) {
                     const field = value.split('-')[1];
                     variables[key] = clientMapsData[0] ? updateValue(clientMapsData[0], field, "client_maps") : "No encontrado";
-                  } else if (value.startsWith("Estaciones Aéreas-") || value.startsWith("Estaciones Roedores-")) {
-                    const field = value.split('-')[1];
-                    variables[key] = stationsData[0] ? updateValue(stationsData[0], field, "stations") : "No encontrado";
+                  } else if (value.startsWith("Estaciones Roedores-")) {
+                    const stationField = value.split('-')[1];
+                    // Filtrar las estaciones que pertenecen a la categoría "Roedores"
+                    const filteredStations = stationsData.filter((station) => station.category === "Roedores");
+
+                    if (filteredStations.length > 0) {
+                      variables[key] = filteredStations[0].hasOwnProperty(stationField)
+                        ? filteredStations[0][stationField]
+                        : "No encontrado";
+                      console.log(\`Variable "\${key}" actualizada a: \${variables[key]}\`);
+                    } else {
+                      console.warn(\`No se encontraron estaciones para la categoría "Roedores".\`);
+                      variables[key] = "No encontrado";
+                    }
+                  } else if (value.startsWith("Estaciones Aéreas-")) {
+                    const stationField = value.split('-')[1];
+                    // Filtrar las estaciones que pertenecen a la categoría "Aéreas"
+                    const filteredStations = stationsData.filter((station) => station.category === "Aéreas");
+
+                    if (filteredStations.length > 0) {
+                      variables[key] = filteredStations[0].hasOwnProperty(stationField)
+                        ? filteredStations[0][stationField]
+                        : "No encontrado";
+                      console.log(\`Variable "\${key}" actualizada a: \${variables[key]}\`);
+                    } else {
+                      console.warn(\`No se encontraron estaciones para la categoría "Aéreas".\`);
+                      variables[key] = "No encontrado";
+                    }
+                  }else if (value.startsWith("Servicios-")) {
+                    const [_, periodo, tipoServicio, campo] = value.split('-'); // Extraer <Periodo>, <Tipo de servicio>, <Campo>
+                    const filteredServices = filterServices(servicesData, periodo, tipoServicio);
+                    if (filteredServices.length > 0 && filteredServices[0].hasOwnProperty(campo)) {
+                      variables[key] = filteredServices[0][campo];
+                      console.log(\`Variable "\${key}" actualizada a: \${variables[key]}\`);
+                    } else {
+                      console.warn(\`No se encontraron servicios para el período "\${periodo}", tipo "\${tipoServicio}", o el campo "\${campo}".\`);
+                      variables[key] = "No encontrado";
+                    }
                   }
                 });
 
@@ -2427,22 +2502,67 @@ router.post('/save-configuration', async (req, res) => {
                 // Procesar tablas
                 tablas.forEach((tabla) => {
                   console.log(\`\\n=== Procesando tabla: \${tabla.nombre} ===\`);
-                  tabla.cuerpo = tabla.cuerpo.map((row) =>
-                    row.map((field) => {
+                  console.log("Cuerpo original de la tabla:", tabla.cuerpo);
+
+                  const nuevoCuerpo = [];
+
+                  tabla.cuerpo.forEach((row) => {
+                    // Crear un array para almacenar todos los valores de cada campo de la fila
+                    const valoresPorCampo = row.map((field) => {
                       if (field.startsWith("Cliente-")) {
                         const clientField = field.split('-')[1];
-                        return updateValue(clientData, clientField, "clients");
+                        return clientData.hasOwnProperty(clientField)
+                          ? [clientData[clientField]]
+                          : ["No encontrado"];
                       } else if (field.startsWith("Mapas-")) {
                         const mapField = field.split('-')[1];
-                        return clientMapsData[0] ? updateValue(clientMapsData[0], mapField, "client_maps") : "No encontrado";
-                      } else if (field.startsWith("Estaciones Aéreas-") || field.startsWith("Estaciones Roedores-")) {
+                        return clientMapsData[0]
+                          ? [updateValue(clientMapsData[0], mapField, "client_maps")]
+                          : ["No encontrado"];
+                      } else if (field.startsWith("Estaciones Roedores-")) {
                         const stationField = field.split('-')[1];
-                        return stationsData[0] ? updateValue(stationsData[0], stationField, "stations") : "No encontrado";
+                        // Filtrar las estaciones que pertenecen a la categoría "Roedores"
+                        return stationsData
+                          .filter((station) => station.category === "Roedores")
+                          .map((station) =>
+                            station.hasOwnProperty(stationField)
+                              ? station[stationField]
+                              : "No encontrado"
+                          );
+                      } else if (field.startsWith("Estaciones Aéreas-")) {
+                        const stationField = field.split('-')[1];
+                        // Filtrar las estaciones que pertenecen a la categoría "Aéreas"
+                        return stationsData
+                          .filter((station) => station.category === "Aéreas")
+                          .map((station) =>
+                            station.hasOwnProperty(stationField)
+                              ? station[stationField]
+                              : "No encontrado"
+                          );
+                      } else if (field.startsWith("Servicios-")) {
+                        const [_, periodo, tipoServicio, campo] = field.split('-');
+                        return filterServices(servicesData, periodo, tipoServicio).map((service) =>
+                          service.hasOwnProperty(campo)
+                            ? service[campo]
+                            : "No encontrado"
+                        );
                       } else {
-                        return field; // Mantener valor original si no coincide con ningún prefijo
+                        return [field]; // Mantener el valor original si no coincide con ninguna regla
                       }
-                    })
-                  );
+                    });
+
+                    // Determinar el número máximo de registros para esta fila
+                    const maxFilas = Math.max(...valoresPorCampo.map((valores) => valores.length));
+
+                    // Generar filas alineadas
+                    for (let i = 0; i < maxFilas; i++) {
+                      const nuevaFila = valoresPorCampo.map((valores) => valores[i] || "No encontrado");
+                      nuevoCuerpo.push(nuevaFila);
+                    }
+                  });
+
+                  // Actualizar el cuerpo de la tabla con las nuevas filas generadas
+                  tabla.cuerpo = nuevoCuerpo;
                   console.log(\`Tabla "\${tabla.nombre}" actualizada:\`, tabla.cuerpo);
                 });
               }
@@ -3066,6 +3186,7 @@ router.post('/create-document-client', async (req, res) => {
       bucketName: "fumiplagax", // Nombre del bucket S3
       Buffer: Buffer, // Agregar Buffer al sandbox
       sharp,
+      moment,
     };    
 
      // Crear un script envolviendo el código generado en una función `async`
