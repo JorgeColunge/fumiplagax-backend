@@ -2399,6 +2399,15 @@ router.post('/save-configuration', async (req, res) => {
                 const resultServicesData = await pool.query(queryServicesData, [idEntity]);
                 const servicesData = resultServicesData.rows.length > 0 ? resultServicesData.rows : [];
 
+                // Consultar inspecciones relacionadas con los servicios del cliente
+                const queryInspectionsData = \`SELECT * FROM inspections WHERE service_id = ANY ($1)\`;
+                const serviceIds = servicesData.map((service) => service.id); // Obtener los IDs de los servicios del cliente
+                const resultInspectionsData = await pool.query(queryInspectionsData, [serviceIds]);
+
+                // Validar si se obtuvieron inspecciones
+                const inspectionsData = resultInspectionsData.rows.length > 0 ? resultInspectionsData.rows : [];
+                console.log("Datos de la entidad 'inspections' obtenidos:", inspectionsData);
+
                 console.log("Datos de la entidad 'stations' obtenidos:", stationsData);
                 console.log("Datos de la entidad 'client_maps' obtenidos:", clientMapsData);
                 console.log("Datos de la entidad 'services' obtenidos:", servicesData);
@@ -2438,6 +2447,10 @@ router.post('/save-configuration', async (req, res) => {
                   }
 
                   // Convertir \`service_type\` en un array y buscar \`tipoServicio\`
+                  if (tipoServicio === "all") {
+                    return filteredServices; // No aplicar ningún filtro adicional
+                  }
+
                   return filteredServices.filter(service => {
                     const serviceTypes = service.service_type
                       .replace(/^{|}$/g, '') // Eliminar las llaves {}
@@ -2484,7 +2497,7 @@ router.post('/save-configuration', async (req, res) => {
                       console.warn(\`No se encontraron estaciones para la categoría "Aéreas".\`);
                       variables[key] = "No encontrado";
                     }
-                  }else if (value.startsWith("Servicios-")) {
+                  } else if (value.startsWith("Servicios-")) {
                     const [_, periodo, tipoServicio, campo] = value.split('-'); // Extraer <Periodo>, <Tipo de servicio>, <Campo>
                     const filteredServices = filterServices(servicesData, periodo, tipoServicio);
                     if (filteredServices.length > 0 && filteredServices[0].hasOwnProperty(campo)) {
@@ -2492,6 +2505,55 @@ router.post('/save-configuration', async (req, res) => {
                       console.log(\`Variable "\${key}" actualizada a: \${variables[key]}\`);
                     } else {
                       console.warn(\`No se encontraron servicios para el período "\${periodo}", tipo "\${tipoServicio}", o el campo "\${campo}".\`);
+                      variables[key] = "No encontrado";
+                    }
+                  } else if (value.startsWith("Inspecciones-")) {
+                    const [_, periodo, tipoInspeccion, campo] = value.split('-'); // Extraer <Periodo>, <Tipo de inspección>, <Campo>
+
+                    console.log(\`Filtrando inspecciones para "\${periodo}" y tipo "\${tipoInspeccion}"...\`);
+
+                    // Filtrar por período
+                    let filteredInspections = inspectionsData;
+                    if (periodo !== "all") {
+                      const now = moment();
+                      filteredInspections = inspectionsData.filter((inspection) => {
+                        const inspectionDate = moment(inspection.date);
+                        switch (periodo) {
+                          case "this_year":
+                            return inspectionDate.isSame(now, 'year');
+                          case "last_3_months":
+                            return inspectionDate.isAfter(now.clone().subtract(3, 'months'));
+                          case "last_month":
+                            return inspectionDate.isSame(now.clone().subtract(1, 'month'), 'month');
+                          case "this_week":
+                            return inspectionDate.isSame(now, 'week');
+                          default:
+                            return false;
+                        }
+                      });
+                    }
+
+                    console.log(\`Inspecciones filtradas por período (\${periodo}):\`, filteredInspections);
+
+                    // Filtrar por tipo de inspección
+                    if (tipoInspeccion !== "all") {
+                      filteredInspections = filteredInspections.filter((inspection) => {
+                        const inspectionTypes = inspection.inspection_type
+                          .split(',')
+                          .map((type) => type.trim().toLowerCase()); // Normalizar a minúsculas y quitar espacios
+
+                        return inspectionTypes.includes(tipoInspeccion.toLowerCase());
+                      });
+                    }
+
+                    console.log(\`Inspecciones filtradas por tipo (\${tipoInspeccion}):\`, filteredInspections);
+
+                    // Asignar el valor a la variable
+                    if (filteredInspections.length > 0 && filteredInspections[0].hasOwnProperty(campo)) {
+                      variables[key] = filteredInspections[0][campo];
+                      console.log(\`Variable "\${key}" actualizada a: \${variables[key]}\`);
+                    } else {
+                      console.warn(\`No se encontraron inspecciones para el período "\${periodo}", tipo "\${tipoInspeccion}", o el campo "\${campo}".\`);
                       variables[key] = "No encontrado";
                     }
                   }
@@ -2546,7 +2608,52 @@ router.post('/save-configuration', async (req, res) => {
                             ? service[campo]
                             : "No encontrado"
                         );
-                      } else {
+                      } else if (field.startsWith("Inspecciones-")) {
+                        const [_, periodo, tipoInspeccion, campo] = field.split('-'); // Extraer <Periodo>, <Tipo de inspección>, <Campo>
+
+                        console.log(\`Filtrando inspecciones para "\${periodo}" y tipo "\${tipoInspeccion}" en tablas...\`);
+
+                        // Filtrar por período
+                        let filteredInspections = inspectionsData;
+                        if (periodo !== "all") {
+                          const now = moment();
+                          filteredInspections = inspectionsData.filter((inspection) => {
+                            const inspectionDate = moment(inspection.date);
+                            switch (periodo) {
+                              case "this_year":
+                                return inspectionDate.isSame(now, 'year');
+                              case "last_3_months":
+                                return inspectionDate.isAfter(now.clone().subtract(3, 'months'));
+                              case "last_month":
+                                return inspectionDate.isSame(now.clone().subtract(1, 'month'), 'month');
+                              case "this_week":
+                                return inspectionDate.isSame(now, 'week');
+                              default:
+                                return false;
+                            }
+                          });
+                        }
+
+                        console.log(\`Inspecciones filtradas por período (\${periodo}):\`, filteredInspections);
+
+                        // Filtrar por tipo de inspección
+                        if (tipoInspeccion !== "all") {
+                          filteredInspections = filteredInspections.filter((inspection) => {
+                            const inspectionTypes = inspection.inspection_type
+                              .split(',')
+                              .map((type) => type.trim().toLowerCase()); // Normalizar a minúsculas y quitar espacios
+
+                            return inspectionTypes.includes(tipoInspeccion.toLowerCase());
+                          });
+                        }
+
+                        console.log(\`Inspecciones filtradas por tipo (\${tipoInspeccion}):\`, filteredInspections);
+
+                        // Generar los valores correspondientes para la tabla
+                        return filteredInspections.map((inspection) =>
+                          inspection.hasOwnProperty(campo) ? inspection[campo] : "No encontrado"
+                        );
+                      }else {
                         return [field]; // Mantener el valor original si no coincide con ninguna regla
                       }
                     });
@@ -2870,10 +2977,8 @@ router.post('/save-configuration', async (req, res) => {
             // Función para encontrar un nodo ancestro específico y obtener el ancho de la celda
             const findAncestorNode = (node, ancestorName) => {
               let currentNode = node;
-              console.log(\`Iniciando búsqueda de ancestro "\${ancestorName}" para el nodo actual: \${node.name}\`);
 
               while (currentNode) {
-                  console.log(\`Revisando ancestro: \${currentNode.name}\`);
                   if (currentNode.name === ancestorName) {
                       if (ancestorName === "w:tc") { // Detectar si estamos en una celda
                           const widthFound = findCellWidth(currentNode);
@@ -2883,7 +2988,6 @@ router.post('/save-configuration', async (req, res) => {
                           const columnWidth = findWidthInFirstColumnCell(currentNode);
                           if (columnWidth) {
                               cellWidthEMU = columnWidth;
-                              console.log(\`Ancho de la primera celda de la columna asignado: \${cellWidthEMU} EMU\`);
                               return true;
                           }
                       }
@@ -2942,15 +3046,11 @@ router.post('/save-configuration', async (req, res) => {
                       if (node && typeof node === "object") {
                           node.parent = parentNode; // Asignar referencia al nodo padre
                       }
-              
-                      console.log(\`Procesando nodo: <\${node.name}>\`);
                       if (parentNode) {
-                          console.log(\`Nodo padre inmediato: <\${parentNode.name}>\`);
                       }
               
                       if (node.type === "element" && node.name === "w:t" && node.elements) {
                           const text = node.elements[0]?.text || "";
-                          console.log(\`Contenido del nodo <w:t>: "\${text}"\`);
               
                           // Verificar si el nodo está dentro de una celda de tabla
                           const isInTableCell = findAncestorNode(node, "w:tc");
@@ -3084,8 +3184,8 @@ router.post('/save-configuration', async (req, res) => {
 
                 // Guardar el XML actualizado para depuración
                 const updatedXml = js2xml(parsedXml, { compact: false, spaces: 4 });
-                console.log("======>>>>>>>>Guardando XML modificado para depuración<<<<<<<<=======");
-                console.log(updatedXml);
+                //console.log("======>>>>>>>>Guardando XML modificado para depuración<<<<<<<<=======");
+                //console.log(updatedXml);
                 const fs = require("fs");
                 fs.writeFileSync("document_debug.xml", updatedXml);
                 console.log("Archivo 'document_debug.xml' guardado exitosamente.");
