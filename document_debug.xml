@@ -64,7 +64,7 @@
                     <w:sz w:val="24"/>
                     <w:szCs w:val="24"/>
                 </w:rPr>
-                <w:t>En el siguiente documento se reflejan las estaciones registradas para el cliente Axioma Robotics.</w:t>
+                <w:t>En el siguiente documento se reflejan las estaciones registradas para el cliente I-271224-01.</w:t>
             </w:r>
         </w:p>
         <w:p w:rsidR="00CF7287" w:rsidRDefault="00CF7287">
@@ -249,7 +249,7 @@
                             <w:spacing w:before="150"/>
                         </w:pPr>
                         <w:r>
-                            <w:t>1</w:t>
+                            <w:t>Fri Dec 27 2024 00:00:00 GMT-0500 (hora estándar de Colombia)</w:t>
                         </w:r>
                     </w:p>
                 </w:tc>
@@ -267,105 +267,7 @@
                             <w:spacing w:before="150"/>
                         </w:pPr>
                         <w:r>
-                            <w:drawing>
-                                <wp:inline>
-                                    <wp:extent cx="2806200" cy="2806200"/>
-                                    <wp:docPr id="10" name="Picture 1734653370339.png"/>
-                                    <a:graphic>
-                                        <a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture">
-                                            <pic:pic>
-                                                <pic:nvPicPr>
-                                                    <pic:cNvPr id="0" name="Picture 1734653370339.png"/>
-                                                    <pic:cNvPicPr/>
-                                                </pic:nvPicPr>
-                                                <pic:blipFill>
-                                                    <a:blip r:embed="rId10"/>
-                                                    <a:stretch>
-                                                        <a:fillRect/>
-                                                    </a:stretch>
-                                                </pic:blipFill>
-                                                <pic:spPr>
-                                                    <a:xfrm>
-                                                        <a:off x="0" y="0"/>
-                                                        <a:ext cx="2806200" cy="2806200"/>
-                                                    </a:xfrm>
-                                                    <a:prstGeom prst="rect">
-                                                        <a:avLst/>
-                                                    </a:prstGeom>
-                                                </pic:spPr>
-                                            </pic:pic>
-                                        </a:graphicData>
-                                    </a:graphic>
-                                </wp:inline>
-                            </w:drawing>
-                        </w:r>
-                    </w:p>
-                </w:tc>
-            </w:tr>
-            <w:tr>
-                <w:tc>
-                    <w:tcPr>
-                        <w:tcBorders>
-                            <w:top w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                            <w:bottom w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                            <w:left w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                            <w:right w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                        </w:tcBorders>
-                    </w:tcPr>
-                    <w:p>
-                        <w:pPr>
-                            <w:spacing w:before="150"/>
-                        </w:pPr>
-                        <w:r>
-                            <w:t>2</w:t>
-                        </w:r>
-                    </w:p>
-                </w:tc>
-                <w:tc>
-                    <w:tcPr>
-                        <w:tcBorders>
-                            <w:top w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                            <w:bottom w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                            <w:left w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                            <w:right w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                        </w:tcBorders>
-                    </w:tcPr>
-                    <w:p>
-                        <w:pPr>
-                            <w:spacing w:before="150"/>
-                        </w:pPr>
-                        <w:r>
-                            <w:drawing>
-                                <wp:inline>
-                                    <wp:extent cx="2806200" cy="2806200"/>
-                                    <wp:docPr id="11" name="Picture 1734653370605.png"/>
-                                    <a:graphic>
-                                        <a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture">
-                                            <pic:pic>
-                                                <pic:nvPicPr>
-                                                    <pic:cNvPr id="0" name="Picture 1734653370605.png"/>
-                                                    <pic:cNvPicPr/>
-                                                </pic:nvPicPr>
-                                                <pic:blipFill>
-                                                    <a:blip r:embed="rId11"/>
-                                                    <a:stretch>
-                                                        <a:fillRect/>
-                                                    </a:stretch>
-                                                </pic:blipFill>
-                                                <pic:spPr>
-                                                    <a:xfrm>
-                                                        <a:off x="0" y="0"/>
-                                                        <a:ext cx="2806200" cy="2806200"/>
-                                                    </a:xfrm>
-                                                    <a:prstGeom prst="rect">
-                                                        <a:avLst/>
-                                                    </a:prstGeom>
-                                                </pic:spPr>
-                                            </pic:pic>
-                                        </a:graphicData>
-                                    </a:graphic>
-                                </wp:inline>
-                            </w:drawing>
+                            <w:t>09:08:29</w:t>
                         </w:r>
                     </w:p>
                 </w:tc>
@@ -552,7 +454,7 @@
                             <w:spacing w:before="150"/>
                         </w:pPr>
                         <w:r>
-                            <w:t>I-191224-01</w:t>
+                            <w:t>Jorge Andrés</w:t>
                         </w:r>
                     </w:p>
                 </w:tc>
@@ -570,7 +472,7 @@
                             <w:spacing w:before="150"/>
                         </w:pPr>
                         <w:r>
-                            <w:t>primera</w:t>
+                            <w:t>Colunge Lopez</w:t>
                         </w:r>
                     </w:p>
                 </w:tc>
@@ -590,7 +492,7 @@
                             <w:spacing w:before="150"/>
                         </w:pPr>
                         <w:r>
-                            <w:t>I-191224-02</w:t>
+                            <w:t>Maria Jose</w:t>
                         </w:r>
                     </w:p>
                 </w:tc>
@@ -608,7 +510,7 @@
                             <w:spacing w:before="150"/>
                         </w:pPr>
                         <w:r>
-                            <w:t>Segunda</w:t>
+                            <w:t>Daza</w:t>
                         </w:r>
                     </w:p>
                 </w:tc>
