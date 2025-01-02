@@ -64,7 +64,7 @@
                     <w:sz w:val="24"/>
                     <w:szCs w:val="24"/>
                 </w:rPr>
-                <w:t>En el siguiente documento se reflejan las estaciones registradas para el cliente I-271224-01.</w:t>
+                <w:t>En el siguiente documento se reflejan las estaciones registradas para el cliente Napoleón Bonaparte era de Francia, aunque nació en Córcega..</w:t>
             </w:r>
         </w:p>
         <w:p w:rsidR="00CF7287" w:rsidRDefault="00CF7287">
@@ -249,7 +249,7 @@
                             <w:spacing w:before="150"/>
                         </w:pPr>
                         <w:r>
-                            <w:t>Fri Dec 27 2024 00:00:00 GMT-0500 (hora estándar de Colombia)</w:t>
+                            <w:t/>
                         </w:r>
                     </w:p>
                 </w:tc>
@@ -267,7 +267,7 @@
                             <w:spacing w:before="150"/>
                         </w:pPr>
                         <w:r>
-                            <w:t>09:08:29</w:t>
+                            <w:t/>
                         </w:r>
                     </w:p>
                 </w:tc>
@@ -454,7 +454,7 @@
                             <w:spacing w:before="150"/>
                         </w:pPr>
                         <w:r>
-                            <w:t>Jorge Andrés</w:t>
+                            <w:t/>
                         </w:r>
                     </w:p>
                 </w:tc>
@@ -472,45 +472,7 @@
                             <w:spacing w:before="150"/>
                         </w:pPr>
                         <w:r>
-                            <w:t>Colunge Lopez</w:t>
-                        </w:r>
-                    </w:p>
-                </w:tc>
-            </w:tr>
-            <w:tr>
-                <w:tc>
-                    <w:tcPr>
-                        <w:tcBorders>
-                            <w:top w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                            <w:bottom w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                            <w:left w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                            <w:right w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                        </w:tcBorders>
-                    </w:tcPr>
-                    <w:p>
-                        <w:pPr>
-                            <w:spacing w:before="150"/>
-                        </w:pPr>
-                        <w:r>
-                            <w:t>Maria Jose</w:t>
-                        </w:r>
-                    </w:p>
-                </w:tc>
-                <w:tc>
-                    <w:tcPr>
-                        <w:tcBorders>
-                            <w:top w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                            <w:bottom w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                            <w:left w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                            <w:right w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                        </w:tcBorders>
-                    </w:tcPr>
-                    <w:p>
-                        <w:pPr>
-                            <w:spacing w:before="150"/>
-                        </w:pPr>
-                        <w:r>
-                            <w:t>Daza</w:t>
+                            <w:t/>
                         </w:r>
                     </w:p>
                 </w:tc>

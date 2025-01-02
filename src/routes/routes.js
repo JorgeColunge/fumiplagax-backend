@@ -16,6 +16,10 @@ const mammoth = require('mammoth');
 const vm = require('vm');
 const QRCode = require('qrcode');
 const { uploadFile, getSignedUrl, deleteObject  } = require('../config/s3Service');
+const dotenv = require('dotenv');
+
+// Configurar dotenv para cargar variables de entorno
+dotenv.config();
 
 // Configuración de almacenamiento con Multer (en memoria para subir a S3)
 const storage = multer.memoryStorage();
@@ -2929,7 +2933,7 @@ const transformEntity = (entity) => {
 
 // Ruta principal para almacenar configuración y código generado
 router.post('/save-configuration', async (req, res) => {
-  const { templateId, variables, tablas, entity } = req.body;
+  const { templateId, variables, tablas, entity, aiModels } = req.body;
 
   try {
     console.log("=== Iniciando almacenamiento de configuración ===");
@@ -2957,7 +2961,7 @@ router.post('/save-configuration', async (req, res) => {
 
               // Función para realizar consultas a GPT
               const consultarGPT = async (modelo, personalidad, prompt) => {
-                const apiKey = "aqui va la apikeyssa";
+                const apiKey = process.env.OPENAI_API_KEY;
                 const url = "https://api.openai.com/v1/chat/completions";
                 const headers = {
                   Authorization: \`Bearer \${apiKey}\`,
@@ -3527,6 +3531,20 @@ router.post('/save-configuration', async (req, res) => {
 
                   console.log('Datos de inspecciones obtenidos:', inspectionsData);
 
+                  // Consultar normativas relacionadas con la categoría del cliente
+                  let clientRulesData = [];
+                  if (clientData.category) {
+                    const queryRulesData = 'SELECT * FROM rules WHERE category = $1';
+                    try {
+                      const resultRulesData = await pool.query(queryRulesData, [clientData.category]);
+                      clientRulesData = resultRulesData.rows;
+                      console.log('Normativas obtenidas para la categoría del cliente:', clientRulesData);
+                    } catch (error) {
+                      console.error(\`Error al consultar normativas para la categoría "\${clientData.category}":\`, error);
+                      clientRulesData = []; // Si falla, asignar un array vacío
+                    }
+                  }
+
                   // Procesar variables específicas para "services"
                   Object.entries(variables).forEach(([key, value]) => {
                     if (value.startsWith("Servicio-")) {
@@ -3546,7 +3564,15 @@ router.post('/save-configuration', async (req, res) => {
                       const companionValues = companionData
                         .filter((companion) => companion) // Filtrar valores null
                         .map((companion) => (companion && companion.hasOwnProperty(field) ? companion[field] : "No encontrado"));
-                      variables[key] = companionValues.join(", "); // Combina todos los valores en un string separado por comas
+                      variables[key] = companionValues.join("* "); // Combina todos los valores en un string separado por comas
+                      console.log(\`Variable "\${key}" actualizada a: \${variables[key]}\`);
+                    } else if (typeof value === 'string' && value.startsWith("Normativa Cliente-")) {
+                      const ruleField = value.split('-')[1];
+                      const ruleValues = clientRulesData
+                        .map((rule) => (rule && rule.hasOwnProperty(ruleField) ? rule[ruleField] : "No encontrado"));
+                      
+                      // Combinar las normativas en un solo string separado por comas
+                      variables[key] = ruleValues.join("* ");
                       console.log(\`Variable "\${key}" actualizada a: \${variables[key]}\`);
                     } else if (value.startsWith("Inspecciones-")) {
                       const [_, periodo, tipoInspeccion, campo] = value.split('-'); // Extraer los parámetros
@@ -3627,6 +3653,16 @@ router.post('/save-configuration', async (req, res) => {
                           return companionData
                             .filter((companion) => companion) // Filtrar valores null
                             .map((companion) => (companion && companion.hasOwnProperty(userField) ? companion[userField] : "No encontrado"));
+                        } else if (typeof field === 'string' && field.startsWith("Normativa Cliente-")) {
+                          const ruleField = field.split('-')[1];
+                          const ruleValues = clientRulesData
+                            .map((rule) => (rule && rule.hasOwnProperty(ruleField) ? rule[ruleField] : "No encontrado"));
+
+                          // Cada valor de normativa debe añadirse como una nueva fila
+                          ruleValues.forEach((value, index) => {
+                            if (!filasPorCampo[index]) filasPorCampo[index] = [];
+                            filasPorCampo[index].push(value);
+                          });
                         } else if (field.startsWith("Inspecciones-")) {
                           const [_, periodo, tipoInspeccion, campo] = field.split('-');
                           console.log(\`Procesando inspecciones para "\${periodo}" y tipo "\${tipoInspeccion}" en tablas...\`);
@@ -3791,6 +3827,20 @@ router.post('/save-configuration', async (req, res) => {
                   console.log("Datos de los acompañantes obtenidos:", companionData);
                 }
 
+                // Consultar normativas relacionadas con la categoría del cliente
+                let clientRulesData = [];
+                if (clientData.category) {
+                  const queryRulesData = 'SELECT * FROM rules WHERE category = $1';
+                  try {
+                    const resultRulesData = await pool.query(queryRulesData, [clientData.category]);
+                    clientRulesData = resultRulesData.rows;
+                    console.log('Normativas obtenidas para la categoría del cliente:', clientRulesData);
+                  } catch (error) {
+                    console.error(\`Error al consultar normativas para la categoría "\${clientData.category}":\`, error);
+                    clientRulesData = []; // Si falla, asignar un array vacío
+                  }
+                }
+
                 // Procesar variables específicas para "inspections"
                 Object.entries(variables).forEach(([key, value]) => {
                   if (typeof value === 'string' && value.startsWith("Inspección-")) {
@@ -3800,7 +3850,8 @@ router.post('/save-configuration', async (req, res) => {
 
                     if (campo.startsWith("findings_")) {
                       const keyPath = campo.replace('findings_', ''); // Extraer jerarquía de claves
-                      variables[key] = getValueFromJson(inspectionData.findings || {}, keyPath, tipoInspeccion) || "No encontrado";
+                      const result = getValueFromJson(inspectionData.findings || {}, keyPath, tipoInspeccion);
+                      variables[key] = Array.isArray(result) ? result.join("* ") : result || "No encontrado";
                     } else {
                       variables[key] = inspectionData[campo] || "No encontrado";
                     }
@@ -3825,7 +3876,15 @@ router.post('/save-configuration', async (req, res) => {
                     const companionValues = companionData
                       .filter((companion) => companion) // Filtrar valores null
                       .map((companion) => (companion && companion.hasOwnProperty(field) ? companion[field] : "No encontrado"));
-                    variables[key] = companionValues.join(", "); // Combina todos los valores en un string separado por comas
+                    variables[key] = companionValues.join("* "); // Combina todos los valores en un string separado por comas
+                    console.log(\`Variable "\${key}" actualizada a: \${variables[key]}\`);
+                  } else if (typeof value === 'string' && value.startsWith("Normativa Cliente-")) {
+                    const ruleField = value.split('-')[1];
+                    const ruleValues = clientRulesData
+                      .map((rule) => (rule && rule.hasOwnProperty(ruleField) ? rule[ruleField] : "No encontrado"));
+                    
+                    // Combinar las normativas en un solo string separado por comas
+                    variables[key] = ruleValues.join("* ");
                     console.log(\`Variable "\${key}" actualizada a: \${variables[key]}\`);
                   }
 
@@ -3893,7 +3952,18 @@ router.post('/save-configuration', async (req, res) => {
                           if (!filasPorCampo[index]) filasPorCampo[index] = [];
                           filasPorCampo[index].push(value);
                         });
-                      } else {
+                      } else if (typeof field === 'string' && field.startsWith("Normativa Cliente-")) {
+                        const ruleField = field.split('-')[1];
+                        const ruleValues = clientRulesData
+                          .map((rule) => (rule && rule.hasOwnProperty(ruleField) ? rule[ruleField] : "No encontrado"));
+
+                        // Cada valor de normativa debe añadirse como una nueva fila
+                        ruleValues.forEach((value, index) => {
+                          if (!filasPorCampo[index]) filasPorCampo[index] = [];
+                          filasPorCampo[index].push(value);
+                        });
+                      }
+                      else {
                         // Si no es un campo dinámico, lo mantenemos igual
                         if (!filasPorCampo[0]) filasPorCampo[0] = [];
                         filasPorCampo[0].push(field);
@@ -3915,6 +3985,220 @@ router.post('/save-configuration', async (req, res) => {
                 throw new Error("No se pudieron procesar los datos de la inspección.");
               }
             }
+
+            // Función para procesar placeholders en el prompt con logs detallados
+            const procesarPromptConInputs = (prompt, filaVariables = {}) => {
+              console.log(\`Prompt inicial: "\${prompt}"\`);
+              const regex = /{{(.*?)}}/g; // Nueva expresión regular para encontrar {{<nombre de la variable>}}
+
+              const promptProcesado = prompt.replace(regex, (match, variableName) => {
+                // Buscar la variable en las variables específicas de la fila o en las globales
+                const variableValue = filaVariables[variableName] || variables[variableName];
+                if (variableValue !== undefined) {
+                  console.log(\`Reemplazando "\${match}" con el valor: "\${variableValue}"\`);
+                  return variableValue;
+                } else {
+                  console.warn(\`No se encontró la variable para el placeholder "\${match}".\`);
+                  return "Variable no encontrada";
+                }
+              });
+
+              console.log(\`Prompt después del reemplazo: "\${promptProcesado}"\`);
+              return promptProcesado;
+            };
+
+            // Función para procesar las tablas con prompts "IA-"
+            const procesarTablasConIA = async () => {
+              for (const tabla of tablas) {
+                console.log(\`Procesando tabla "\${tabla.nombre}"...\`);
+
+                const columnasIA = []; // Guardar columnas que contienen prompts con "IA-"
+                const promptsBase = []; // Guardar los prompts base para cada columna
+
+                // Buscar columnas que contienen prompts "IA-"
+                for (let colIndex = 0; colIndex < (tabla.cuerpo[0]?.length || 0); colIndex++) {
+                  for (const row of tabla.cuerpo) {
+                    if (typeof row[colIndex] === 'string' && row[colIndex].startsWith("IA-")) {
+                      columnasIA.push(colIndex);
+                      promptsBase[colIndex] = row[colIndex];
+                      console.log(\`Prompt base encontrado en columna \${colIndex}: "\${promptsBase[colIndex]}"\`);
+                      break;
+                    }
+                  }
+                }
+
+                // Si no hay columnas con prompts "IA-", continuar con la siguiente tabla
+                if (columnasIA.length === 0) {
+                  console.warn(\`No se encontró ningún campo "IA-" en la tabla "\${tabla.nombre}".\`);
+                  continue;
+                }
+
+                // Extraer y dividir las variables de todos los prompts en las columnas IA
+                const valoresVariablesPorColumna = {};
+
+                for (const colIndex of columnasIA) {
+                  const regex = /{{(.*?)}}/g;
+                  const variablesEncontradas = [];
+                  let match;
+
+                  // Extraer variables del prompt base
+                  while ((match = regex.exec(promptsBase[colIndex])) !== null) {
+                    variablesEncontradas.push(match[1]);
+                  }
+
+                  console.log(\`Variables encontradas en el prompt de la columna \${colIndex}: \${variablesEncontradas}\`);
+
+                  // Dividir las variables por "*"
+                  const valoresVariables = {};
+                  variablesEncontradas.forEach((variable) => {
+                    const valorCompleto = variables[variable] || "";
+                    const partes = valorCompleto.split("*");
+                    valoresVariables[variable] = partes;
+                    console.log(\`Variable "\${variable}" dividida en partes:\`, partes);
+                  });
+
+                  valoresVariablesPorColumna[colIndex] = valoresVariables;
+                }
+
+                // Determinar el número máximo de filas requerido
+                const maxFilas = Math.max(
+                  tabla.cuerpo.length,
+                  ...Object.values(valoresVariablesPorColumna).flatMap((valoresVariables) =>
+                    Object.values(valoresVariables).map((partes) => partes.length)
+                  )
+                );
+
+                // Agregar filas necesarias si faltan
+                while (tabla.cuerpo.length < maxFilas) {
+                  const nuevaFila = Array(tabla.cuerpo[0]?.length || 0).fill("");
+                  tabla.cuerpo.push(nuevaFila);
+                }
+
+                console.log(\`Tabla "\${tabla.nombre}" después de agregar filas necesarias:\`, tabla.cuerpo);
+
+                // Replicar los prompts base en todas las filas de las columnas correspondientes
+                for (const colIndex of columnasIA) {
+                  for (let rowIndex = 0; rowIndex < maxFilas; rowIndex++) {
+                    tabla.cuerpo[rowIndex][colIndex] = promptsBase[colIndex];
+                  }
+                }
+
+                console.log(\`Tabla "\${tabla.nombre}" después de replicar los prompts base:\`, tabla.cuerpo);
+
+                // Procesar cada fila individualmente para todas las columnas IA
+                for (let rowIndex = 0; rowIndex < tabla.cuerpo.length; rowIndex++) {
+                  const row = tabla.cuerpo[rowIndex];
+
+                  for (const colIndex of columnasIA) {
+                    const value = row[colIndex];
+                    console.log(\`Procesando valor en fila \${rowIndex}, columna \${colIndex}. Tipo: \${typeof value}, Valor:\`, value);
+
+                    if (typeof value === 'string' && value.startsWith("IA-")) {
+                      console.log(\`Campo identificado como IA. Valor: \${value}\`);
+                      const [_, modeloIA, rawPrompt] = value.split('-');
+
+                      // Construir variables específicas para esta fila
+                      const filaVariables = {};
+                      const valoresVariables = valoresVariablesPorColumna[colIndex];
+                      for (const variable in valoresVariables) {
+                        filaVariables[variable] = valoresVariables[variable]?.[rowIndex] || "Variable no encontrada";
+                      }
+
+                      // Procesar el prompt con las variables específicas de esta fila
+                      const prompt = procesarPromptConInputs(rawPrompt, filaVariables);
+
+                      const modeloEncontrado = aiModels.find((ai) => ai.name === modeloIA);
+                      if (!modeloEncontrado) {
+                        console.warn(\`Modelo IA no encontrado para el campo en la tabla "\${tabla.nombre}".\`);
+                        row[colIndex] = "Modelo no encontrado";
+                        continue;
+                      }
+
+                      const { model, personality } = modeloEncontrado;
+                      try {
+                        console.log(\`Consultando GPT con modelo: "\${model}", personalidad: "\${personality}"\`);
+                        // Usar await para resolver la Promesa
+                        const resultadoIA = await consultarGPT(model, personality, prompt);
+                        row[colIndex] = resultadoIA;
+                        console.log(\`Valor generado por la IA para fila \${rowIndex}, columna \${colIndex}: \${resultadoIA}\`);
+                      } catch (error) {
+                        console.error(\`Error al consultar IA para fila \${rowIndex}, columna \${colIndex}:\`, error);
+                        row[colIndex] = "Error al generar valor con IA";
+                      }
+                    }
+                  }
+                }
+
+                console.log(\`Tabla "\${tabla.nombre}" actualizada:\`, tabla.cuerpo);
+              }
+            };
+
+            // Llamar a la función para procesar las tablas IA
+            await procesarTablasConIA();
+
+            // Procesar variables específicas que inician con "IA-"
+            const procesarVariablesIA = async () => {
+              for (const [key, value] of Object.entries(variables)) {
+                if (typeof value === 'string' && value.startsWith("IA-")) {
+                  const [_, modeloIA, rawPrompt] = value.split('-');
+
+                  console.log(\`Procesando variable "\${key}" con modelo IA: \${modeloIA}\`);
+                  console.log(\`Prompt inicial: "\${rawPrompt}"\`);
+
+                  // Extraer las variables dentro del prompt
+                  const regex = /{{(.*?)}}/g;
+                  const variablesEncontradas = [];
+                  let match;
+
+                  while ((match = regex.exec(rawPrompt)) !== null) {
+                    variablesEncontradas.push(match[1]);
+                  }
+
+                  console.log(\`Variables encontradas en el prompt: \${variablesEncontradas}\`);
+
+                  // Reemplazar las variables en el prompt
+                  const promptProcesado = rawPrompt.replace(regex, (match, variableName) => {
+                    const variableValue = variables[variableName];
+                    if (variableValue !== undefined) {
+                      console.log(\`Reemplazando "\${match}" con el valor: "\${variableValue}"\`);
+                      return variableValue;
+                    } else {
+                      console.warn(\`No se encontró la variable "\${variableName}" para el placeholder "\${match}".\`);
+                      return "Variable no encontrada";
+                    }
+                  });
+
+                  console.log(\`Prompt después del reemplazo: "\${promptProcesado}"\`);
+
+                  // Buscar el modelo en la lista de modelos disponibles
+                  const modeloEncontrado = aiModels.find((ai) => ai.name === modeloIA);
+
+                  if (!modeloEncontrado) {
+                    console.warn(\`Modelo IA no encontrado para la variable "\${key}".\`);
+                    variables[key] = "Modelo no encontrado";
+                    continue;
+                  }
+
+                  const { model, personality } = modeloEncontrado;
+
+                  // Consultar GPT para generar el valor
+                  try {
+                    console.log(\`Consultando GPT con modelo: "\${model}", personalidad: "\${personality}"\`);
+                    const resultadoIA = await consultarGPT(model, personality, promptProcesado);
+
+                    // Asignar el resultado generado a la variable
+                    variables[key] = resultadoIA;
+                    console.log(\`Variable "\${key}" actualizada con el valor generado por la IA:\`, resultadoIA);
+                  } catch (error) {
+                    console.error(\`Error al procesar la variable "\${key}" con IA:\`, error);
+                    variables[key] = "Error al generar valor con IA";
+                  }
+                }
+              }
+            };
+
+            // Llamar a esta función para procesar las variables "IA-" de manera global
+            await procesarVariablesIA();
 
               // 1. Obtener plantilla desde S3
               console.log("Obteniendo plantilla...");
@@ -4469,6 +4753,7 @@ router.post('/save-configuration', async (req, res) => {
     `;
 
     const configuration = {
+      aiModels,
       variables,
       tablas,
     };
@@ -4529,6 +4814,8 @@ router.post('/create-document-client', async (req, res) => {
       Buffer: Buffer, // Agregar Buffer al sandbox
       sharp,
       moment,
+      axios,
+      process: { env: process.env },
     };    
 
      // Crear un script envolviendo el código generado en una función `async`
@@ -4592,6 +4879,8 @@ router.post('/create-document-service', async (req, res) => {
       Buffer: Buffer, // Agregar Buffer al sandbox
       sharp,
       moment,
+      axios,
+      process: { env: process.env },
     };    
 
      // Crear un script envolviendo el código generado en una función `async`
@@ -4655,6 +4944,8 @@ router.post('/create-document-inspeccion', async (req, res) => {
       Buffer: Buffer, // Agregar Buffer al sandbox
       sharp,
       moment,
+      axios,
+      process: { env: process.env },
     };    
 
      // Crear un script envolviendo el código generado en una función `async`
