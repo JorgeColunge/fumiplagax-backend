@@ -2309,6 +2309,67 @@ router.post('/save-configuration', async (req, res) => {
               const templateId = "${templateId}";
               let variables = ${JSON.stringify(variables, null, 2)};
               let tablas = ${JSON.stringify(tablas, null, 2)};
+              let aiModels = ${JSON.stringify(aiModels, null, 2)};
+
+              // Función para realizar consultas a GPT
+              const consultarGPT = async (modelo, personalidad, prompt) => {
+                const apiKey = "aqui va la apikeyssa";
+                const url = "https://api.openai.com/v1/chat/completions";
+                const headers = {
+                  Authorization: \`Bearer \${apiKey}\`,
+                  "Content-Type": "application/json",
+                };
+                const payload = {
+                  model: modelo,
+                  messages: [
+                    { role: "system", content: personalidad },
+                    { role: "user", content: prompt },
+                  ],
+                };
+
+                try {
+                  const responseGpt = await axios.post(url, payload, { headers });
+                  const resultado = responseGpt.data.choices[0].message.content.trim();
+
+                  // Cálculo del uso de tokens
+                  const usage = responseGpt.data.usage;
+                  const inputTokens = usage.prompt_tokens;
+                  const outputTokens = usage.completion_tokens;
+
+                  // Deja la sección de envío comentada por ahora
+                  /*
+                  const backendUrl = "https://botix.axiomarobotics.com:10000/api/consumptions";
+                  const backendPayloadInput = {
+                    api_name: "GPT",
+                    model: modelo,
+                    unit_type: "input_token",
+                    unit_count: inputTokens,
+                    query_details: "consulta personalizada",
+                    company_id: integrationDetails.company_id,
+                    user_id: responsibleUserId,
+                    conversationId: conversationId,
+                  };
+                  await axios.post(backendUrl, backendPayloadInput);
+
+                  const backendPayloadOutput = {
+                    api_name: "GPT",
+                    model: modelo,
+                    unit_type: "output_token",
+                    unit_count: outputTokens,
+                    query_details: "consulta personalizada",
+                    company_id: integrationDetails.company_id,
+                    user_id: responsibleUserId,
+                    conversationId: conversationId,
+                  };
+                  await axios.post(backendUrl, backendPayloadOutput);
+                  */
+
+                  return resultado;
+                } catch (error) {
+                  console.error("Error al obtener respuesta de GPT:", error);
+                  return "Error al obtener la respuesta";
+                }
+              };
 
               let defaultWidthEMU = 990000; // Ancho en EMU
               let cellWidthEMU = defaultWidthEMU; // Variable global para el ancho de celda
