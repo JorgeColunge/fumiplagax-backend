@@ -615,6 +615,7 @@ router.post('/services', async (req, res) => {
   const { service_type, description, pest_to_control, intervention_areas, category, quantity_per_month, client_id, value, created_by, responsible, companion } = req.body;
 
   try {
+    // Insertar el servicio en la tabla
     const query = `
       INSERT INTO services (service_type, description, pest_to_control, intervention_areas, category, quantity_per_month, client_id, value, created_by, responsible, companion)
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *
@@ -622,12 +623,78 @@ router.post('/services', async (req, res) => {
     const values = [service_type, description, pest_to_control, intervention_areas, category, quantity_per_month, client_id, value, created_by, responsible, companion];
     const result = await pool.query(query, values);
 
-    res.status(201).json({ success: true, message: "Service created successfully", service: result.rows[0] });
+    const service = result.rows[0]; // Servicio creado
+    const notificationMessage = `Tu servicio ${service.id} ha sido creado con éxito.`;
+
+    // Notificar al responsable
+    const notificationQuery = `
+      INSERT INTO notifications (user_id, notification, state)
+      VALUES ($1, $2, $3) RETURNING *
+    `;
+    const responsibleNotificationValues = [responsible, notificationMessage, 'pending'];
+    const responsibleNotificationResult = await pool.query(notificationQuery, responsibleNotificationValues);
+
+    // Emitir la notificación al responsable
+    req.io.to(responsible.toString()).emit('notification', {
+      user_id: responsible,
+      notification: responsibleNotificationResult.rows[0],
+    });
+
+    // Procesar el campo companion (acompañantes)
+    let parsedCompanion = [];
+    console.log(`Valor inicial de companion: ${companion}`); // Log inicial
+
+    if (typeof companion === 'string') {
+      if (companion.startsWith('{') && companion.endsWith('}')) {
+        console.log(`Companion detectado como formato JSON-like.`);
+        parsedCompanion = JSON.parse(companion.replace(/'/g, '"'));
+      } else if (companion.includes(',')) {
+        console.log(`Companion detectado como lista separada por comas.`);
+        parsedCompanion = companion.split(',').map(id => id.trim());
+      } else {
+        console.log(`Companion detectado como string simple.`);
+        parsedCompanion = [companion];
+      }
+    } else if (typeof companion === 'number') {
+      console.log(`Companion detectado como número simple.`);
+      parsedCompanion = [companion.toString()];
+    } else if (Array.isArray(companion)) {
+      console.log(`Companion detectado como array.`);
+      parsedCompanion = companion.map(id => id.toString());
+    } else {
+      console.error(`Formato de companion no soportado: ${companion}`);
+    }
+
+    // Iterar sobre los IDs de los acompañantes
+    if (parsedCompanion.length > 0) {
+      console.log(`Iniciando notificaciones para acompañantes: ${JSON.stringify(parsedCompanion)}`);
+      for (let companionId of parsedCompanion) {
+        console.log(`Procesando notificación para el acompañante ID: ${companionId}`);
+        try {
+          const companionNotificationValues = [companionId, notificationMessage, 'pending'];
+          const companionNotificationResult = await pool.query(notificationQuery, companionNotificationValues);
+
+          // Emitir la notificación al acompañante
+          req.io.to(companionId).emit('notification', {
+            user_id: companionId,
+            notification: companionNotificationResult.rows[0],
+          });
+          console.log(`Notificación emitida al acompañante ${companionId}: ${notificationMessage}`);
+        } catch (notifError) {
+          console.error(`Error al enviar notificación al acompañante ${companionId}: ${notifError.message}`);
+        }
+      }
+    } else {
+      console.warn("No se enviaron notificaciones a acompañantes. Lista vacía o formato no soportado.");
+    }
+
+    res.status(201).json({ success: true, message: "Service created successfully", service });
   } catch (error) {
-    console.error("Error creating service:", error);
-    res.status(500).json({ success: false, message: "Server error" });
+    console.error("Error creando el servicio:", error);
+    res.status(500).json({ success: false, message: "Error interno del servidor" });
   }
 });
+
 
 // Obtener todos los servicios
 router.get('/services', async (req, res) => {
@@ -674,32 +741,174 @@ router.put('/services/:id', async (req, res) => {
     if (result.rows.length === 0) {
       return res.status(404).json({ success: false, message: "Service not found" });
     }
-    res.json({ success: true, message: "Service updated successfully", service: result.rows[0] });
+
+    const service = result.rows[0];
+    const notificationMessage = `Tu servicio ${service.id} ha sido actualizado.`;
+
+    // Notificar al responsable
+    const notificationQuery = `
+      INSERT INTO notifications (user_id, notification, state)
+      VALUES ($1, $2, $3) RETURNING *
+    `;
+    const responsibleNotificationValues = [responsible, notificationMessage, 'pending'];
+    const responsibleNotificationResult = await pool.query(notificationQuery, responsibleNotificationValues);
+
+    req.io.to(responsible.toString()).emit('notification', {
+      user_id: responsible,
+      notification: responsibleNotificationResult.rows[0],
+    });
+    console.log(`Notificación emitida al responsable ${responsible}: ${notificationMessage}`);
+
+    // Procesar el campo companion (acompañantes)
+    let parsedCompanion = [];
+    console.log(`Valor inicial de companion: ${companion}`); // Log inicial
+
+    try {
+      if (typeof companion === 'string') {
+        console.log(`Companion detectado como string.`);
+        if (companion.startsWith('{') && companion.endsWith('}')) {
+          console.log(`Companion detectado como JSON-like. Intentando corregir.`);
+          const correctedCompanion = companion
+            .replace(/{/g, '[') // Reemplazar llaves por corchetes
+            .replace(/}/g, ']') // Reemplazar llaves por corchetes
+            .replace(/'/g, '"'); // Reemplazar comillas simples por dobles
+          console.log(`Companion corregido: ${correctedCompanion}`);
+          parsedCompanion = JSON.parse(correctedCompanion);
+        } else if (companion.includes(',')) {
+          console.log(`Companion detectado como lista separada por comas.`);
+          parsedCompanion = companion.split(',').map(id => id.trim());
+        } else {
+          console.log(`Companion detectado como string simple.`);
+          parsedCompanion = [companion];
+        }
+      } else if (Array.isArray(companion)) {
+        console.log(`Companion detectado como array.`);
+        parsedCompanion = companion.map(id => id.toString());
+      } else if (typeof companion === 'number') {
+        console.log(`Companion detectado como número.`);
+        parsedCompanion = [companion.toString()];
+      } else {
+        console.error(`Formato de companion no soportado: ${companion}`);
+      }
+    } catch (parseError) {
+      console.error(`Error al procesar companion: ${parseError.message}`);
+      parsedCompanion = [];
+    }
+
+    console.log(`Lista procesada de acompañantes: ${JSON.stringify(parsedCompanion)}`);
+
+    // Notificar a los acompañantes
+    for (let companionId of parsedCompanion) {
+      console.log(`Procesando notificación para acompañante ${companionId}`);
+      try {
+        const companionNotificationValues = [companionId, notificationMessage, 'pending'];
+        const companionNotificationResult = await pool.query(notificationQuery, companionNotificationValues);
+
+        req.io.to(companionId.toString()).emit('notification', {
+          user_id: companionId,
+          notification: companionNotificationResult.rows[0],
+        });
+        console.log(`Notificación emitida al acompañante ${companionId}: ${notificationMessage}`);
+      } catch (companionError) {
+        console.error(`Error al notificar al acompañante ${companionId}: ${companionError.message}`);
+      }
+    }
+
+    res.json({ success: true, message: "Service updated successfully", service });
   } catch (error) {
     console.error("Error updating service:", error);
     res.status(500).json({ success: false, message: "Server error" });
   }
 });
 
-// Eliminar servicio junto con inspecciones y programación de servicios relacionados
+// Eliminar servicio
 router.delete('/services/:id', async (req, res) => {
   const { id } = req.params;
 
   try {
+    // Obtener el servicio antes de eliminarlo para enviar las notificaciones
+    const serviceResult = await pool.query('SELECT * FROM services WHERE id = $1', [id]);
+    if (serviceResult.rows.length === 0) {
+      return res.status(404).json({ success: false, message: "Service not found" });
+    }
+    const service = serviceResult.rows[0];
+    const notificationMessage = `El servicio ${service.id} ha sido eliminado.`;
+
+    console.log(`Servicio a eliminar: ${JSON.stringify(service)}`);
+
     // Eliminar programación de servicios relacionados
     await pool.query('DELETE FROM service_schedule WHERE service_id = $1', [id]);
-    console.log(`Service schedule entries for service ${id} deleted.`);
+    console.log(`Programación eliminada para el servicio ${id}`);
 
     // Eliminar inspecciones relacionadas con el servicio
     await pool.query('DELETE FROM inspections WHERE service_id = $1', [id]);
-    console.log(`Inspections for service ${id} deleted.`);
+    console.log(`Inspecciones eliminadas para el servicio ${id}`);
 
     // Eliminar el servicio
-    const result = await pool.query('DELETE FROM services WHERE id = $1 RETURNING *', [id]);
-
-    if (result.rows.length === 0) {
+    const deleteResult = await pool.query('DELETE FROM services WHERE id = $1 RETURNING *', [id]);
+    if (deleteResult.rows.length === 0) {
       return res.status(404).json({ success: false, message: "Service not found" });
     }
+    console.log(`Servicio eliminado: ${deleteResult.rows[0].id}`);
+
+    // Notificar al responsable
+    const notificationQuery = `
+      INSERT INTO notifications (user_id, notification, state)
+      VALUES ($1, $2, $3) RETURNING *
+    `;
+    const responsibleNotificationValues = [service.responsible, notificationMessage, 'pending'];
+    const responsibleNotificationResult = await pool.query(notificationQuery, responsibleNotificationValues);
+
+    req.io.to(service.responsible.toString()).emit('notification', {
+      user_id: service.responsible,
+      notification: responsibleNotificationResult.rows[0],
+    });
+    console.log(`Notificación emitida al responsable ${service.responsible}: ${notificationMessage}`);
+
+    // Procesar y notificar a los acompañantes
+// Procesar y notificar a los acompañantes
+let parsedCompanion = [];
+try {
+  if (typeof service.companion === 'string') {
+    if (service.companion.startsWith('{') && service.companion.endsWith('}')) {
+      // Intenta interpretar el string como JSON y extraer los valores
+      const fixedCompanion = service.companion
+        .replace(/'/g, '"') // Reemplaza comillas simples por dobles
+        .replace(/^{|}$/g, '') // Elimina las llaves inicial y final
+        .split(',') // Divide por comas si hay múltiples valores
+        .map(id => id.trim().replace(/"/g, '')); // Limpia comillas alrededor de los valores
+      parsedCompanion = fixedCompanion;
+    } else if (service.companion.includes(',')) {
+      // Es una lista separada por comas
+      parsedCompanion = service.companion.split(',').map(id => id.trim());
+    } else {
+      // Es un único ID en formato string
+      parsedCompanion = [service.companion];
+    }
+  } else if (Array.isArray(service.companion)) {
+    // Es un array directamente
+    parsedCompanion = service.companion.map(id => id.toString());
+  }
+} catch (parseError) {
+  console.error(`Error procesando acompañantes: ${parseError.message}`);
+}
+
+console.log(`Acompañantes procesados: ${JSON.stringify(parsedCompanion)}`);
+
+for (let companionId of parsedCompanion) {
+  try {
+    const companionNotificationValues = [companionId, notificationMessage, 'pending'];
+    const companionNotificationResult = await pool.query(notificationQuery, companionNotificationValues);
+
+    req.io.to(companionId.toString()).emit('notification', {
+      user_id: companionId,
+      notification: companionNotificationResult.rows[0],
+    });
+    console.log(`Notificación emitida al acompañante ${companionId}: ${notificationMessage}`);
+  } catch (companionError) {
+    console.error(`Error notificando al acompañante ${companionId}: ${companionError.message}`);
+  }
+}
 
     res.json({ success: true, message: "Service, related inspections, and service schedule entries deleted successfully" });
   } catch (error) {
@@ -887,29 +1096,102 @@ router.post('/inspections', async (req, res) => {
   }
 
   try {
+    // Crear inspección en la tabla
     const query = `
       INSERT INTO inspections (date, time, service_id, inspection_type, inspection_sub_type)
-      VALUES ($1, $2, $3, $4, $5) RETURNING *
+      VALUES ($1, $2, $3, $4, $5) RETURNING *;
     `;
     const values = [
       date,
       time,
       service_id,
-      Array.isArray(inspection_type) ? inspection_type.join(", ") : inspection_type, // Convierte el array en texto si es necesario
-      inspection_sub_type || null, // Si no hay sub tipo, inserta NULL
+      Array.isArray(inspection_type) ? inspection_type.join(", ") : inspection_type,
+      inspection_sub_type || null,
     ];
     const result = await pool.query(query, values);
 
+    const inspection = result.rows[0];
+    const { id: inspectionId, time: inspectionTime } = inspection;
+
+    // Consultar datos del servicio relacionado
+    const serviceQuery = `
+      SELECT client_id 
+      FROM services 
+      WHERE id = $1;
+    `;
+    const serviceResult = await pool.query(serviceQuery, [service_id]);
+
+    if (serviceResult.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "Servicio no encontrado.",
+      });
+    }
+
+    const { client_id } = serviceResult.rows[0];
+
+    // Consultar el nombre del cliente
+    const clientQuery = `
+      SELECT name 
+      FROM clients 
+      WHERE id = $1;
+    `;
+    const clientResult = await pool.query(clientQuery, [client_id]);
+
+    if (clientResult.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "Cliente no encontrado.",
+      });
+    }
+
+    const clientName = clientResult.rows[0].name;
+
+    // Crear mensaje de notificación
+    const notificationMessage = `Se ha creado la inspección ${inspectionId} del cliente ${clientName} a las ${inspectionTime}.`;
+
+    // Obtener usuarios con roles permitidos (Superadministrador, Administrador, Supervisor Técnico)
+    const allowedRoles = ['Superadministrador', 'Administrador', 'Supervisor Técnico'];
+    const roleQuery = `
+      SELECT id 
+      FROM users 
+      WHERE rol = ANY ($1);
+    `;
+    const roleResult = await pool.query(roleQuery, [allowedRoles]);
+
+    // Notificar a los usuarios con roles permitidos
+    const roleUsers = roleResult.rows.map(user => user.id);
+
+    for (let userId of roleUsers) {
+      try {
+        const notificationQuery = `
+          INSERT INTO notifications (user_id, notification, state, route)
+          VALUES ($1, $2, $3, $4) RETURNING *;
+        `;
+        const roleNotificationValues = [userId, notificationMessage, 'pending', `/inspection/${inspectionId}`];
+        const roleNotificationResult = await pool.query(notificationQuery, roleNotificationValues);
+
+        // Emitir la notificación al usuario
+        req.io.to(userId.toString()).emit('notification', {
+          user_id: userId,
+          notification: roleNotificationResult.rows[0],
+        });
+        console.log(`Notificación emitida al usuario ${userId}: ${notificationMessage}`);
+      } catch (notifError) {
+        console.error(`Error al enviar notificación al usuario ${userId}: ${notifError.message}`);
+      }
+    }
+
     res.status(201).json({
       success: true,
-      message: "Inspección creada exitosamente",
-      inspection: result.rows[0],
+      message: "Inspección creada exitosamente y notificaciones enviadas.",
+      inspection,
     });
   } catch (error) {
     console.error("Error al crear inspección:", error);
     res.status(500).json({
       success: false,
-      message: "Error en el servidor",
+      message: "Error interno del servidor",
       error: error.message,
     });
   }
@@ -942,7 +1224,7 @@ router.get('/inspections/:id', async (req, res) => {
   }
 });
 
-// Ruta para actualizar una inspección
+// Editar Inspección
 router.put('/inspections/:id', async (req, res) => {
   const { id } = req.params;
   const { date, time, duration, observations, service_id, exit_time } = req.body;
@@ -952,20 +1234,98 @@ router.put('/inspections/:id', async (req, res) => {
   }
 
   try {
-    const query = `
+    console.log(`Iniciando actualización para inspección con ID: ${id}`);
+    console.log("Datos recibidos en el body:", req.body);
+
+    // Actualizar la inspección
+    const updateQuery = `
       UPDATE inspections
       SET date = $1, time = $2, duration = $3, observations = $4, service_id = $5, exit_time = $6
-      WHERE id = $7 RETURNING *
+      WHERE id = $7 RETURNING *;
     `;
-    const values = [date, time, duration, observations, service_id, exit_time, id];
-    const result = await pool.query(query, values);
+    const updateValues = [date, time, duration, observations, service_id, exit_time, id];
+    const result = await pool.query(updateQuery, updateValues);
 
     if (result.rows.length === 0) {
-      return res.status(404).json({ success: false, message: "Inspección no encontrada" });
+      console.log(`Inspección con ID: ${id} no encontrada.`);
+      return res.status(404).json({ success: false, message: "Inspección no encontrada." });
     }
-    res.json({ success: true, message: "Inspección actualizada exitosamente", inspection: result.rows[0] });
+
+    const updatedInspection = result.rows[0];
+    console.log("Inspección actualizada exitosamente:", updatedInspection);
+
+    // Obtener información del servicio relacionado
+    const serviceQuery = `SELECT client_id FROM services WHERE id = $1;`;
+    const serviceResult = await pool.query(serviceQuery, [service_id]);
+
+    if (serviceResult.rows.length === 0) {
+      console.log(`Servicio relacionado con ID: ${service_id} no encontrado.`);
+      return res.status(404).json({ success: false, message: "Servicio relacionado no encontrado." });
+    }
+
+    const { client_id } = serviceResult.rows[0];
+    console.log(`Cliente relacionado con el servicio: ${client_id}`);
+
+    // Obtener información del cliente
+    const clientQuery = `SELECT name FROM clients WHERE id = $1;`;
+    const clientResult = await pool.query(clientQuery, [client_id]);
+
+    if (clientResult.rows.length === 0) {
+      console.log(`Cliente con ID: ${client_id} no encontrado.`);
+      return res.status(404).json({ success: false, message: "Cliente no encontrado." });
+    }
+
+    const clientName = clientResult.rows[0].name;
+    console.log(`Nombre del cliente: ${clientName}`);
+
+    // Crear mensaje de notificación
+    const notificationMessage = `La inspección con ID ${id} de ${clientName} finalizó a las ${exit_time}.`;
+    console.log(`Mensaje de notificación: ${notificationMessage}`);
+
+    // Obtener usuarios con roles permitidos
+    const allowedRoles = ['Superadministrador', 'Administrador', 'Supervisor Técnico'];
+    const roleQuery = `SELECT id, rol FROM users WHERE rol = ANY ($1);`;
+    const roleResult = await pool.query(roleQuery, [allowedRoles]);
+
+    if (roleResult.rows.length === 0) {
+      console.log("No se encontraron usuarios con roles permitidos.");
+      return res.status(404).json({ success: false, message: "No se encontraron usuarios con roles permitidos para notificar." });
+    }
+
+    const roleUsers = roleResult.rows;
+    console.log("Usuarios con roles permitidos:", roleUsers);
+
+    // Insertar notificaciones y emitirlas
+    if (!req.io) {
+      console.warn("Socket.io no está configurado. Las notificaciones no se emitirán en tiempo real.");
+    }
+
+    for (let user of roleUsers) {
+      try {
+        const notificationQuery = `
+          INSERT INTO notifications (user_id, notification, state, route)
+          VALUES ($1, $2, $3, $4) RETURNING *;
+        `;
+        const notificationValues = [user.id, notificationMessage, 'pending', `/inspection/${id}`];
+        const notificationResult = await pool.query(notificationQuery, notificationValues);
+
+        console.log(`Notificación almacenada para el usuario ${user.id} (${user.rol}):`, notificationResult.rows[0]);
+
+        if (req.io) {
+          req.io.to(user.id.toString()).emit('notification', {
+            user_id: user.id,
+            notification: notificationResult.rows[0],
+          });
+          console.log(`Notificación emitida al usuario ${user.id} (${user.rol}): ${notificationMessage}`);
+        }
+      } catch (notifError) {
+        console.error(`Error al enviar notificación al usuario ${user.id}:`, notifError.message);
+      }
+    }
+
+    res.json({ success: true, message: "Inspección actualizada exitosamente", inspection: updatedInspection });
   } catch (error) {
-    console.error("Error al actualizar inspección:", error);
+    console.error("Error al actualizar inspección:", error.message);
     res.status(500).json({ success: false, message: "Error en el servidor", error: error.message });
   }
 });
@@ -1013,6 +1373,7 @@ router.get('/service-schedule/:id', async (req, res) => {
   }
 });
 
+// Ruta para agregar un registro
 router.post('/service-schedule', async (req, res) => {
   const { service_id, date, start_time, end_time } = req.body;
 
@@ -1031,7 +1392,7 @@ router.post('/service-schedule', async (req, res) => {
       return res.status(404).json({ success: false, message: "Servicio no encontrado" });
     }
 
-    const { responsible } = service;
+    const { responsible, companion } = service;
 
     // Obtener información del responsable
     const responsibleQuery = await pool.query('SELECT * FROM users WHERE id = $1', [responsible]);
@@ -1047,7 +1408,7 @@ router.post('/service-schedule', async (req, res) => {
       service_id: service_id,
       start: `${date}T${start_time}`,
       end: `${date}T${end_time}`,
-      title: `${service_id}`,
+      title: `Servicio ${service_id}`,
       responsible,
       serviceType: service.service_type,
       color: responsibleData.color,
@@ -1057,7 +1418,7 @@ router.post('/service-schedule', async (req, res) => {
     req.io.to(responsible.toString()).emit('newEvent', newEvent);
     console.log(`Evento emitido al responsable ${responsible}:`, newEvent);
 
-    // Generar notificación
+    // Generar notificación para el responsable
     const notificationMessage = `Tu servicio ${service_id} ha sido agendado para el ${date} a las ${start_time}.`;
 
     const notificationQuery = `
@@ -1073,6 +1434,30 @@ router.post('/service-schedule', async (req, res) => {
       notification: notificationResult.rows[0],
     });
     console.log(`Notificación emitida al responsable ${responsible}:`, notificationMessage);
+
+    // Procesar acompañantes
+    console.log("Acompañantes recibidos:", companion);
+
+    // Dividir acompañantes
+    const companions = companion.replace(/[{}]/g, '').split(',').map(id => id.replace(/"/g, '').trim());
+    console.log("Acompañantes procesados:", companions);
+
+    // Emitir eventos y notificaciones a cada acompañante
+    for (const companionId of companions) {
+      const trimmedId = companionId.trim();
+
+      // Emitir evento
+      req.io.to(trimmedId).emit('newEvent', newEvent);
+      console.log(`Evento emitido al acompañante ${trimmedId}:`, newEvent);
+
+      // Generar y emitir notificación
+      const companionNotificationResult = await pool.query(notificationQuery, [trimmedId, notificationMessage, 'pending']);
+      req.io.to(trimmedId).emit('notification', {
+        user_id: trimmedId,
+        notification: companionNotificationResult.rows[0],
+      });
+      console.log(`Notificación emitida al acompañante ${trimmedId}:`, notificationMessage);
+    }
 
     // Responder con éxito
     res.status(201).json({
@@ -1091,14 +1476,159 @@ router.post('/service-schedule', async (req, res) => {
 router.put('/service-schedule/:id', async (req, res) => {
   const { id } = req.params;
   const { service_id, date, start_time, end_time } = req.body;
+
   try {
+    console.log("Iniciando actualización para registro:", id);
+
+    // Validar datos requeridos
+    if (!service_id || !date || !start_time || !end_time) {
+      console.log("Datos faltantes en el body:", req.body);
+      return res.status(400).json({ success: false, message: "Faltan datos requeridos (service_id, date, start_time, end_time)." });
+    }
+
+    // Actualizar el registro
     const result = await pool.query(
       'UPDATE service_schedule SET service_id = $1, date = $2, start_time = $3, end_time = $4 WHERE id = $5 RETURNING *',
       [service_id, date, start_time, end_time, id]
     );
+
     if (result.rows.length === 0) {
+      console.log("Registro no encontrado para actualizar:", id);
       return res.status(404).json({ success: false, message: "Registro no encontrado" });
     }
+
+    console.log("Registro actualizado en la base de datos:", result.rows[0]);
+
+    // Obtener información del servicio
+    const serviceQuery = await pool.query('SELECT * FROM services WHERE id = $1', [service_id]);
+    const service = serviceQuery.rows[0];
+
+    if (!service) {
+      console.log("Servicio no encontrado para ID:", service_id);
+      return res.status(404).json({ success: false, message: "Servicio no encontrado" });
+    }
+
+    console.log("Servicio relacionado encontrado:", service);
+
+    const { responsible, companion } = service;
+
+    // Obtener información del responsable
+    const responsibleQuery = await pool.query('SELECT * FROM users WHERE id = $1', [responsible]);
+    const responsibleData = responsibleQuery.rows[0];
+
+    if (!responsibleData) {
+      console.log("Responsable no encontrado para ID:", responsible);
+      return res.status(404).json({ success: false, message: "Responsable no encontrado" });
+    }
+
+    console.log("Datos del responsable:", responsibleData);
+
+    // Emitir evento de actualización
+    const updatedEvent = {
+      id: result.rows[0].id,
+      service_id: service_id,
+      start: `${date}T${start_time}`,
+      end: `${date}T${end_time}`,
+      title: `${service_id}`,
+      responsible,
+      serviceType: service.service_type,
+      color: responsibleData.color,
+    };
+
+    req.io.to(responsible.toString()).emit('updateEvent', updatedEvent);
+    console.log(`Evento actualizado emitido al responsable ${responsible}:`, updatedEvent);
+
+    // Notificación al responsable
+    const notificationMessage = `El servicio ${service_id} ha sido actualizado para el ${date} a las ${start_time}.`;
+
+    const notificationQuery = `
+      INSERT INTO notifications (user_id, notification, state)
+      VALUES ($1, $2, $3) RETURNING *
+    `;
+    const notificationValues = [responsible, notificationMessage, 'pending'];
+    const notificationResult = await pool.query(notificationQuery, notificationValues);
+
+    console.log(`Notificación guardada para el responsable ${responsible}:`, notificationResult.rows[0]);
+
+    req.io.to(responsible.toString()).emit('notification', {
+      user_id: responsible,
+      notification: notificationResult.rows[0],
+    });
+
+    // Notificaciones a acompañantes
+    if (companion) {
+      console.log("Procesando acompañantes:", companion);
+
+      let parsedCompanion = [];
+      try {
+        parsedCompanion = Array.isArray(companion)
+          ? companion.map(String)
+          : (typeof companion === 'string'
+              ? companion.replace(/[\{\}\[\]]/g, '').split(',').map(id => id.trim().replace(/"/g, ''))
+              : []);
+        console.log("Lista de acompañantes procesada:", parsedCompanion);
+      } catch (error) {
+        console.error("Error al procesar los IDs de los acompañantes:", error.message);
+        parsedCompanion = [];
+      }      
+
+      console.log("Lista de acompañantes procesada:", parsedCompanion);
+
+      for (let companionId of parsedCompanion) {
+        try {
+          companionId = companionId.trim().replace(/"/g, '');
+      
+          const companionNotificationValues = [companionId, notificationMessage, 'pending'];
+          const companionNotificationResult = await pool.query(notificationQuery, companionNotificationValues);
+      
+          console.log(`Notificación guardada para el acompañante ${companionId}:`, companionNotificationResult.rows[0]);
+      
+          req.io.to(companionId.toString()).emit('notification', {
+            user_id: companionId,
+            notification: companionNotificationResult.rows[0],
+          });
+          console.log(`Evento emitido para el acompañante ${companionId}`);
+        } catch (error) {
+          console.error(`Error al notificar al acompañante ${companionId}:`, error.message);
+        }
+      }      
+    }
+
+    // Notificaciones a roles permitidos
+    const allowedRoles = ['Superadministrador', 'Administrador', 'Supervisor Técnico'];
+    console.log("Obteniendo usuarios con roles permitidos:", allowedRoles);
+
+    const roleQuery = `SELECT id FROM users WHERE rol = ANY($1);`;
+    const roleResult = await pool.query(roleQuery, [allowedRoles]);
+    const roleUsers = roleResult.rows.map(user => user.id);
+
+    console.log("Usuarios con roles permitidos encontrados:", roleUsers);
+
+    const uniqueUserIds = new Set([...roleUsers, responsible, ...parsedCompanion]);
+    console.log("Usuarios únicos para notificación:", Array.from(uniqueUserIds));
+    
+    for (let userId of uniqueUserIds) {
+      try {
+        const roleNotificationValues = [userId, notificationMessage, 'pending'];
+        const roleNotificationResult = await pool.query(notificationQuery, roleNotificationValues);
+    
+        console.log(`Notificación guardada para el usuario ${userId}:`, roleNotificationResult.rows[0]);
+    
+        req.io.to(userId.toString()).emit('notification', {
+          user_id: userId,
+          notification: roleNotificationResult.rows[0],
+        }, (ack) => {
+          if (ack) {
+            console.log(`Evento recibido por el usuario ${userId}`);
+          } else {
+            console.warn(`El evento no fue recibido por el usuario ${userId}`);
+          }
+        });        
+      } catch (error) {
+        console.error(`Error al notificar al usuario ${userId}:`, error.message);
+      }
+    }    
+
     res.json({ success: true, message: "Registro actualizado con éxito", data: result.rows[0] });
   } catch (error) {
     console.error("Error al actualizar el registro:", error);
@@ -1109,11 +1639,87 @@ router.put('/service-schedule/:id', async (req, res) => {
 // Ruta para eliminar un registro
 router.delete('/service-schedule/:id', async (req, res) => {
   const { id } = req.params;
+
   try {
+    // Eliminar el registro
     const result = await pool.query('DELETE FROM service_schedule WHERE id = $1 RETURNING *', [id]);
+
     if (result.rows.length === 0) {
       return res.status(404).json({ success: false, message: "Registro no encontrado" });
     }
+
+    const { service_id } = result.rows[0];
+
+    // Obtener información del servicio
+    const serviceQuery = await pool.query('SELECT * FROM services WHERE id = $1', [service_id]);
+    const service = serviceQuery.rows[0];
+
+    if (!service) {
+      return res.status(404).json({ success: false, message: "Servicio no encontrado" });
+    }
+
+    const { responsible, companion } = service;
+
+    // Notificación al responsable
+    const notificationMessage = `El servicio ${service_id} ha sido eliminado.`;
+
+    const notificationQuery = `
+      INSERT INTO notifications (user_id, notification, state)
+      VALUES ($1, $2, $3) RETURNING *
+    `;
+    const notificationValues = [responsible, notificationMessage, 'pending'];
+    const notificationResult = await pool.query(notificationQuery, notificationValues);
+
+    req.io.to(responsible.toString()).emit('notification', {
+      user_id: responsible,
+      notification: notificationResult.rows[0],
+    });
+
+    // Notificaciones a acompañantes
+// Notificaciones a acompañantes
+let parsedCompanion = [];
+try {
+  if (typeof companion === 'string') {
+    // Intenta analizar como JSON o procesar cadenas separadas por comas
+    try {
+      parsedCompanion = JSON.parse(companion);
+    } catch (jsonError) {
+      // Si no es JSON, trata como una cadena separada por comas
+      parsedCompanion = companion.replace(/{|}/g, '').split(',').map(id => id.trim().replace(/"/g, ''));
+    }
+  } else if (Array.isArray(companion)) {
+    // Si ya es un arreglo, úsalo directamente
+    parsedCompanion = companion;
+  } else if (typeof companion === 'object' && companion !== null) {
+    // Si es un objeto, convierte sus valores en un arreglo
+    parsedCompanion = Object.values(companion);
+  } else if (companion) {
+    // Manejo adicional si es un formato inesperado
+    parsedCompanion = companion.toString().replace(/{|}/g, '').split(',').map(id => id.trim().replace(/"/g, ''));
+  }
+
+  // Validar que el resultado sea un arreglo
+  if (!Array.isArray(parsedCompanion)) {
+    throw new TypeError('El valor procesado no es un arreglo válido');
+  }
+} catch (error) {
+  console.error("Error al procesar companion:", error.message);
+  parsedCompanion = []; // Asegurar un valor predeterminado
+}
+
+// Iterar y notificar a los acompañantes
+for (let companionId of parsedCompanion) {
+  companionId = companionId.trim().replace(/"/g, '');
+
+  const companionNotificationValues = [companionId, notificationMessage, 'pending'];
+  const companionNotificationResult = await pool.query(notificationQuery, companionNotificationValues);
+
+  req.io.to(companionId.toString()).emit('notification', {
+    user_id: companionId,
+    notification: companionNotificationResult.rows[0],
+  });
+}
+
     res.json({ success: true, message: "Registro eliminado con éxito", data: result.rows[0] });
   } catch (error) {
     console.error("Error al eliminar el registro:", error);
@@ -1362,7 +1968,7 @@ const uploadInspectionImages = multer({
   { name: "images", maxCount: 20 }, // Nuevo campo para imágenes genéricas
 ]);
 
-
+// Actualizar Inspecciones
 router.post('/inspections/:inspectionId/save', uploadInspectionImages, async (req, res) => {
   try {
     const { inspectionId } = req.params;
@@ -1384,10 +1990,7 @@ router.post('/inspections/:inspectionId/save', uploadInspectionImages, async (re
     const parsedSignatures =
       typeof signatures === 'string' ? JSON.parse(signatures) : signatures;
 
-    console.log('findingsByType parseado:', JSON.stringify(parsedFindingsByType, null, 2));
-    console.log('stationsFindings parseado:', JSON.stringify(parsedStationsFindings, null, 2));
-
-    // Procesar imágenes recibidas
+    // Procesar imágenes recibidas (igual que antes)
     const techSignaturePath = req.files.tech_signature
       ? `/media/inspections/${req.files.tech_signature[0].filename}`
       : parsedSignatures?.technician?.signature;
@@ -1406,14 +2009,6 @@ router.post('/inspections/:inspectionId/save', uploadInspectionImages, async (re
       ? req.files.images.map((file) => `/media/inspections/${file.filename}`)
       : [];
 
-    console.log('Rutas de imágenes procesadas:', {
-      techSignaturePath,
-      clientSignaturePath,
-      findingsImagePaths,
-      stationImagePaths,
-      genericImagePaths, // Mostrar las imágenes genéricas procesadas
-    });
-
     // Reconstruir el objeto signatures
     const updatedSignatures = {
       client: {
@@ -1428,37 +2023,16 @@ router.post('/inspections/:inspectionId/save', uploadInspectionImages, async (re
       },
     };
 
-    // Asociar imágenes a `findingsByType`
-    let imageIndex = 0;
-    Object.keys(parsedFindingsByType).forEach((type) => {
-      parsedFindingsByType[type] = parsedFindingsByType[type].map((finding) => {
-        if ((!finding.photo || finding.photo.startsWith('blob:')) && findingsImagePaths[imageIndex]) {
-          finding.photo = findingsImagePaths[imageIndex];
-          imageIndex++;
-        }
-        return finding;
-      });
-    });
-
-    // Asociar imágenes a `stationsFindings`
-    parsedStationsFindings.forEach((finding, index) => {
-      if ((!finding.photo || finding.photo.startsWith('blob:')) && stationImagePaths[index]) {
-        finding.photo = stationImagePaths[index];
-      }
-    });
-
-    // Construir el objeto final de datos, incluyendo imágenes genéricas
+    // Construir el objeto final de datos
     const findingsData = {
       findingsByType: parsedFindingsByType,
       productsByType: typeof productsByType === 'string' ? JSON.parse(productsByType) : productsByType,
       stationsFindings: parsedStationsFindings,
-      signatures: updatedSignatures, // Usar el objeto signatures reconstruido
-      genericImages: genericImagePaths, // Agregar imágenes genéricas al objeto
+      signatures: updatedSignatures,
+      genericImages: genericImagePaths,
     };
 
-    console.log('findingsData preparado para guardar en la base de datos:', JSON.stringify(findingsData, null, 2));
-
-    // Query para actualizar la inspección en la base de datos
+    // Actualizar la inspección en la base de datos
     const query = `
       UPDATE inspections
       SET 
@@ -1466,10 +2040,9 @@ router.post('/inspections/:inspectionId/save', uploadInspectionImages, async (re
         findings = $2,
         exit_time = NOW()
       WHERE id = $3
-      RETURNING *;
+      RETURNING *, NOW() AS exit_time;
     `;
     const values = [generalObservations, findingsData, inspectionId];
-
     const result = await pool.query(query, values);
 
     if (result.rowCount === 0) {
@@ -1477,19 +2050,94 @@ router.post('/inspections/:inspectionId/save', uploadInspectionImages, async (re
       return res.status(404).json({ success: false, message: 'Inspección no encontrada' });
     }
 
-    console.log('Datos guardados en la base de datos:', result.rows[0]);
+    const updatedInspection = result.rows[0];
+    const exitTime = updatedInspection.exit_time;
+    
+    // Formatear exitTime para que sea más amigable
+    const formattedExitTime = new Intl.DateTimeFormat('es-CO', {
+      dateStyle: 'full',
+      timeStyle: 'short',
+      timeZone: 'America/Bogota',
+    }).format(new Date(exitTime));
+    
+    console.log('Datos guardados en la base de datos:', updatedInspection);
+    
+    // Obtener el responsable desde la tabla `services`
+    const responsibleQuery = `
+      SELECT u.name AS responsible_name 
+      FROM services s
+      JOIN users u ON s.responsible::text = u.id::text
+      WHERE s.id::text = $1;
+    `;
+    const responsibleResult = await pool.query(responsibleQuery, [String(updatedInspection.service_id)]);
+    
+    if (responsibleResult.rowCount === 0) {
+      console.warn(`Responsable no encontrado para el servicio asociado a la inspección ${inspectionId}`);
+      return res.status(404).json({ success: false, message: 'Responsable no encontrado' });
+    }
+    
+    const responsibleName = responsibleResult.rows[0].responsible_name;
+    console.log(`Responsable del servicio: ${responsibleName}`);
+    
+    // Crear mensaje de notificación condicional con fecha formateada
+    let notificationMessage;
+    if (updatedSignatures.client?.signature && updatedSignatures.technician?.signature) {
+      notificationMessage = `${responsibleName} ha finalizado el servicio con ID ${inspectionId} a las ${formattedExitTime}.`;
+    } else {
+      notificationMessage = `${responsibleName} ha actualizado la inspección con ID ${inspectionId} a las ${formattedExitTime}.`;
+    }
+    console.log(`Mensaje de notificación: ${notificationMessage}`);    
+
+    // Notificar a usuarios con roles permitidos
+    const allowedRoles = ['superadministrador', 'administrador', 'supervisor técnico'];
+    const roleQuery = `SELECT id, rol FROM users WHERE LOWER(rol) = ANY ($1);`;
+    const roleResult = await pool.query(roleQuery, [allowedRoles]);
+
+    if (roleResult.rows.length === 0) {
+      console.log("No se encontraron usuarios con roles permitidos.");
+    } else {
+      const roleUsers = roleResult.rows;
+      console.log("Usuarios con roles permitidos encontrados:", roleUsers);
+
+      if (!req.io) {
+        console.warn("Socket.io no está configurado. Las notificaciones no se emitirán en tiempo real.");
+      }
+
+      for (let user of roleUsers) {
+        try {
+          const notificationQuery = `
+            INSERT INTO notifications (user_id, notification, state, route)
+            VALUES ($1, $2, $3, $4) RETURNING *;
+          `;
+          const notificationValues = [user.id, notificationMessage, 'pending', `/inspection/${inspectionId}`];
+          const notificationResult = await pool.query(notificationQuery, notificationValues);
+
+          console.log(`Notificación almacenada para el usuario ${user.id} (${user.rol}):`, notificationResult.rows[0]);
+
+          if (req.io) {
+            req.io.to(user.id.toString()).emit('notification', {
+              user_id: user.id,
+              notification: notificationResult.rows[0],
+            });
+            console.log(`Notificación emitida al usuario ${user.id} (${user.rol}): ${notificationMessage}`);
+          }
+        } catch (notifError) {
+          console.error(`Error al enviar notificación al usuario ${user.id}:`, notifError.message);
+        }
+      }
+    }
 
     // Respuesta exitosa al cliente
     res.status(200).json({
       success: true,
       message: 'Inspección guardada exitosamente',
-      inspection: result.rows[0],
+      inspection: updatedInspection,
       uploadedImages: {
         techSignature: techSignaturePath,
         clientSignature: clientSignaturePath,
         findingsImages: findingsImagePaths,
         stationImages: stationImagePaths,
-        genericImages: genericImagePaths, // Retornar las imágenes genéricas procesadas
+        genericImages: genericImagePaths,
       },
     });
   } catch (error) {
@@ -1497,8 +2145,6 @@ router.post('/inspections/:inspectionId/save', uploadInspectionImages, async (re
     res.status(500).json({ success: false, message: 'Error al guardar la inspección' });
   }
 });
-
-
 
 // Marcar una notificación como leída
 router.put('/notifications/:id/read', async (req, res) => {
