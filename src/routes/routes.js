@@ -701,7 +701,6 @@ router.delete('/services/:id', async (req, res) => {
       return res.status(404).json({ success: false, message: "Service not found" });
     }
 
-    console.log(`Service ${id} deleted successfully.`);
     res.json({ success: true, message: "Service, related inspections, and service schedule entries deleted successfully" });
   } catch (error) {
     console.error("Error deleting service and related data:", error);
@@ -948,7 +947,6 @@ router.put('/inspections/:id', async (req, res) => {
   const { id } = req.params;
   const { date, time, duration, observations, service_id, exit_time } = req.body;
 
-  // Validación de campos obligatorios
   if (!date || !time) {
     return res.status(400).json({ success: false, message: "La fecha y la hora son campos obligatorios." });
   }
