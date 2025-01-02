@@ -2922,7 +2922,7 @@ const transformEntity = (entity) => {
     cliente: 'clients',
     servicio: 'services',
     usuario: 'users',
-    inspección: 'inspections',
+    inspeccion: 'inspections',
   };
   return entityMapping[entity] || entity;
 };
@@ -3018,6 +3018,79 @@ router.post('/save-configuration', async (req, res) => {
               
                 return uniqueId; // Devolver el nuevo ID
               };    
+
+              const getValueFromJson = (json, keyPath, type = null) => {
+                  const keys = keyPath.split('_');
+                  let currentValue = json;
+
+                  for (const [index, key] of keys.entries()) {
+                    if (type && key === 'findingsByType') {
+                      // Manejar findingsByType con el campo type
+                      if (type === 'all') {
+                        // Combinar todos los tipos
+                        const allFindings = Object.values(currentValue[key] || {}).flat();
+                        currentValue = allFindings; // Continuar navegando con todos los hallazgos
+                      } else {
+                        // Filtrar por tipo específico
+                        currentValue = currentValue[key]?.[type] || [];
+                      }
+
+                      // Continuar con las claves restantes
+                      const remainingKeys = keys.slice(index + 1);
+                      if (remainingKeys.length > 0) {
+                        return currentValue
+                          .map((finding) => getValueFromJson(finding, remainingKeys.join('_')))
+                          .flat();
+                      }
+
+                      return currentValue;
+                    } else if (key === 'stationsFindings') {
+                      // Manejar findings_stationsFindings_<Category>_<Field>
+                      const category = keys[index + 1]; // La categoría está en la siguiente clave
+                      const field = keys[index + 2]; // El campo específico está dos niveles más abajo
+
+                      if (!category || !field) {
+                        console.warn(\`No se encontró una categoría o campo válido en la ruta: \${keyPath}\`);
+                        return "No encontrado";
+                      }
+
+                      // Filtrar stationsFindings por categoría, o incluir todas si la categoría es "all"
+                      const filteredStations = category === "all"
+                        ? currentValue[key] || [] // Incluir todas las estaciones si la categoría es "all"
+                        : currentValue[key]?.filter((station) => station.category === category) || [];
+
+                      // Retornar los valores del campo específico
+                      const results = filteredStations.map((station) =>
+                        station.hasOwnProperty(field) ? station[field] : "No encontrado"
+                      );
+
+                      return results.length > 0 ? results : "No encontrado";
+                    } else if (type && key === 'productsByType') {
+                      // Manejar productsByType con el campo type
+                      if (type === 'all') {
+                        const allProducts = Object.values(currentValue[key] || {});
+                        currentValue = allProducts;
+                      } else {
+                        currentValue = currentValue[key]?.[type] || {};
+                      }
+
+                      const remainingKeys = keys.slice(index + 1);
+                      if (remainingKeys.length > 0) {
+                        return getValueFromJson(currentValue, remainingKeys.join('_'));
+                      }
+
+                      return currentValue;
+                    } else if (currentValue && typeof currentValue === 'object' && key in currentValue) {
+                      // Navegar por las claves normalmente
+                      currentValue = currentValue[key];
+                    } else {
+                      console.warn(\`No se encontró la clave "\${key}" en el JSON.\`);
+                      return "No encontrado";
+                    }
+                  }
+
+                  return currentValue;
+                };
 
               // Consultar campos dinámicos de las entidades "clients", "stations" y "client_maps"
               if (entity === "clients") {
@@ -3153,10 +3226,9 @@ router.post('/save-configuration', async (req, res) => {
                     }
                   } else if (value.startsWith("Inspecciones-")) {
                     const [_, periodo, tipoInspeccion, campo] = value.split('-'); // Extraer <Periodo>, <Tipo de inspección>, <Campo>
-
                     console.log(\`Filtrando inspecciones para "\${periodo}" y tipo "\${tipoInspeccion}"...\`);
 
-                    // Filtrar por período
+                    // Filtrar inspecciones por período
                     let filteredInspections = inspectionsData;
                     if (periodo !== "all") {
                       const now = moment();
@@ -3184,7 +3256,7 @@ router.post('/save-configuration', async (req, res) => {
                       filteredInspections = filteredInspections.filter((inspection) => {
                         const inspectionTypes = inspection.inspection_type
                           .split(',')
-                          .map((type) => type.trim().toLowerCase()); // Normalizar a minúsculas y quitar espacios
+                          .map((type) => type.trim().toLowerCase());
 
                         return inspectionTypes.includes(tipoInspeccion.toLowerCase());
                       });
@@ -3192,14 +3264,16 @@ router.post('/save-configuration', async (req, res) => {
 
                     console.log(\`Inspecciones filtradas por tipo (\${tipoInspeccion}):\`, filteredInspections);
 
-                    // Asignar el valor a la variable
-                    if (filteredInspections.length > 0 && filteredInspections[0].hasOwnProperty(campo)) {
-                      variables[key] = filteredInspections[0][campo];
-                      console.log(\`Variable "\${key}" actualizada a: \${variables[key]}\`);
-                    } else {
-                      console.warn(\`No se encontraron inspecciones para el período "\${periodo}", tipo "\${tipoInspeccion}", o el campo "\${campo}".\`);
-                      variables[key] = "No encontrado";
-                    }
+                    // Manejar campos del JSON de findings
+                    if (campo.startsWith("findings_")) {
+                      const keyPath = campo.replace('findings_', ''); // Extraer jerarquía de claves
+                      if (filteredInspections.length > 0) {
+                        variables[key] = getValueFromJson(filteredInspections[0].findings, keyPath, tipoInspeccion);
+                      } else {
+                        console.warn(\`No se encontraron inspecciones con findings para el período "\${periodo}" y tipo "\${tipoInspeccion}".\`);
+                        variables[key] = "No encontrado";
+                      }
+                    } 
                   }
                 });
 
@@ -3213,110 +3287,573 @@ router.post('/save-configuration', async (req, res) => {
                   const nuevoCuerpo = [];
 
                   tabla.cuerpo.forEach((row) => {
-                    // Crear un array para almacenar todos los valores de cada campo de la fila
-                    const valoresPorCampo = row.map((field) => {
-                      if (field.startsWith("Cliente-")) {
-                        const clientField = field.split('-')[1];
-                        return clientData.hasOwnProperty(clientField)
-                          ? [clientData[clientField]]
-                          : ["No encontrado"];
-                      } else if (field.startsWith("Mapas-")) {
-                        const mapField = field.split('-')[1];
-                        return clientMapsData[0]
-                          ? [updateValue(clientMapsData[0], mapField, "client_maps")]
-                          : ["No encontrado"];
-                      } else if (field.startsWith("Estaciones Roedores-")) {
-                        const stationField = field.split('-')[1];
-                        // Filtrar las estaciones que pertenecen a la categoría "Roedores"
-                        return stationsData
-                          .filter((station) => station.category === "Roedores")
-                          .map((station) =>
-                            station.hasOwnProperty(stationField)
-                              ? station[stationField]
-                              : "No encontrado"
-                          );
-                      } else if (field.startsWith("Estaciones Aéreas-")) {
-                        const stationField = field.split('-')[1];
-                        // Filtrar las estaciones que pertenecen a la categoría "Aéreas"
-                        return stationsData
-                          .filter((station) => station.category === "Aéreas")
-                          .map((station) =>
-                            station.hasOwnProperty(stationField)
-                              ? station[stationField]
-                              : "No encontrado"
-                          );
-                      } else if (field.startsWith("Servicios-")) {
-                        const [_, periodo, tipoServicio, campo] = field.split('-');
-                        return filterServices(servicesData, periodo, tipoServicio).map((service) =>
-                          service.hasOwnProperty(campo)
-                            ? service[campo]
-                            : "No encontrado"
+                  // Crear un array para almacenar todos los valores de cada campo de la fila
+                  const valoresPorCampo = row.map((field) => {
+                    if (field.startsWith("Cliente-")) {
+                      const clientField = field.split('-')[1];
+                      return clientData.hasOwnProperty(clientField)
+                        ? [clientData[clientField]]
+                        : [];
+                    } else if (field.startsWith("Mapas-")) {
+                      const mapField = field.split('-')[1];
+                      return clientMapsData[0]
+                        ? [updateValue(clientMapsData[0], mapField, "client_maps")]
+                        : [];
+                    } else if (field.startsWith("Estaciones Roedores-")) {
+                      const stationField = field.split('-')[1];
+                      return stationsData
+                        .filter((station) => station.category === "Roedores")
+                        .map((station) =>
+                          station.hasOwnProperty(stationField)
+                            ? station[stationField]
+                            : []
                         );
-                      } else if (field.startsWith("Inspecciones-")) {
-                        const [_, periodo, tipoInspeccion, campo] = field.split('-'); // Extraer <Periodo>, <Tipo de inspección>, <Campo>
-
-                        console.log(\`Filtrando inspecciones para "\${periodo}" y tipo "\${tipoInspeccion}" en tablas...\`);
-
-                        // Filtrar por período
-                        let filteredInspections = inspectionsData;
-                        if (periodo !== "all") {
-                          const now = moment();
-                          filteredInspections = inspectionsData.filter((inspection) => {
-                            const inspectionDate = moment(inspection.date);
-                            switch (periodo) {
-                              case "this_year":
-                                return inspectionDate.isSame(now, 'year');
-                              case "last_3_months":
-                                return inspectionDate.isAfter(now.clone().subtract(3, 'months'));
-                              case "last_month":
-                                return inspectionDate.isSame(now.clone().subtract(1, 'month'), 'month');
-                              case "this_week":
-                                return inspectionDate.isSame(now, 'week');
-                              default:
-                                return false;
-                            }
-                          });
-                        }
-
-                        console.log(\`Inspecciones filtradas por período (\${periodo}):\`, filteredInspections);
-
-                        // Filtrar por tipo de inspección
-                        if (tipoInspeccion !== "all") {
-                          filteredInspections = filteredInspections.filter((inspection) => {
-                            const inspectionTypes = inspection.inspection_type
-                              .split(',')
-                              .map((type) => type.trim().toLowerCase()); // Normalizar a minúsculas y quitar espacios
-
-                            return inspectionTypes.includes(tipoInspeccion.toLowerCase());
-                          });
-                        }
-
-                        console.log(\`Inspecciones filtradas por tipo (\${tipoInspeccion}):\`, filteredInspections);
-
-                        // Generar los valores correspondientes para la tabla
-                        return filteredInspections.map((inspection) =>
-                          inspection.hasOwnProperty(campo) ? inspection[campo] : "No encontrado"
+                    } else if (field.startsWith("Estaciones Aéreas-")) {
+                      const stationField = field.split('-')[1];
+                      return stationsData
+                        .filter((station) => station.category === "Aéreas")
+                        .map((station) =>
+                          station.hasOwnProperty(stationField)
+                            ? station[stationField]
+                            : []
                         );
-                      }else {
-                        return [field]; // Mantener el valor original si no coincide con ninguna regla
+                    } else if (field.startsWith("Servicios-")) {
+                      const [_, periodo, tipoServicio, campo] = field.split('-');
+                      return filterServices(servicesData, periodo, tipoServicio).map((service) =>
+                        service.hasOwnProperty(campo)
+                          ? service[campo]
+                          : []
+                      );
+                    } else if (field.startsWith("Inspecciones-")) {
+                      const [_, periodo, tipoInspeccion, campo] = field.split('-');
+                      console.log(\`Procesando inspecciones para "\${periodo}" y tipo "\${tipoInspeccion}" en tablas...\`);
+
+                      // Filtrar inspecciones por período
+                      let filteredInspections = inspectionsData;
+                      if (periodo !== "all") {
+                        const now = moment();
+                        filteredInspections = inspectionsData.filter((inspection) => {
+                          const inspectionDate = moment(inspection.date);
+                          switch (periodo) {
+                            case "this_year":
+                              return inspectionDate.isSame(now, 'year');
+                            case "last_3_months":
+                              return inspectionDate.isAfter(now.clone().subtract(3, 'months'));
+                            case "last_month":
+                              return inspectionDate.isSame(now.clone().subtract(1, 'month'), 'month');
+                            case "this_week":
+                              return inspectionDate.isSame(now, 'week');
+                            default:
+                              return false;
+                          }
+                        });
                       }
-                    });
 
-                    // Determinar el número máximo de registros para esta fila
-                    const maxFilas = Math.max(...valoresPorCampo.map((valores) => valores.length));
+                      console.log(\`Inspecciones filtradas por período (\${periodo}):\`, filteredInspections);
 
-                    // Generar filas alineadas
-                    for (let i = 0; i < maxFilas; i++) {
-                      const nuevaFila = valoresPorCampo.map((valores) => valores[i] || "No encontrado");
-                      nuevoCuerpo.push(nuevaFila);
+                      // Filtrar por tipo de inspección
+                      if (tipoInspeccion !== "all") {
+                        filteredInspections = filteredInspections.filter((inspection) => {
+                          const inspectionTypes = inspection.inspection_type
+                            .split(',')
+                            .map((type) => type.trim().toLowerCase());
+
+                          return inspectionTypes.includes(tipoInspeccion.toLowerCase());
+                        });
+                      }
+
+                      console.log(\`Inspecciones filtradas por tipo (\${tipoInspeccion}):\`, filteredInspections);
+
+                      // Manejar campos del JSON de findings
+                      if (campo.startsWith("findings_")) {
+                        const keyPath = campo.replace('findings_', ''); // Extraer jerarquía de claves
+                        const findings = filteredInspections
+                          .map((inspection) => getValueFromJson(inspection.findings, keyPath, tipoInspeccion))
+                          .flat(); // Asegurarse de aplanar para manejar múltiples hallazgos
+
+                        return findings.filter((value) => value !== "No encontrado" && value !== null && value !== undefined);
+                      } else {
+                        // Generar valores para otros campos
+                        return filteredInspections
+                          .map((inspection) => (inspection.hasOwnProperty(campo) ? inspection[campo] : []))
+                          .filter((value) => value !== "No encontrado" && value !== null && value !== undefined);
+                      }
+                    } else {
+                      return [field]; // Mantener el valor original si no coincide con ninguna regla
                     }
                   });
 
-                  // Actualizar el cuerpo de la tabla con las nuevas filas generadas
+                  // Determinar el número máximo de registros para esta fila
+                  const maxFilas = Math.max(...valoresPorCampo.map((valores) => valores.length));
+
+                  // Generar filas alineadas, pero filtrar las vacías
+                  for (let i = 0; i < maxFilas; i++) {
+                    const nuevaFila = valoresPorCampo.map((valores) => valores[i] || null);
+                    // Filtrar filas vacías antes de agregar al cuerpo
+                    if (nuevaFila.some((valor) => valor !== null && valor !== "No encontrado" && valor !== "")) {
+                      nuevoCuerpo.push(nuevaFila);
+                    }
+                  }
+                });
+
+                // Actualizar el cuerpo de la tabla con las nuevas filas generadas
+                tabla.cuerpo = nuevoCuerpo;
+                console.log(\`Tabla "\${tabla.nombre}" actualizada:\`, tabla.cuerpo);
+                });
+              }
+
+              // Consultar campos dinámicos para la entidad "services"
+              else if (entity === "services") {
+                const queryServiceData = 'SELECT * FROM services WHERE id = $1';
+                const queryClientData = 'SELECT * FROM clients WHERE id = $1';
+                const queryUserData = 'SELECT * FROM users WHERE id = $1';
+                const queryInspections = 'SELECT * FROM inspections WHERE service_id = $1';
+
+                try {
+                  // Consultar datos del servicio
+                  const resultServiceData = await pool.query(queryServiceData, [idEntity]);
+
+                  if (resultServiceData.rows.length === 0) {
+                    throw new Error(\`No se encontró la entidad "services" con ID: \${idEntity}\`);
+                  }
+
+                  const serviceData = resultServiceData.rows[0];
+                  console.log('Datos de la entidad "services" obtenidos:', serviceData);
+
+                  // Consultar datos del cliente relacionado con el servicio
+                  const resultClientData = await pool.query(queryClientData, [serviceData.client_id]);
+
+                  if (resultClientData.rows.length === 0) {
+                    throw new Error(\`No se encontró el cliente relacionado con el servicio con ID: \${serviceData.client_id}\`);
+                  }
+
+                  const clientData = resultClientData.rows[0];
+                  console.log('Datos de la entidad "clients" obtenidos:', clientData);
+
+                  // Consultar datos del responsable relacionado con el servicio
+                  const resultUserData = await pool.query(queryUserData, [serviceData.responsible]);
+                  const responsibleData = resultUserData.rows.length > 0 ? resultUserData.rows[0] : null;
+
+                  // Procesar el campo "companion" para consultar datos de los acompañantes
+                  const companionIdsRaw = serviceData.companion.replace(/{/g, "[").replace(/}/g, "]"); // Reemplazar llaves por corchetes
+                  let companionIds;
+
+                  try {
+                    companionIds = JSON.parse(companionIdsRaw).map((id) => id.trim());
+                    console.log("IDs de acompañantes extraídos:", companionIds);
+                  } catch (error) {
+                    console.error("Error al parsear el campo 'companion':", error);
+                    companionIds = []; // Si hay un error, asignar un array vacío
+                  }
+
+                  // Consultar datos de los acompañantes
+                  const companionData = [];
+                  for (const companionId of companionIds) {
+                    const resultCompanionData = await pool.query(queryUserData, [companionId]);
+                    if (resultCompanionData.rows.length > 0) {
+                      companionData.push(resultCompanionData.rows[0]);
+                    } else {
+                      console.warn(\`No se encontró usuario para el ID de acompañante: \${companionId}\`);
+                      companionData.push(null); // Si no se encuentra el usuario, agregar un null
+                    }
+                  }
+                  console.log("Datos de los acompañantes obtenidos:", companionData);
+
+
+                  // Consultar datos de inspecciones relacionados con el servicio
+                  const resultInspections = await pool.query(queryInspections, [idEntity]);
+                  const inspectionsData = resultInspections.rows;
+
+                  console.log('Datos de inspecciones obtenidos:', inspectionsData);
+
+                  // Procesar variables específicas para "services"
+                  Object.entries(variables).forEach(([key, value]) => {
+                    if (value.startsWith("Servicio-")) {
+                      const field = value.split('-')[1];
+                      variables[key] = serviceData.hasOwnProperty(field) ? serviceData[field] : "No encontrado";
+                      console.log(\`Variable "\${key}" actualizada a: \${variables[key]}\`);
+                    } else if (value.startsWith("Cliente-")) {
+                      const field = value.split('-')[1];
+                      variables[key] = clientData.hasOwnProperty(field) ? clientData[field] : "No encontrado";
+                      console.log(\`Variable "\${key}" actualizada a: \${variables[key]}\`);
+                    } else if (value.startsWith("Responsable-")) {
+                      const field = value.split('-')[1];
+                      variables[key] = responsibleData && responsibleData.hasOwnProperty(field) ? responsibleData[field] : "No encontrado";
+                      console.log(\`Variable "\${key}" actualizada a: \${variables[key]}\`);
+                    } else if (value.startsWith("Acompañante-")) {
+                      const field = value.split('-')[1];
+                      const companionValues = companionData
+                        .filter((companion) => companion) // Filtrar valores null
+                        .map((companion) => (companion && companion.hasOwnProperty(field) ? companion[field] : "No encontrado"));
+                      variables[key] = companionValues.join(", "); // Combina todos los valores en un string separado por comas
+                      console.log(\`Variable "\${key}" actualizada a: \${variables[key]}\`);
+                    } else if (value.startsWith("Inspecciones-")) {
+                      const [_, periodo, tipoInspeccion, campo] = value.split('-'); // Extraer los parámetros
+                      console.log(\`Filtrando inspecciones para "\${periodo}" y tipo "\${tipoInspeccion}"...\`);
+
+                      // Filtrar inspecciones por período
+                      let filteredInspections = inspectionsData;
+                      if (periodo !== "all") {
+                        const now = moment();
+                        filteredInspections = filteredInspections.filter((inspection) => {
+                          const inspectionDate = moment(inspection.date);
+                          switch (periodo) {
+                            case "this_year":
+                              return inspectionDate.isSame(now, 'year');
+                            case "last_3_months":
+                              return inspectionDate.isAfter(now.clone().subtract(3, 'months'));
+                            case "last_month":
+                              return inspectionDate.isSame(now.clone().subtract(1, 'month'), 'month');
+                            case "this_week":
+                              return inspectionDate.isSame(now, 'week');
+                            default:
+                              return false;
+                          }
+                        });
+                      }
+
+                      // Filtrar por tipo de inspección
+                      if (tipoInspeccion !== "all") {
+                        filteredInspections = filteredInspections.filter((inspection) => {
+                          const inspectionTypes = inspection.inspection_type
+                            .split(',')
+                            .map((type) => type.trim().toLowerCase());
+                          return inspectionTypes.includes(tipoInspeccion.toLowerCase());
+                        });
+                      }
+
+                      console.log(\`Inspecciones filtradas:\`, filteredInspections);
+
+                      // Asignar valores según el campo especificado
+                      if (filteredInspections.length > 0) {
+                        if (campo.startsWith("findings_")) {
+                          const keyPath = campo.replace('findings_', ''); // Extraer jerarquía de claves
+                          variables[key] = getValueFromJson(filteredInspections[0].findings, keyPath, tipoInspeccion) || "No encontrado";
+                        } else {
+                          variables[key] = filteredInspections[0][campo] || "No encontrado";
+                        }
+                      } else {
+                        console.warn(\`No se encontraron inspecciones para "\${periodo}" y tipo "\${tipoInspeccion}".\`);
+                        variables[key] = "No encontrado";
+                      }
+                    } else {
+                        if (filteredInspections.length > 0 && filteredInspections[0].hasOwnProperty(campo)) {
+                          variables[key] = filteredInspections[0][campo];
+                        } else {
+                          console.warn(\`No se encontraron inspecciones para el período "\${periodo}", tipo "\${tipoInspeccion}", o el campo "\${campo}".\`);
+                          variables[key] = "No encontrado";
+                        }
+                      }
+                  });
+
+                  // Procesar tablas específicas para "services"
+                  tablas.forEach((tabla) => {
+                    const nuevoCuerpo = []; // Nuevo cuerpo para la tabla
+
+                    tabla.cuerpo.forEach((row) => {
+                      const valoresPorCampo = row.map((field) => {
+                        if (field.startsWith("Servicio-")) {
+                          const serviceField = field.split('-')[1];
+                          return [serviceData[serviceField] || "No encontrado"];
+                        } else if (field.startsWith("Cliente-")) {
+                          const clientField = field.split('-')[1];
+                          return [clientData[clientField] || "No encontrado"];
+                        } else if (field.startsWith("Responsable-")) {
+                          const userField = field.split('-')[1];
+                          return [responsibleData && responsibleData[userField] || "No encontrado"];
+                        } else if (field.startsWith("Acompañante-")) {
+                          const userField = field.split('-')[1];
+                          return companionData
+                            .filter((companion) => companion) // Filtrar valores null
+                            .map((companion) => (companion && companion.hasOwnProperty(userField) ? companion[userField] : "No encontrado"));
+                        } else if (field.startsWith("Inspecciones-")) {
+                          const [_, periodo, tipoInspeccion, campo] = field.split('-');
+                          console.log(\`Procesando inspecciones para "\${periodo}" y tipo "\${tipoInspeccion}" en tablas...\`);
+
+                          // Filtrar inspecciones por período
+                          let filteredInspections = inspectionsData;
+                          if (periodo !== "all") {
+                            const now = moment();
+                            filteredInspections = inspectionsData.filter((inspection) => {
+                              const inspectionDate = moment(inspection.date);
+                              switch (periodo) {
+                                case "this_year":
+                                  return inspectionDate.isSame(now, 'year');
+                                case "last_3_months":
+                                  return inspectionDate.isAfter(now.clone().subtract(3, 'months'));
+                                case "last_month":
+                                  return inspectionDate.isSame(now.clone().subtract(1, 'month'), 'month');
+                                case "this_week":
+                                  return inspectionDate.isSame(now, 'week');
+                                default:
+                                  return false;
+                              }
+                            });
+                          }
+
+                          console.log(\`Inspecciones filtradas por período (\${periodo}):\`, filteredInspections);
+
+                          // Filtrar por tipo de inspección
+                          if (tipoInspeccion !== "all") {
+                            filteredInspections = filteredInspections.filter((inspection) => {
+                              const inspectionTypes = inspection.inspection_type
+                                .split(',')
+                                .map((type) => type.trim().toLowerCase());
+
+                              return inspectionTypes.includes(tipoInspeccion.toLowerCase());
+                            });
+                          }
+
+                          console.log(\`Inspecciones filtradas por tipo (\${tipoInspeccion}):\`, filteredInspections);
+
+                          // Manejar campos del JSON de findings
+                          if (campo.startsWith("findings_")) {
+                            const keyPath = campo.replace('findings_', ''); // Extraer jerarquía de claves
+                            const findings = filteredInspections
+                              .map((inspection) => getValueFromJson(inspection.findings, keyPath, tipoInspeccion))
+                              .flat(); // Asegurarse de aplanar para manejar múltiples hallazgos
+
+                            return findings.filter((value) => value !== "No encontrado" && value !== null && value !== undefined);
+                          } else {
+                            // Generar valores para otros campos
+                            return filteredInspections
+                              .map((inspection) => (inspection.hasOwnProperty(campo) ? inspection[campo] : []))
+                              .filter((value) => value !== "No encontrado" && value !== null && value !== undefined);
+                          }
+                        } else {
+                          return [field]; // Mantener el valor original si no coincide con ninguna regla
+                        }
+                      });
+
+                      // Determinar el número máximo de valores para esta fila
+                      const maxFilas = Math.max(...valoresPorCampo.map((valores) => valores.length));
+
+                      // Generar nuevas filas alineadas con los valores obtenidos
+                      for (let i = 0; i < maxFilas; i++) {
+                        const nuevaFila = valoresPorCampo.map((valores) => valores[i] || null);
+
+                        // Filtrar filas vacías: solo agregar si hay al menos un valor válido
+                        if (nuevaFila.some((valor) => valor !== null && valor !== "No encontrado" && valor !== "")) {
+                          nuevoCuerpo.push(nuevaFila);
+                        }
+                      }
+                    });
+
+                    // Reemplazar el cuerpo de la tabla con las nuevas filas generadas
+                    tabla.cuerpo = nuevoCuerpo;
+                  });
+                } catch (error) {
+                  console.error("Error al procesar datos para la entidad 'services':", error);
+                  throw new Error("No se pudieron procesar los datos del servicio.");
+                }
+              }
+
+              else if (entity === "inspections") {
+              const queryInspectionData = 'SELECT * FROM inspections WHERE id = $1';
+              const queryServiceData = 'SELECT * FROM services WHERE id = $1'; // Consulta para servicios
+              const queryClientData = 'SELECT * FROM clients WHERE id = $1'; // Consulta para clientes
+              const queryUserData = 'SELECT * FROM users WHERE id = $1'; // Consulta para usuarios
+
+              try {
+                // Consultar datos de la inspección
+                const resultInspectionData = await pool.query(queryInspectionData, [idEntity]);
+
+                if (resultInspectionData.rows.length === 0) {
+                  throw new Error(\`No se encontró la entidad "inspections" con ID: \${idEntity}\`);
+                }
+
+                const inspectionData = resultInspectionData.rows[0];
+                console.log('Datos de la entidad "inspections" obtenidos:', inspectionData);
+
+                // Consultar datos del servicio relacionado
+                let serviceData = {};
+                if (inspectionData.service_id) {
+                  const resultServiceData = await pool.query(queryServiceData, [inspectionData.service_id]);
+
+                  if (resultServiceData.rows.length === 0) {
+                    console.warn(\`No se encontró el servicio relacionado con ID: \${inspectionData.service_id}\`);
+                  } else {
+                    serviceData = resultServiceData.rows[0];
+                    console.log('Datos del servicio obtenidos:', serviceData);
+                  }
+                }
+
+                // Consultar datos del cliente relacionado
+                let clientData = {};
+                if (serviceData.client_id) {
+                  const resultClientData = await pool.query(queryClientData, [serviceData.client_id]);
+
+                  if (resultClientData.rows.length === 0) {
+                    console.warn(\`No se encontró el cliente relacionado con ID: \${serviceData.client_id}\`);
+                  } else {
+                    clientData = resultClientData.rows[0];
+                    console.log('Datos del cliente obtenidos:', clientData);
+                  }
+                }
+
+                let responsibleData = {};
+                if (serviceData.responsible) {
+                  const resultUserData = await pool.query(queryUserData, [serviceData.responsible]);
+
+                  if (resultUserData.rows.length === 0) {
+                    console.warn(\`No se encontró el usuario responsable con ID: \${serviceData.responsible}\`);
+                  } else {
+                    responsibleData = resultUserData.rows[0];
+                    console.log('Datos del responsable obtenidos:', responsibleData);
+                  }
+                }
+
+                // Procesar el campo "companion" para consultar datos de los acompañantes
+                let companionData = [];
+                if (serviceData.companion) {
+                  const companionIdsRaw = serviceData.companion.replace(/{/g, "[").replace(/}/g, "]"); // Reemplazar llaves por corchetes
+                  let companionIds;
+
+                  try {
+                    companionIds = JSON.parse(companionIdsRaw).map((id) => id.trim());
+                    console.log("IDs de acompañantes extraídos:", companionIds);
+                  } catch (error) {
+                    console.error("Error al parsear el campo 'companion':", error);
+                    companionIds = []; // Si hay un error, asignar un array vacío
+                  }
+
+                  // Consultar datos de los acompañantes
+                  for (const companionId of companionIds) {
+                    const resultCompanionData = await pool.query(queryUserData, [companionId]);
+                    if (resultCompanionData.rows.length > 0) {
+                      companionData.push(resultCompanionData.rows[0]);
+                    } else {
+                      console.warn(\`No se encontró usuario para el ID de acompañante: \${companionId}\`);
+                      companionData.push(null); // Si no se encuentra el usuario, agregar un null
+                    }
+                  }
+                  console.log("Datos de los acompañantes obtenidos:", companionData);
+                }
+
+                // Procesar variables específicas para "inspections"
+                Object.entries(variables).forEach(([key, value]) => {
+                  if (typeof value === 'string' && value.startsWith("Inspección-")) {
+                    const [_, periodo, tipoInspeccion, campo] = value.split('-');
+
+                    console.log(\`Procesando variable para tipo: "\${tipoInspeccion}" y campo: "\${campo}"\`);
+
+                    if (campo.startsWith("findings_")) {
+                      const keyPath = campo.replace('findings_', ''); // Extraer jerarquía de claves
+                      variables[key] = getValueFromJson(inspectionData.findings || {}, keyPath, tipoInspeccion) || "No encontrado";
+                    } else {
+                      variables[key] = inspectionData[campo] || "No encontrado";
+                    }
+                  } else if (typeof value === 'string' && value.startsWith("Servicio-")) {
+                    const serviceField = value.split('-')[1];
+                    console.log(\`Procesando variable del servicio para campo: "\${serviceField}"\`);
+
+                    variables[key] = serviceData[serviceField] || "No encontrado";
+                  } else if (typeof value === 'string' && value.startsWith("Cliente-")) {
+                    const clientField = value.split('-')[1];
+                    console.log(\`Procesando variable del cliente para campo: "\${clientField}"\`);
+
+                    variables[key] = clientData[clientField] || "No encontrado";
+                  } else if (typeof value === 'string' && value.startsWith("Responsable-")) {
+                    const userField = value.split('-')[1];
+                    console.log(\`Procesando variable del responsable para campo: "\${userField}"\`);
+
+                    variables[key] = responsibleData[userField] || "No encontrado";
+                    console.log(\`Variable "\${key}" actualizada a: \${variables[key]}\`);
+                  } else if (typeof value === 'string' && value.startsWith("Acompañante-")) {
+                    const field = value.split('-')[1];
+                    const companionValues = companionData
+                      .filter((companion) => companion) // Filtrar valores null
+                      .map((companion) => (companion && companion.hasOwnProperty(field) ? companion[field] : "No encontrado"));
+                    variables[key] = companionValues.join(", "); // Combina todos los valores en un string separado por comas
+                    console.log(\`Variable "\${key}" actualizada a: \${variables[key]}\`);
+                  }
+
+                  console.log(\`Variable "\${key}" actualizada a: \${variables[key]}\`);
+                });
+
+                // Procesar tablas específicas para "inspections"
+                tablas.forEach((tabla) => {
+                  const nuevoCuerpo = [];
+                  const filasPorCampo = []; // Almacena las filas generadas para cada campo
+
+                  tabla.cuerpo.forEach((row) => {
+                    row.forEach((field) => {
+                      if (typeof field === 'string' && field.startsWith("Inspección-")) {
+                        const [_, periodo, tipoInspeccion, campo] = field.split('-');
+
+                        console.log(\`Procesando campo para tipo: "\${tipoInspeccion}" y campo: "\${campo}"\`);
+
+                        if (campo.startsWith("findings_")) {
+                          const keyPath = campo.replace('findings_', ''); // Extraer jerarquía de claves
+                          const findings = getValueFromJson(inspectionData.findings || {}, keyPath, tipoInspeccion);
+
+                          if (Array.isArray(findings)) {
+                            findings.forEach((finding, index) => {
+                              if (!filasPorCampo[index]) filasPorCampo[index] = [];
+                              filasPorCampo[index].push(finding || "No encontrado");
+                            });
+                          } else {
+                            if (!filasPorCampo[0]) filasPorCampo[0] = [];
+                            filasPorCampo[0].push(findings || "No encontrado");
+                          }
+                        } else {
+                          if (!filasPorCampo[0]) filasPorCampo[0] = [];
+                          filasPorCampo[0].push(inspectionData[campo] || "No encontrado");
+                        }
+                      } else if (typeof field === 'string' && field.startsWith("Servicio-")) {
+                        const serviceField = field.split('-')[1];
+
+                        console.log(\`Procesando campo del servicio para campo: "\${serviceField}"\`);
+
+                        if (!filasPorCampo[0]) filasPorCampo[0] = [];
+                        filasPorCampo[0].push(serviceData[serviceField] || "No encontrado");
+                      } else if (typeof field === 'string' && field.startsWith("Cliente-")) {
+                        const clientField = field.split('-')[1];
+
+                        console.log(\`Procesando campo del cliente para campo: "\${clientField}"\`);
+
+                        if (!filasPorCampo[0]) filasPorCampo[0] = [];
+                        filasPorCampo[0].push(clientData[clientField] || "No encontrado");
+                      } else if (typeof field === 'string' && field.startsWith("Responsable-")) {
+                        const userField = field.split('-')[1];
+
+                        console.log(\`Procesando campo del responsable para campo: "\${userField}"\`);
+
+                        if (!filasPorCampo[0]) filasPorCampo[0] = [];
+                        filasPorCampo[0].push(responsibleData[userField] || "No encontrado");
+                      } else if (typeof field === 'string' && field.startsWith("Acompañante-")) {
+                        const userField = field.split('-')[1];
+                        const companionValues = companionData
+                          .filter((companion) => companion) // Filtrar valores null
+                          .map((companion) => (companion && companion.hasOwnProperty(userField) ? companion[userField] : "No encontrado"));
+
+                        // Cada valor de los acompañantes debe añadirse como una nueva fila
+                        companionValues.forEach((value, index) => {
+                          if (!filasPorCampo[index]) filasPorCampo[index] = [];
+                          filasPorCampo[index].push(value);
+                        });
+                      } else {
+                        // Si no es un campo dinámico, lo mantenemos igual
+                        if (!filasPorCampo[0]) filasPorCampo[0] = [];
+                        filasPorCampo[0].push(field);
+                      }
+                    });
+                  });
+
+                  // Convertir filasPorCampo a formato de tabla
+                  filasPorCampo.forEach((fila) => {
+                    nuevoCuerpo.push(fila);
+                  });
+
+                  // Actualizar el cuerpo de la tabla
                   tabla.cuerpo = nuevoCuerpo;
                   console.log(\`Tabla "\${tabla.nombre}" actualizada:\`, tabla.cuerpo);
                 });
+              } catch (error) {
+                console.error("Error al procesar datos para la entidad 'inspections':", error);
+                throw new Error("No se pudieron procesar los datos de la inspección.");
               }
+            }
 
               // 1. Obtener plantilla desde S3
               console.log("Obteniendo plantilla...");
@@ -3938,6 +4475,132 @@ router.post('/create-document-client', async (req, res) => {
       (async () => {
         ${generated_code}
         return await createDocument_clients(idEntity);
+      })();
+    `);
+
+    const context = vm.createContext(sandbox);
+    script.runInContext(context);
+
+    console.log("Código ejecutado exitosamente.");
+
+    res.status(200).json({ message: "Código ejecutado correctamente.", executed: true });
+  } catch (error) {
+    console.error("Error al ejecutar el código generado:", error.message);
+    res.status(500).json({ message: "Error interno del servidor", error: error.message });
+  }
+});
+
+// Ruta para ejecutar código dinámico almacenado
+router.post('/create-document-service', async (req, res) => {
+  const { idEntity, id } = req.body; // Recibir ID de la entidad e ID de configuración
+  try {
+    console.log("=== Iniciando ejecución de configuración almacenada ===");
+
+    // Validar entradas requeridas
+    if (!idEntity || !id) {
+      return res.status(400).json({ message: "Los campos 'idEntity' y 'id' son obligatorios." });
+    }
+
+    console.log("ID de la entidad recibido:", idEntity);
+    console.log("ID de configuración recibido:", id);
+
+    // Consultar la configuración en la base de datos
+    const query = 'SELECT generated_code FROM document_configuration WHERE id = $1';
+    const result = await pool.query(query, [id]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: "Configuración no encontrada." });
+    }
+
+    const { generated_code } = result.rows[0];
+    console.log("Código generado obtenido de la base de datos.");
+
+    // Preparar el sandbox
+    const sandbox = {
+      console: console, // Permite console.log
+      require: require, // Permite require
+      idEntity: idEntity, // ID de la entidad
+      pool: pool, // Conexión a la base de datos
+      fetch: fetch, // Para descargar archivos desde S3
+      PizZip: require('pizzip'), // Librería para manejar archivos .docx
+      xml2js: require('xml-js').xml2js, // Parsear XML a JSON
+      js2xml: require('xml-js').js2xml, // Convertir JSON a XML
+      getSignedUrl: getSignedUrl, // Función para obtener URLs firmadas de S3
+      uploadFile: uploadFile, // Función para subir archivos a S3
+      bucketName: "fumiplagax", // Nombre del bucket S3
+      Buffer: Buffer, // Agregar Buffer al sandbox
+      sharp,
+      moment,
+    };    
+
+     // Crear un script envolviendo el código generado en una función `async`
+     const script = new vm.Script(`
+      (async () => {
+        ${generated_code}
+        return await createDocument_services(idEntity);
+      })();
+    `);
+
+    const context = vm.createContext(sandbox);
+    script.runInContext(context);
+
+    console.log("Código ejecutado exitosamente.");
+
+    res.status(200).json({ message: "Código ejecutado correctamente.", executed: true });
+  } catch (error) {
+    console.error("Error al ejecutar el código generado:", error.message);
+    res.status(500).json({ message: "Error interno del servidor", error: error.message });
+  }
+});
+
+// Ruta para ejecutar código dinámico almacenado
+router.post('/create-document-inspeccion', async (req, res) => {
+  const { idEntity, id } = req.body; // Recibir ID de la entidad e ID de configuración
+  try {
+    console.log("=== Iniciando ejecución de configuración almacenada ===");
+
+    // Validar entradas requeridas
+    if (!idEntity || !id) {
+      return res.status(400).json({ message: "Los campos 'idEntity' y 'id' son obligatorios." });
+    }
+
+    console.log("ID de la entidad recibido:", idEntity);
+    console.log("ID de configuración recibido:", id);
+
+    // Consultar la configuración en la base de datos
+    const query = 'SELECT generated_code FROM document_configuration WHERE id = $1';
+    const result = await pool.query(query, [id]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: "Configuración no encontrada." });
+    }
+
+    const { generated_code } = result.rows[0];
+    console.log("Código generado obtenido de la base de datos.");
+
+    // Preparar el sandbox
+    const sandbox = {
+      console: console, // Permite console.log
+      require: require, // Permite require
+      idEntity: idEntity, // ID de la entidad
+      pool: pool, // Conexión a la base de datos
+      fetch: fetch, // Para descargar archivos desde S3
+      PizZip: require('pizzip'), // Librería para manejar archivos .docx
+      xml2js: require('xml-js').xml2js, // Parsear XML a JSON
+      js2xml: require('xml-js').js2xml, // Convertir JSON a XML
+      getSignedUrl: getSignedUrl, // Función para obtener URLs firmadas de S3
+      uploadFile: uploadFile, // Función para subir archivos a S3
+      bucketName: "fumiplagax", // Nombre del bucket S3
+      Buffer: Buffer, // Agregar Buffer al sandbox
+      sharp,
+      moment,
+    };    
+
+     // Crear un script envolviendo el código generado en una función `async`
+     const script = new vm.Script(`
+      (async () => {
+        ${generated_code}
+        return await createDocument_inspections(idEntity);
       })();
     `);
 
