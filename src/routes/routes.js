@@ -3894,10 +3894,11 @@ router.post('/save-configuration', async (req, res) => {
                 // Procesar tablas específicas para "inspections"
                 tablas.forEach((tabla) => {
                   const nuevoCuerpo = [];
-                  const filasPorCampo = []; // Almacena las filas generadas para cada campo
 
                   tabla.cuerpo.forEach((row) => {
-                    row.forEach((field) => {
+                    const filasGeneradas = [[]]; // Comenzamos con una fila vacía para generar nuevas filas
+
+                    row.forEach((field, colIndex) => {
                       if (typeof field === 'string' && field.startsWith("Inspección-")) {
                         const [_, periodo, tipoInspeccion, campo] = field.split('-');
 
@@ -3908,77 +3909,77 @@ router.post('/save-configuration', async (req, res) => {
                           const findings = getValueFromJson(inspectionData.findings || {}, keyPath, tipoInspeccion);
 
                           if (Array.isArray(findings)) {
+                            // Expandir filasGeneradas para cada hallazgo
                             findings.forEach((finding, index) => {
-                              if (!filasPorCampo[index]) filasPorCampo[index] = [];
-                              filasPorCampo[index].push(finding || "No encontrado");
+                              if (!filasGeneradas[index]) filasGeneradas[index] = Array(row.length).fill(""); // Nueva fila
+                              filasGeneradas[index][colIndex] = finding || "No encontrado";
                             });
                           } else {
-                            if (!filasPorCampo[0]) filasPorCampo[0] = [];
-                            filasPorCampo[0].push(findings || "No encontrado");
+                            filasGeneradas[0][colIndex] = findings || "No encontrado";
                           }
                         } else {
-                          if (!filasPorCampo[0]) filasPorCampo[0] = [];
-                          filasPorCampo[0].push(inspectionData[campo] || "No encontrado");
+                          filasGeneradas[0][colIndex] = inspectionData[campo] || "No encontrado";
                         }
                       } else if (typeof field === 'string' && field.startsWith("Servicio-")) {
                         const serviceField = field.split('-')[1];
 
                         console.log(\`Procesando campo del servicio para campo: "\${serviceField}"\`);
 
-                        if (!filasPorCampo[0]) filasPorCampo[0] = [];
-                        filasPorCampo[0].push(serviceData[serviceField] || "No encontrado");
+                        filasGeneradas.forEach((fila) => {
+                          fila[colIndex] = serviceData[serviceField] || "No encontrado";
+                        });
                       } else if (typeof field === 'string' && field.startsWith("Cliente-")) {
                         const clientField = field.split('-')[1];
 
                         console.log(\`Procesando campo del cliente para campo: "\${clientField}"\`);
 
-                        if (!filasPorCampo[0]) filasPorCampo[0] = [];
-                        filasPorCampo[0].push(clientData[clientField] || "No encontrado");
+                        filasGeneradas.forEach((fila) => {
+                          fila[colIndex] = clientData[clientField] || "No encontrado";
+                        });
                       } else if (typeof field === 'string' && field.startsWith("Responsable-")) {
                         const userField = field.split('-')[1];
 
                         console.log(\`Procesando campo del responsable para campo: "\${userField}"\`);
 
-                        if (!filasPorCampo[0]) filasPorCampo[0] = [];
-                        filasPorCampo[0].push(responsibleData[userField] || "No encontrado");
+                        filasGeneradas.forEach((fila) => {
+                          fila[colIndex] = responsibleData[userField] || "No encontrado";
+                        });
                       } else if (typeof field === 'string' && field.startsWith("Acompañante-")) {
                         const userField = field.split('-')[1];
                         const companionValues = companionData
                           .filter((companion) => companion) // Filtrar valores null
                           .map((companion) => (companion && companion.hasOwnProperty(userField) ? companion[userField] : "No encontrado"));
 
-                        // Cada valor de los acompañantes debe añadirse como una nueva fila
+                        // Añadir los valores de los acompañantes como filas separadas
                         companionValues.forEach((value, index) => {
-                          if (!filasPorCampo[index]) filasPorCampo[index] = [];
-                          filasPorCampo[index].push(value);
+                          if (!filasGeneradas[index]) filasGeneradas[index] = Array(row.length).fill("");
+                          filasGeneradas[index][colIndex] = value;
                         });
                       } else if (typeof field === 'string' && field.startsWith("Normativa Cliente-")) {
                         const ruleField = field.split('-')[1];
                         const ruleValues = clientRulesData
                           .map((rule) => (rule && rule.hasOwnProperty(ruleField) ? rule[ruleField] : "No encontrado"));
 
-                        // Cada valor de normativa debe añadirse como una nueva fila
+                        // Añadir los valores de normativa como filas separadas
                         ruleValues.forEach((value, index) => {
-                          if (!filasPorCampo[index]) filasPorCampo[index] = [];
-                          filasPorCampo[index].push(value);
+                          if (!filasGeneradas[index]) filasGeneradas[index] = Array(row.length).fill("");
+                          filasGeneradas[index][colIndex] = value;
+                        });
+                      } else {
+                        // Campo estático, lo mantenemos en todas las filas generadas
+                        filasGeneradas.forEach((fila) => {
+                          fila[colIndex] = field;
                         });
                       }
-                      else {
-                        // Si no es un campo dinámico, lo mantenemos igual
-                        if (!filasPorCampo[0]) filasPorCampo[0] = [];
-                        filasPorCampo[0].push(field);
-                      }
                     });
-                  });
 
-                  // Convertir filasPorCampo a formato de tabla
-                  filasPorCampo.forEach((fila) => {
-                    nuevoCuerpo.push(fila);
+                    // Añadir todas las filas generadas al cuerpo
+                    nuevoCuerpo.push(...filasGeneradas);
                   });
 
                   // Actualizar el cuerpo de la tabla
                   tabla.cuerpo = nuevoCuerpo;
-                  console.log(\`Tabla "\${tabla.nombre}" actualizada:\`, tabla.cuerpo);
+                  console.log(\`Tabla "\${tabla.nombre}" actualizada correctamente:\`, tabla.cuerpo);
                 });
               } catch (error) {
                 console.error("Error al procesar datos para la entidad 'inspections':", error);
@@ -4289,67 +4290,338 @@ router.post('/save-configuration', async (req, res) => {
                 });
               };
 
+              const extractCellAttributes = (cell) => {
+                const attributes = {
+                  width: 2000,
+                  gridSpan: 1,
+                  textColor: null,
+                  bgColor: null,
+                  fontStyle: null,
+                  fontSize: null,
+                  textAlign: null,
+                  verticalAlign: null,
+                };
+              
+                const tcPr = cell?.elements?.find((el) => el.name === 'w:tcPr');
+                const widthElement = tcPr?.elements?.find((el) => el.name === 'w:tcW');
+                const gridSpanElement = tcPr?.elements?.find((el) => el.name === 'w:gridSpan');
+                const shadingElement = tcPr?.elements?.find((el) => el.name === 'w:shd');
+                const verticalAlignElement = tcPr?.elements?.find((el) => el.name === 'w:vAlign');
+                const paragraph = cell?.elements?.find((el) => el.name === 'w:p');
+                const run = paragraph?.elements?.find((el) => el.name === 'w:r');
+                const runProps = run?.elements?.find((el) => el.name === 'w:rPr');
+              
+                // Extract width
+                if (widthElement) {
+                  attributes.width = parseInt(widthElement.attributes['w:w'], 10);
+                }
+              
+                // Extract gridSpan
+                if (gridSpanElement) {
+                  attributes.gridSpan = parseInt(gridSpanElement.attributes['w:val'], 10);
+                }
+              
+                // Extract background color
+                if (shadingElement) {
+                  attributes.bgColor = shadingElement.attributes['w:fill'];
+                }
+              
+                // Extract vertical alignment
+                if (verticalAlignElement) {
+                  attributes.verticalAlign = verticalAlignElement.attributes['w:val'];
+                }
+              
+                // Extract run properties
+                if (runProps) {
+                  const colorElement = runProps.elements?.find((el) => el.name === 'w:color');
+                  const fontSizeElement = runProps.elements?.find((el) => el.name === 'w:sz');
+                  const boldElement = runProps.elements?.find((el) => el.name === 'w:b');
+                  const italicElement = runProps.elements?.find((el) => el.name === 'w:i');
+              
+                  // Extract text color
+                  if (colorElement) {
+                    attributes.textColor = colorElement.attributes['w:val'];
+                  }
+              
+                  // Extract font size
+                  if (fontSizeElement) {
+                    attributes.fontSize = parseInt(fontSizeElement.attributes['w:val'], 10);
+                  }
+              
+                  // Extract bold style
+                  if (boldElement) {
+                    attributes.fontStyle = 'bold';
+                  }
+              
+                  // Extract italic style
+                  if (italicElement) {
+                    attributes.fontStyle = attributes.fontStyle
+                      ? \`\${attributes.fontStyle} italic\`
+                      : 'italic';
+                  }
+                }
+              
+                // Extract text alignment
+                const pPr = paragraph?.elements?.find((el) => el.name === 'w:pPr');
+                const textAlignElement = pPr?.elements?.find((el) => el.name === 'w:jc');
+                if (textAlignElement) {
+                  attributes.textAlign = textAlignElement.attributes['w:val'];
+                }
+              
+                return attributes;
+              };
+                            
+
+              const extractCellWidthsAndSpans = (row) => {
+                console.log("=== Extrayendo y reestructurando celdas (combinación hacia la izquierda) ===");
+              
+                const elements = row.elements;
+                const restructuredCells = [];
+                const cellsToRemove = []; // Lista de índices de celdas que serán eliminadas
+              
+                // Fase 1: Detectar todas las celdas y su estado
+                console.log("=== Fase 1: Detección inicial de celdas ===");
+                const cellDetails = elements.map((cell, index) => {
+                  // Log para mostrar el elemento completo
+                  console.log(\`Evaluando elemento en índice \${index}:\`, JSON.stringify(cell, null, 2));
+              
+                  const attributes = extractCellAttributes(cell); // Usa la función que extrae atributos de la celda
+                  const isCell = cell?.name === 'w:tc'; // Confirmar si el elemento es una celda
+                  if (!isCell) {
+                    console.log(\`Elemento en índice \${index} no es una celda válida. Se ignora.\`);
+                    return null;
+                  }
+              
+                  const cellDetail = {
+                    index: index + 1,
+                    ...attributes,
+                    combinedWith: [], // Inicialmente vacío
+                  };
+              
+                  console.log(
+                    \`Celda \${cellDetail.index}: Ancho = \${cellDetail.width}, GridSpan = \${cellDetail.gridSpan}, Atributos = \`,
+                    cellDetail
+                  );
+                  return cellDetail;
+                }).filter(Boolean); // Filtrar elementos nulos o no válidos
+              
+                // Fase 2: Detectar combinaciones hacia la izquierda
+                console.log("=== Fase 2: Detectar combinaciones hacia la izquierda ===");
+                cellDetails.forEach((cell, idx) => {
+                  if (cell.gridSpan > 1) {
+                    console.log(\`Celda \${cell.index}: Detectada combinación con GridSpan = \${cell.gridSpan}\`);
+                    let combinedWidth = cell.width;
+              
+                    // Revisar celdas anteriores para la combinación
+                    for (let i = 1; i < cell.gridSpan; i++) {
+                      const prevCellIndex = idx - i;
+                      if (prevCellIndex >= 0) {
+                        const prevCell = cellDetails[prevCellIndex];
+                        combinedWidth += prevCell.width;
+                        cell.combinedWith.push(prevCell.index);
+                        cellsToRemove.push(prevCell.index);
+                      }
+                    }
+              
+                    cell.width = combinedWidth;
+                    console.log(
+                      \`Celda \${cell.index}: Combinada con \${cell.combinedWith.join(", ")}. Ancho combinado = \${cell.width}\`
+                    );
+                  }
+                });
+              
+                // Fase 3: Registrar celdas a eliminar
+                console.log("=== Fase 3: Celdas a eliminar ===");
+                console.log(\`Celdas que serán eliminadas: \${[...new Set(cellsToRemove)].join(", ")}\`);
+              
+                // Fase 4: Filtrar celdas restantes
+                console.log("=== Fase 4: Filtrar celdas restantes ===");
+                const remainingCells = cellDetails.filter(
+                  (cell) => !cellsToRemove.includes(cell.index)
+                );
+              
+                console.log("Celdas restantes:");
+                remainingCells.forEach((cell) =>
+                  console.log(\`Celda \${cell.index}: Ancho = \${cell.width}, GridSpan = \${cell.gridSpan}\`)
+                );
+              
+                // Fase 5: Reordenar índices de celdas
+                console.log("=== Fase 5: Reordenar índices ===");
+                const reorderedCells = remainingCells.map((cell, newIndex) => {
+                  console.log(\`Celda original \${cell.index} ahora es Celda \${newIndex + 1}\`);
+                  return {
+                    ...cell,
+                    index: newIndex + 1,
+                  };
+                });
+              
+                console.log("Celdas reestructuradas finales:");
+                reorderedCells.forEach((cell) =>
+                  console.log(\`Celda \${cell.index}: Ancho = \${cell.width}, GridSpan = \${cell.gridSpan}\`)
+                );
+              
+                // Retornar las celdas reestructuradas
+                return reorderedCells.map((cell) => ({
+                  ...cell,
+                  widthAttributes: { 'w:w': cell.width.toString(), 'w:type': 'dxa' },
+                }));
+              };                                                       
+              
               // Función para crear una fila de tabla con bordes opcionales
-              const createRow = (values, withBorders = true) => ({
-                type: 'element',
-                name: 'w:tr',
-                elements: values.map((value) => ({
+              const createRow = (values, cellStyles = [], withBorders = true) => {
+                console.log("=== Creando nueva fila ===");
+                return {
                   type: 'element',
-                  name: 'w:tc',
-                  elements: [
-                    ...(withBorders
-                      ? [
-                          {
+                  name: 'w:tr',
+                  elements: values.map((value, index) => {
+                    const {
+                      widthAttributes,
+                      gridSpan,
+                      textColor,
+                      bgColor,
+                      fontStyle,
+                      fontSize,
+                      textAlign,
+                      verticalAlign,
+                    } = cellStyles[index] || { widthAttributes: { 'w:w': '2000', 'w:type': 'dxa' }, gridSpan: 1 };
+              
+                    console.log(
+                      \`Celda \${index + 1}: Aplicando atributos\`,
+                      widthAttributes,
+                      \`GridSpan: \${gridSpan}, TextColor: \${textColor}, BgColor: \${bgColor}, FontStyle: \${fontStyle}, FontSize: \${fontSize}, TextAlign: \${textAlign}, VerticalAlign: \${verticalAlign}\`
+                    );
+              
+                    const gridSpanElement =
+                      gridSpan > 1
+                        ? {
                             type: 'element',
-                            name: 'w:tcPr',
-                            elements: [
-                              {
-                                type: 'element',
-                                name: 'w:tcBorders',
-                                elements: [
-                                  { name: 'w:top', type: 'element', attributes: { 'w:val': 'single', 'w:sz': '4', 'w:space': '0', 'w:color': 'auto' } },
-                                  { name: 'w:bottom', type: 'element', attributes: { 'w:val': 'single', 'w:sz': '4', 'w:space': '0', 'w:color': 'auto' } },
-                                  { name: 'w:left', type: 'element', attributes: { 'w:val': 'single', 'w:sz': '4', 'w:space': '0', 'w:color': 'auto' } },
-                                  { name: 'w:right', type: 'element', attributes: { 'w:val': 'single', 'w:sz': '4', 'w:space': '0', 'w:color': 'auto' } },
-                                ],
-                              },
-                            ],
-                          },
-                        ]
-                      : []),
-                    {
+                            name: 'w:gridSpan',
+                            attributes: { 'w:val': gridSpan.toString() },
+                          }
+                        : null;
+              
+                    const bgColorElement = bgColor
+                      ? {
+                          type: 'element',
+                          name: 'w:shd',
+                          attributes: { 'w:fill': bgColor },
+                        }
+                      : null;
+              
+                    const textAlignElement = textAlign
+                      ? {
+                          type: 'element',
+                          name: 'w:jc',
+                          attributes: { 'w:val': textAlign },
+                        }
+                      : null;
+              
+                    const verticalAlignElement = verticalAlign
+                      ? {
+                          type: 'element',
+                          name: 'w:vAlign',
+                          attributes: { 'w:val': verticalAlign },
+                        }
+                      : null;
+              
+                    return {
                       type: 'element',
-                      name: 'w:p',
+                      name: 'w:tc',
                       elements: [
                         {
                           type: 'element',
-                          name: 'w:pPr', // Propiedades del párrafo
+                          name: 'w:tcPr',
                           elements: [
                             {
                               type: 'element',
-                              name: 'w:spacing',
-                              attributes: {
-                                'w:before': '150', // Margen superior de 200 twips (~0.14 pulgadas)
-                              },
+                              name: 'w:tcW',
+                              attributes: widthAttributes, // Aplicar ancho original o combinado
                             },
+                            ...(gridSpanElement ? [gridSpanElement] : []), // Añadir gridSpan si aplica
+                            ...(bgColorElement ? [bgColorElement] : []), // Añadir bgColor si aplica
+                            ...(verticalAlignElement ? [verticalAlignElement] : []), // Añadir alineación vertical si aplica
+                            ...(withBorders
+                              ? [
+                                  {
+                                    type: 'element',
+                                    name: 'w:tcBorders',
+                                    elements: [
+                                      { name: 'w:top', type: 'element', attributes: { 'w:val': 'single', 'w:sz': '4', 'w:space': '0', 'w:color': 'auto' } },
+                                      { name: 'w:bottom', type: 'element', attributes: { 'w:val': 'single', 'w:sz': '4', 'w:space': '0', 'w:color': 'auto' } },
+                                      { name: 'w:left', type: 'element', attributes: { 'w:val': 'single', 'w:sz': '4', 'w:space': '0', 'w:color': 'auto' } },
+                                      { name: 'w:right', type: 'element', attributes: { 'w:val': 'single', 'w:sz': '4', 'w:space': '0', 'w:color': 'auto' } },
+                                    ],
+                                  },
+                                ]
+                              : []),
                           ],
                         },
                         {
                           type: 'element',
-                          name: 'w:r',
+                          name: 'w:p',
                           elements: [
                             {
                               type: 'element',
-                              name: 'w:t',
-                              elements: [{ type: 'text', text: value }],
+                              name: 'w:pPr', // Propiedades del párrafo
+                              elements: [
+                                ...(textAlignElement ? [textAlignElement] : []), // Añadir alineación horizontal si aplica
+                                {
+                                  type: 'element',
+                                  name: 'w:spacing',
+                                  attributes: {
+                                    'w:before': '150', // Margen superior
+                                  },
+                                },
+                              ],
+                            },
+                            {
+                              type: 'element',
+                              name: 'w:r',
+                              elements: [
+                                {
+                                  type: 'element',
+                                  name: 'w:rPr',
+                                  elements: [
+                                    ...(textColor
+                                      ? [
+                                          {
+                                            type: 'element',
+                                            name: 'w:color',
+                                            attributes: { 'w:val': textColor },
+                                          },
+                                        ]
+                                      : []),
+                                    ...(fontStyle
+                                      ? fontStyle.split(' ').map((style) => ({
+                                          type: 'element',
+                                          name: \`w:\${style}\`,
+                                        }))
+                                      : []),
+                                    ...(fontSize
+                                      ? [
+                                          {
+                                            type: 'element',
+                                            name: 'w:sz',
+                                            attributes: { 'w:val': fontSize.toString() },
+                                          },
+                                        ]
+                                      : []),
+                                  ],
+                                },
+                                {
+                                  type: 'element',
+                                  name: 'w:t',
+                                  elements: [{ type: 'text', text: value }],
+                                },
+                              ],
                             },
                           ],
                         },
                       ],
-                    },
-                  ],
-                })),
-              });
+                    };
+                  }),
+                };
+              };
 
               // Función para agregar bordes a una fila (encabezado)
               const addBordersToRow = (row) => {
@@ -4420,7 +4692,8 @@ router.post('/save-configuration', async (req, res) => {
                       }
 
                       // Validar si el encabezado coincide
-                      const headerRow = tableRows[0]; // Primera fila de la tabla
+                      const headerRow = tableRows[0];
+                      const bodyRows = tableRows.slice(1);
                       const headerTexts = extractRowTexts(headerRow);
 
                       console.log("Encabezado encontrado en tabla:", headerTexts);
@@ -4469,8 +4742,9 @@ router.post('/save-configuration', async (req, res) => {
                         const updatedRows = [headerRow];
 
                         // Generar las filas nuevas del cuerpo
-                        cuerpo.forEach((rowValues) => {
-                          const newRow = createRow(rowValues);
+                        cuerpo.forEach((rowValues, rowIndex) => {
+                          const cellWidthsAndSpans = extractCellWidthsAndSpans(bodyRows[rowIndex] || bodyRows[bodyRows.length - 1]);
+                          const newRow = createRow(rowValues, cellWidthsAndSpans);
                           updatedRows.push(newRow);
                         });
 
