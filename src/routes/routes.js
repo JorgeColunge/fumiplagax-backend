@@ -6,6 +6,7 @@ const sharp = require('sharp');
 const moment = require('moment');
 const fs = require('fs');
 const path = require('path');
+const AWS = require('aws-sdk');
 const router = express.Router();
 const pool = require('../config/dbConfig');
 const { v4: uuidv4 } = require('uuid');
@@ -19,6 +20,62 @@ const { uploadFile, getSignedUrl, deleteObject  } = require('../config/s3Service
 
 // Configuración de almacenamiento con Multer (en memoria para subir a S3)
 const storage = multer.memoryStorage();
+
+// Configuración de AWS S3
+const s3 = new AWS.S3({
+  accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+  secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+  region: process.env.AWS_REGION,
+});
+
+// Función para generar URL prefirmada
+async function generateSignedUrl(url) {
+  try {
+    // Extraer el bucket y el key desde la URL
+    const urlParts = new URL(url);
+
+    const bucketName = urlParts.hostname.split('.')[0]; // Extraer el nombre del bucket
+    // Decodificar el key para manejar caracteres especiales (%20, %28, %29)
+    const key = decodeURIComponent(
+      urlParts.pathname.startsWith('/') ? urlParts.pathname.substring(1) : urlParts.pathname
+    );
+    
+    const params = {
+      Bucket: bucketName,
+      Key: key,
+      Expires: 60, // Tiempo en segundos (ejemplo: 60 segundos)
+    };
+
+    // Generar URL prefirmada
+    return await s3.getSignedUrlPromise('getObject', params);
+  } catch (error) {
+    console.error('Error al generar URL prefirmada:', error);
+    throw new Error('No se pudo generar la URL prefirmada.');
+  }
+}
+
+// Ruta para prefirmar documentos de S3
+router.post('/PrefirmarArchivos', async (req, res) => {
+  const { url } = req.body;
+
+  if (!url) {
+    console.error('URL no proporcionada en la solicitud.');
+    return res.status(400).json({ message: 'La URL es requerida.' });
+  }
+
+  console.log(`Recibida solicitud para prefirmar archivo con URL: ${url}`);
+
+  try {
+    const signedUrl = await generateSignedUrl(url);
+    console.log('Archivo encontrado y URL prefirmada generada con éxito.');
+    console.log(`URL prefirmada: ${signedUrl}`);
+
+    res.json({ signedUrl });
+  } catch (error) {
+    console.error('Error al generar la URL prefirmada:', error.message);
+    res.status(500).json({ message: 'Error al generar la URL prefirmada.', error: error.message });
+  }
+});
 
 // Configuración del filtro para permitir solo imágenes
 const fileFilter = (req, file, cb) => {
@@ -944,51 +1001,55 @@ const uploadProductFiles = multer({
   { name: 'emergency_card', maxCount: 1 }
 ]);
 
+// Función para subir archivos a S3
+const uploadFileToS3 = async (fileBuffer, fileName, mimeType) => {
+  const params = {
+    Bucket: process.env.S3_BUCKET_NAME,
+    Key: `products/${Date.now()}-${fileName}`, // Ruta única para almacenar el archivo
+    Body: fileBuffer,
+    ContentType: mimeType,
+  };
+
+  try {
+    const result = await s3.upload(params).promise();
+    return result.Location; // URL pública del archivo subido
+  } catch (error) {
+    console.error(`Error uploading ${fileName} to S3:`, error.message);
+    throw new Error('Error al subir archivo a S3');
+  }
+};
 
 // Ruta para crear producto
 router.post('/products', uploadProductFiles, async (req, res) => {
   const { name, description_type, dose, residual_duration, category } = req.body;
 
-  console.log("Categorías:", category);
+  console.log('Categorías:', category);
 
   // Convierte el arreglo de categorías en una cadena separada por comas
-  const formattedCategory = Array.isArray(category) ? category.join(", ") : category;
+  const formattedCategory = Array.isArray(category) ? category.join(', ') : category;
 
   let fileUrls = {};
 
-  const uploadFileToDrive = async (fileBuffer, filename, mimeType) => {
-    const fileData = fileBuffer.toString('base64');
-    try {
-      const response = await axios.post(
-        'https://script.google.com/macros/s/AKfycbypyU3rkJJHmFwvzeXCfWpeflEeSOryJYLn8HMs3cykpd6sAQMBl4xsRwtbeRPQkG6b/exec',
-        { fileData, filename, mimeType },
-        { timeout: 60000 } // Aumenta el tiempo de espera a 60 segundos
-      );
-      return response.data.fileUrl;
-    } catch (error) {
-      console.error(`Error uploading ${filename} to Google Drive:`, error.message);
-      return null;
-    }
-  };
-
-  if (req.files.safety_data_sheet) {
-    const file = req.files.safety_data_sheet[0];
-    fileUrls.safety_data_sheet = await uploadFileToDrive(file.buffer, file.originalname, file.mimetype);
-  }
-  if (req.files.technical_sheet) {
-    const file = req.files.technical_sheet[0];
-    fileUrls.technical_sheet = await uploadFileToDrive(file.buffer, file.originalname, file.mimetype);
-  }
-  if (req.files.health_registration) {
-    const file = req.files.health_registration[0];
-    fileUrls.health_registration = await uploadFileToDrive(file.buffer, file.originalname, file.mimetype);
-  }
-  if (req.files.emergency_card) {
-    const file = req.files.emergency_card[0];
-    fileUrls.emergency_card = await uploadFileToDrive(file.buffer, file.originalname, file.mimetype);
-  }
-
   try {
+    // Procesar y subir cada archivo a S3
+    if (req.files.safety_data_sheet) {
+      const file = req.files.safety_data_sheet[0];
+      fileUrls.safety_data_sheet = await uploadFileToS3(file.buffer, file.originalname, file.mimetype);
+    }
+    if (req.files.technical_sheet) {
+      const file = req.files.technical_sheet[0];
+      fileUrls.technical_sheet = await uploadFileToS3(file.buffer, file.originalname, file.mimetype);
+    }
+    if (req.files.health_registration) {
+      const file = req.files.health_registration[0];
+      fileUrls.health_registration = await uploadFileToS3(file.buffer, file.originalname, file.mimetype);
+    }
+    if (req.files.emergency_card) {
+      const file = req.files.emergency_card[0];
+      fileUrls.emergency_card = await uploadFileToS3(file.buffer, file.originalname, file.mimetype);
+    }
+
+    // Insertar los datos del producto en la base de datos
     const query = `
       INSERT INTO products (name, description_type, dose, residual_duration, category, safety_data_sheet, technical_sheet, health_registration, emergency_card)
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *
@@ -998,19 +1059,19 @@ router.post('/products', uploadProductFiles, async (req, res) => {
       description_type,
       dose,
       residual_duration,
-      formattedCategory, // Aquí se utiliza la categoría formateada
-      fileUrls.safety_data_sheet,
-      fileUrls.technical_sheet,
-      fileUrls.health_registration,
-      fileUrls.emergency_card,
+      formattedCategory, // Categorías separadas por comas
+      fileUrls.safety_data_sheet || null,
+      fileUrls.technical_sheet || null,
+      fileUrls.health_registration || null,
+      fileUrls.emergency_card || null,
     ];
 
     const result = await pool.query(query, values);
 
-    res.status(201).json({ success: true, message: "Product created successfully", product: result.rows[0] });
+    res.status(201).json({ success: true, message: 'Producto creado exitosamente', product: result.rows[0] });
   } catch (error) {
-    console.error("Error creating product:", error);
-    res.status(500).json({ success: false, message: "Server error" });
+    console.error('Error al crear el producto:', error.message);
+    res.status(500).json({ success: false, message: 'Error del servidor' });
   }
 });
 
@@ -1945,15 +2006,15 @@ const inspectionFileFilter = (req, file, cb) => {
 };
 
 const uploadInspectionImages = multer({
-  storage: inspectionStorage,
+  storage: storage, // Cambiado a almacenamiento en memoria
   fileFilter: inspectionFileFilter,
-  limits: { fileSize: 5 * 1024 * 1024 }, // Límite de 5MB por archivo
+  limits: { fileSize: 5 * 1024 * 1024 }, // Límite de 5 MB por archivo
 }).fields([
   { name: "tech_signature", maxCount: 1 },
   { name: "client_signature", maxCount: 1 },
   { name: "findingsImages", maxCount: 20 },
   { name: "stationImages", maxCount: 20 },
-  { name: "images", maxCount: 20 }, // Nuevo campo para imágenes genéricas
+  { name: "images", maxCount: 20 },
 ]);
 
 // Actualizar Inspecciones
@@ -1978,24 +2039,54 @@ router.post('/inspections/:inspectionId/save', uploadInspectionImages, async (re
     const parsedSignatures =
       typeof signatures === 'string' ? JSON.parse(signatures) : signatures;
 
+      console.log('findingsByType parseado:', JSON.stringify(parsedFindingsByType, null, 2));
+      console.log('stationsFindings parseado:', JSON.stringify(parsedStationsFindings, null, 2));  
+
     // Procesar imágenes recibidas (igual que antes)
-    const techSignaturePath = req.files.tech_signature
-      ? `/media/inspections/${req.files.tech_signature[0].filename}`
-      : parsedSignatures?.technician?.signature;
+    const bucketName = 'fumiplagax'; // Define el bucket
+    const uploadImagesToS3 = async (files, folder) => {
+      if (!files) return [];
+      return await Promise.all(
+        files.map(async (file) => {
+          const key = `${folder}/${Date.now()}-${file.originalname}`;
+          const result = await uploadFile(bucketName, key, file.buffer);
+          return result.Location; // URL pública generada por S3
+        })
+      );
+    };
+    
+// Subir la firma del técnico a S3 o usar la existente
+const techSignaturePath = req.files.tech_signature
+  ? (await uploadImagesToS3(req.files.tech_signature, 'signatures'))[0]
+  : parsedSignatures?.technician?.signature;
 
-    const clientSignaturePath = req.files.client_signature
-      ? `/media/inspections/${req.files.client_signature[0].filename}`
-      : parsedSignatures?.client?.signature;
+// Subir la firma del cliente a S3 o usar la existente
+const clientSignaturePath = req.files.client_signature
+  ? (await uploadImagesToS3(req.files.client_signature, 'signatures'))[0]
+  : parsedSignatures?.client?.signature;
 
-    const findingsImagePaths = req.files.findingsImages
-      ? req.files.findingsImages.map((file) => `/media/inspections/${file.filename}`)
-      : [];
-    const stationImagePaths = req.files.stationImages
-      ? req.files.stationImages.map((file) => `/media/inspections/${file.filename}`)
-      : [];
-    const genericImagePaths = req.files.images
-      ? req.files.images.map((file) => `/media/inspections/${file.filename}`)
-      : [];
+// Subir imágenes de hallazgos a S3
+const findingsImagePaths = req.files.findingsImages
+  ? await uploadImagesToS3(req.files.findingsImages, 'findings')
+  : [];
+
+// Subir imágenes de estaciones a S3
+const stationImagePaths = req.files.stationImages
+  ? await uploadImagesToS3(req.files.stationImages, 'stations')
+  : [];
+
+// Subir imágenes genéricas a S3
+const genericImagePaths = req.files.images
+  ? await uploadImagesToS3(req.files.images, 'generic')
+  : [];
+
+  console.log('Rutas de imágenes procesadas:', {
+    techSignaturePath,
+    clientSignaturePath,
+    findingsImagePaths,
+    stationImagePaths,
+    genericImagePaths, // Mostrar las imágenes genéricas procesadas
+  });
 
     // Reconstruir el objeto signatures
     const updatedSignatures = {
@@ -2011,27 +2102,65 @@ router.post('/inspections/:inspectionId/save', uploadInspectionImages, async (re
       },
     };
 
+        // Asociar imágenes a `findingsByType`
+        let imageIndex = 0;
+        Object.keys(parsedFindingsByType).forEach((type) => {
+          parsedFindingsByType[type] = parsedFindingsByType[type].map((finding) => {
+            if ((!finding.photo || finding.photo.startsWith('blob:')) && findingsImagePaths[imageIndex]) {
+              finding.photo = findingsImagePaths[imageIndex];
+              imageIndex++;
+            }
+            return finding;
+          });
+        });
+    
+        // Asociar imágenes a `stationsFindings`
+        parsedStationsFindings.forEach((finding, index) => {
+          if ((!finding.photo || finding.photo.startsWith('blob:')) && stationImagePaths[index]) {
+            finding.photo = stationImagePaths[index];
+          }
+        });    
+
     // Construir el objeto final de datos
     const findingsData = {
       findingsByType: parsedFindingsByType,
       productsByType: typeof productsByType === 'string' ? JSON.parse(productsByType) : productsByType,
       stationsFindings: parsedStationsFindings,
-      signatures: updatedSignatures,
-      genericImages: genericImagePaths,
+      signatures: {
+        client: {
+          id: parsedSignatures?.client?.id || null,
+          name: parsedSignatures?.client?.name || null,
+          position: parsedSignatures?.client?.position || null,
+          signature: clientSignaturePath, // URL pública de la firma del cliente
+        },
+        technician: {
+          name: parsedSignatures?.technician?.name || "Técnico",
+          signature: techSignaturePath, // URL pública de la firma del técnico
+        },
+      },
+      genericImages: genericImagePaths, // URLs públicas de imágenes genéricas
+      findingsImages: findingsImagePaths, // URLs públicas de hallazgos
+      stationImages: stationImagePaths, // URLs públicas de estaciones
     };
 
-    // Actualizar la inspección en la base de datos
-    const query = `
-      UPDATE inspections
-      SET 
-        observations = $1,
-        findings = $2,
-        exit_time = NOW()
-      WHERE id = $3
-      RETURNING *, NOW() AS exit_time;
-    `;
-    const values = [generalObservations, findingsData, inspectionId];
-    const result = await pool.query(query, values);
+    console.log('findingsData preparado para guardar en la base de datos:', JSON.stringify(findingsData, null, 2));
+
+    // Definir la consulta para actualizar la inspección
+const query = `
+UPDATE inspections
+SET 
+  observations = $1,
+  findings = $2,
+  exit_time = NOW()
+WHERE id = $3
+RETURNING *, NOW() AS exit_time;
+`;
+
+// Valores para la consulta
+const values = [generalObservations, findingsData, inspectionId];
+
+// Ejecutar la consulta
+const result = await pool.query(query, values);
 
     if (result.rowCount === 0) {
       console.warn(`Inspección no encontrada para ID: ${inspectionId}`);
@@ -2115,6 +2244,20 @@ router.post('/inspections/:inspectionId/save', uploadInspectionImages, async (re
       }
     }
 
+    //Prefirma
+    const generateSignedUrls = async (paths) => {
+      return await Promise.all(
+        paths.map(async (path) => {
+          const key = path.split('.amazonaws.com/')[1];
+          return await getSignedUrl(bucketName, key);
+        })
+      );
+    };
+    
+    const signedFindingsImages = await generateSignedUrls(findingsImagePaths);
+    const signedStationImages = await generateSignedUrls(stationImagePaths);
+    const signedGenericImages = await generateSignedUrls(genericImagePaths);    
+
     // Respuesta exitosa al cliente
     res.status(200).json({
       success: true,
@@ -2123,11 +2266,11 @@ router.post('/inspections/:inspectionId/save', uploadInspectionImages, async (re
       uploadedImages: {
         techSignature: techSignaturePath,
         clientSignature: clientSignaturePath,
-        findingsImages: findingsImagePaths,
-        stationImages: stationImagePaths,
-        genericImages: genericImagePaths,
+        findingsImages: signedFindingsImages,
+        stationImages: signedStationImages,
+        genericImages: signedGenericImages,
       },
-    });
+    });    
   } catch (error) {
     console.error('Error al guardar la inspección:', error);
     res.status(500).json({ success: false, message: 'Error al guardar la inspección' });
@@ -2218,29 +2361,28 @@ router.get('/notifications/:userId', async (req, res) => {
   }
 });
 
-// Configuración de almacenamiento para documentos RUT
-const rutStorage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    const uploadPath = path.join(__dirname, '..', '..', 'public', 'media', 'documents', 'clients', 'rut');
-
-    // Verificar si la carpeta existe, si no, crearla
-    if (!fs.existsSync(uploadPath)) {
-      fs.mkdirSync(uploadPath, { recursive: true });
-    }
-
-    cb(null, uploadPath);
-  },
-  filename: function (req, file, cb) {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, uniqueSuffix + path.extname(file.originalname));
-  }
-});
-
-// Middleware de Multer para documentos RUT
+// Middleware de Multer para documentos RUT (sin almacenamiento local)
 const uploadRutFile = multer({
-  storage: rutStorage,
-  limits: { fileSize: 50 * 1024 * 1024 }, // Límite de 5 MB
+  limits: { fileSize: 50 * 1024 * 1024 }, // Límite de 50 MB
 }).single('rut');
+
+// Función para subir archivos RUT a S3
+const uploadRutToS3 = async (fileBuffer, fileName, mimeType) => {
+  const params = {
+    Bucket: process.env.S3_BUCKET_NAME,
+    Key: `clients/rut/${Date.now()}-${fileName}`, // Ruta única para almacenar el archivo
+    Body: fileBuffer,
+    ContentType: mimeType,
+  };
+
+  try {
+    const result = await s3.upload(params).promise();
+    return result.Location; // URL pública del archivo subido
+  } catch (error) {
+    console.error(`Error uploading ${fileName} to S3:`, error.message);
+    throw new Error('Error al subir archivo a S3');
+  }
+};
 
 // Ruta para subir el archivo RUT
 router.post('/clients/upload-rut', uploadRutFile, async (req, res) => {
@@ -2249,8 +2391,8 @@ router.post('/clients/upload-rut', uploadRutFile, async (req, res) => {
       return res.status(400).json({ message: "No se ha subido ningún archivo" });
     }
 
-    // Construye la URL del archivo
-    const fileUrl = `/media/documents/clients/rut/${req.file.filename}`;
+    // Subir el archivo a S3
+    const fileUrl = await uploadRutToS3(req.file.buffer, req.file.originalname, req.file.mimetype);
 
     res.json({ success: true, fileUrl, message: "Archivo RUT subido exitosamente" });
   } catch (error) {
@@ -4666,5 +4808,3 @@ router.post('/create-document-inspeccion', async (req, res) => {
 });
 
 module.exports = router;
-
-//fin
