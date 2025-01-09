@@ -17,6 +17,10 @@ const mammoth = require('mammoth');
 const vm = require('vm');
 const QRCode = require('qrcode');
 const { uploadFile, getSignedUrl, deleteObject  } = require('../config/s3Service');
+const dotenv = require('dotenv');
+
+// Configurar dotenv para cargar variables de entorno
+dotenv.config();
 
 // Configuración de almacenamiento con Multer (en memoria para subir a S3)
 const storage = multer.memoryStorage();
@@ -3059,7 +3063,7 @@ const transformEntity = (entity) => {
 
 // Ruta principal para almacenar configuración y código generado
 router.post('/save-configuration', async (req, res) => {
-  const { templateId, variables, tablas, entity } = req.body;
+  const { templateId, variables, tablas, entity, aiModels } = req.body;
 
   try {
     console.log("=== Iniciando almacenamiento de configuración ===");
@@ -3087,7 +3091,7 @@ router.post('/save-configuration', async (req, res) => {
 
               // Función para realizar consultas a GPT
               const consultarGPT = async (modelo, personalidad, prompt) => {
-                const apiKey = "aqui va la apikeyssa";
+                const apiKey = process.env.OPENAI_API_KEY;
                 const url = "https://api.openai.com/v1/chat/completions";
                 const headers = {
                   Authorization: \`Bearer \${apiKey}\`,
@@ -3657,6 +3661,20 @@ router.post('/save-configuration', async (req, res) => {
 
                   console.log('Datos de inspecciones obtenidos:', inspectionsData);
 
+                  // Consultar normativas relacionadas con la categoría del cliente
+                  let clientRulesData = [];
+                  if (clientData.category) {
+                    const queryRulesData = 'SELECT * FROM rules WHERE category = $1';
+                    try {
+                      const resultRulesData = await pool.query(queryRulesData, [clientData.category]);
+                      clientRulesData = resultRulesData.rows;
+                      console.log('Normativas obtenidas para la categoría del cliente:', clientRulesData);
+                    } catch (error) {
+                      console.error(\`Error al consultar normativas para la categoría "\${clientData.category}":\`, error);
+                      clientRulesData = []; // Si falla, asignar un array vacío
+                    }
+                  }
+
                   // Procesar variables específicas para "services"
                   Object.entries(variables).forEach(([key, value]) => {
                     if (value.startsWith("Servicio-")) {
@@ -3676,7 +3694,15 @@ router.post('/save-configuration', async (req, res) => {
                       const companionValues = companionData
                         .filter((companion) => companion) // Filtrar valores null
                         .map((companion) => (companion && companion.hasOwnProperty(field) ? companion[field] : "No encontrado"));
-                      variables[key] = companionValues.join(", "); // Combina todos los valores en un string separado por comas
+                      variables[key] = companionValues.join("* "); // Combina todos los valores en un string separado por comas
+                      console.log(\`Variable "\${key}" actualizada a: \${variables[key]}\`);
+                    } else if (typeof value === 'string' && value.startsWith("Normativa Cliente-")) {
+                      const ruleField = value.split('-')[1];
+                      const ruleValues = clientRulesData
+                        .map((rule) => (rule && rule.hasOwnProperty(ruleField) ? rule[ruleField] : "No encontrado"));
+                      
+                      // Combinar las normativas en un solo string separado por comas
+                      variables[key] = ruleValues.join("* ");
                       console.log(\`Variable "\${key}" actualizada a: \${variables[key]}\`);
                     } else if (value.startsWith("Inspecciones-")) {
                       const [_, periodo, tipoInspeccion, campo] = value.split('-'); // Extraer los parámetros
@@ -3757,6 +3783,16 @@ router.post('/save-configuration', async (req, res) => {
                           return companionData
                             .filter((companion) => companion) // Filtrar valores null
                             .map((companion) => (companion && companion.hasOwnProperty(userField) ? companion[userField] : "No encontrado"));
+                        } else if (typeof field === 'string' && field.startsWith("Normativa Cliente-")) {
+                          const ruleField = field.split('-')[1];
+                          const ruleValues = clientRulesData
+                            .map((rule) => (rule && rule.hasOwnProperty(ruleField) ? rule[ruleField] : "No encontrado"));
+
+                          // Cada valor de normativa debe añadirse como una nueva fila
+                          ruleValues.forEach((value, index) => {
+                            if (!filasPorCampo[index]) filasPorCampo[index] = [];
+                            filasPorCampo[index].push(value);
+                          });
                         } else if (field.startsWith("Inspecciones-")) {
                           const [_, periodo, tipoInspeccion, campo] = field.split('-');
                           console.log(\`Procesando inspecciones para "\${periodo}" y tipo "\${tipoInspeccion}" en tablas...\`);
@@ -3921,6 +3957,20 @@ router.post('/save-configuration', async (req, res) => {
                   console.log("Datos de los acompañantes obtenidos:", companionData);
                 }
 
+                // Consultar normativas relacionadas con la categoría del cliente
+                let clientRulesData = [];
+                if (clientData.category) {
+                  const queryRulesData = 'SELECT * FROM rules WHERE category = $1';
+                  try {
+                    const resultRulesData = await pool.query(queryRulesData, [clientData.category]);
+                    clientRulesData = resultRulesData.rows;
+                    console.log('Normativas obtenidas para la categoría del cliente:', clientRulesData);
+                  } catch (error) {
+                    console.error(\`Error al consultar normativas para la categoría "\${clientData.category}":\`, error);
+                    clientRulesData = []; // Si falla, asignar un array vacío
+                  }
+                }
+
                 // Procesar variables específicas para "inspections"
                 Object.entries(variables).forEach(([key, value]) => {
                   if (typeof value === 'string' && value.startsWith("Inspección-")) {
@@ -3930,7 +3980,8 @@ router.post('/save-configuration', async (req, res) => {
 
                     if (campo.startsWith("findings_")) {
                       const keyPath = campo.replace('findings_', ''); // Extraer jerarquía de claves
-                      variables[key] = getValueFromJson(inspectionData.findings || {}, keyPath, tipoInspeccion) || "No encontrado";
+                      const result = getValueFromJson(inspectionData.findings || {}, keyPath, tipoInspeccion);
+                      variables[key] = Array.isArray(result) ? result.join("* ") : result || "No encontrado";
                     } else {
                       variables[key] = inspectionData[campo] || "No encontrado";
                     }
@@ -3955,7 +4006,15 @@ router.post('/save-configuration', async (req, res) => {
                     const companionValues = companionData
                       .filter((companion) => companion) // Filtrar valores null
                       .map((companion) => (companion && companion.hasOwnProperty(field) ? companion[field] : "No encontrado"));
-                    variables[key] = companionValues.join(", "); // Combina todos los valores en un string separado por comas
+                    variables[key] = companionValues.join("* "); // Combina todos los valores en un string separado por comas
+                    console.log(\`Variable "\${key}" actualizada a: \${variables[key]}\`);
+                  } else if (typeof value === 'string' && value.startsWith("Normativa Cliente-")) {
+                    const ruleField = value.split('-')[1];
+                    const ruleValues = clientRulesData
+                      .map((rule) => (rule && rule.hasOwnProperty(ruleField) ? rule[ruleField] : "No encontrado"));
+                    
+                    // Combinar las normativas en un solo string separado por comas
+                    variables[key] = ruleValues.join("* ");
                     console.log(\`Variable "\${key}" actualizada a: \${variables[key]}\`);
                   }
 
@@ -3965,10 +4024,11 @@ router.post('/save-configuration', async (req, res) => {
                 // Procesar tablas específicas para "inspections"
                 tablas.forEach((tabla) => {
                   const nuevoCuerpo = [];
-                  const filasPorCampo = []; // Almacena las filas generadas para cada campo
 
                   tabla.cuerpo.forEach((row) => {
-                    row.forEach((field) => {
+                    const filasGeneradas = [[]]; // Comenzamos con una fila vacía para generar nuevas filas
+
+                    row.forEach((field, colIndex) => {
                       if (typeof field === 'string' && field.startsWith("Inspección-")) {
                         const [_, periodo, tipoInspeccion, campo] = field.split('-');
 
@@ -3979,72 +4039,297 @@ router.post('/save-configuration', async (req, res) => {
                           const findings = getValueFromJson(inspectionData.findings || {}, keyPath, tipoInspeccion);
 
                           if (Array.isArray(findings)) {
+                            // Expandir filasGeneradas para cada hallazgo
                             findings.forEach((finding, index) => {
-                              if (!filasPorCampo[index]) filasPorCampo[index] = [];
-                              filasPorCampo[index].push(finding || "No encontrado");
+                              if (!filasGeneradas[index]) filasGeneradas[index] = Array(row.length).fill(""); // Nueva fila
+                              filasGeneradas[index][colIndex] = finding || "No encontrado";
                             });
                           } else {
-                            if (!filasPorCampo[0]) filasPorCampo[0] = [];
-                            filasPorCampo[0].push(findings || "No encontrado");
+                            filasGeneradas[0][colIndex] = findings || "No encontrado";
                           }
                         } else {
-                          if (!filasPorCampo[0]) filasPorCampo[0] = [];
-                          filasPorCampo[0].push(inspectionData[campo] || "No encontrado");
+                          filasGeneradas[0][colIndex] = inspectionData[campo] || "No encontrado";
                         }
                       } else if (typeof field === 'string' && field.startsWith("Servicio-")) {
                         const serviceField = field.split('-')[1];
 
                         console.log(\`Procesando campo del servicio para campo: "\${serviceField}"\`);
 
-                        if (!filasPorCampo[0]) filasPorCampo[0] = [];
-                        filasPorCampo[0].push(serviceData[serviceField] || "No encontrado");
+                        filasGeneradas.forEach((fila) => {
+                          fila[colIndex] = serviceData[serviceField] || "No encontrado";
+                        });
                       } else if (typeof field === 'string' && field.startsWith("Cliente-")) {
                         const clientField = field.split('-')[1];
 
                         console.log(\`Procesando campo del cliente para campo: "\${clientField}"\`);
 
-                        if (!filasPorCampo[0]) filasPorCampo[0] = [];
-                        filasPorCampo[0].push(clientData[clientField] || "No encontrado");
+                        filasGeneradas.forEach((fila) => {
+                          fila[colIndex] = clientData[clientField] || "No encontrado";
+                        });
                       } else if (typeof field === 'string' && field.startsWith("Responsable-")) {
                         const userField = field.split('-')[1];
 
                         console.log(\`Procesando campo del responsable para campo: "\${userField}"\`);
 
-                        if (!filasPorCampo[0]) filasPorCampo[0] = [];
-                        filasPorCampo[0].push(responsibleData[userField] || "No encontrado");
+                        filasGeneradas.forEach((fila) => {
+                          fila[colIndex] = responsibleData[userField] || "No encontrado";
+                        });
                       } else if (typeof field === 'string' && field.startsWith("Acompañante-")) {
                         const userField = field.split('-')[1];
                         const companionValues = companionData
                           .filter((companion) => companion) // Filtrar valores null
                           .map((companion) => (companion && companion.hasOwnProperty(userField) ? companion[userField] : "No encontrado"));
 
-                        // Cada valor de los acompañantes debe añadirse como una nueva fila
+                        // Añadir los valores de los acompañantes como filas separadas
                         companionValues.forEach((value, index) => {
-                          if (!filasPorCampo[index]) filasPorCampo[index] = [];
-                          filasPorCampo[index].push(value);
+                          if (!filasGeneradas[index]) filasGeneradas[index] = Array(row.length).fill("");
+                          filasGeneradas[index][colIndex] = value;
+                        });
+                      } else if (typeof field === 'string' && field.startsWith("Normativa Cliente-")) {
+                        const ruleField = field.split('-')[1];
+                        const ruleValues = clientRulesData
+                          .map((rule) => (rule && rule.hasOwnProperty(ruleField) ? rule[ruleField] : "No encontrado"));
+
+                        // Añadir los valores de normativa como filas separadas
+                        ruleValues.forEach((value, index) => {
+                          if (!filasGeneradas[index]) filasGeneradas[index] = Array(row.length).fill("");
+                          filasGeneradas[index][colIndex] = value;
                         });
                       } else {
-                        // Si no es un campo dinámico, lo mantenemos igual
-                        if (!filasPorCampo[0]) filasPorCampo[0] = [];
-                        filasPorCampo[0].push(field);
+                        // Campo estático, lo mantenemos en todas las filas generadas
+                        filasGeneradas.forEach((fila) => {
+                          fila[colIndex] = field;
+                        });
                       }
                     });
-                  });
 
-                  // Convertir filasPorCampo a formato de tabla
-                  filasPorCampo.forEach((fila) => {
-                    nuevoCuerpo.push(fila);
+                    // Añadir todas las filas generadas al cuerpo
+                    nuevoCuerpo.push(...filasGeneradas);
                   });
 
                   // Actualizar el cuerpo de la tabla
                   tabla.cuerpo = nuevoCuerpo;
-                  console.log(\`Tabla "\${tabla.nombre}" actualizada:\`, tabla.cuerpo);
+                  console.log(\`Tabla "\${tabla.nombre}" actualizada correctamente:\`, tabla.cuerpo);
                 });
               } catch (error) {
                 console.error("Error al procesar datos para la entidad 'inspections':", error);
                 throw new Error("No se pudieron procesar los datos de la inspección.");
               }
             }
+
+            // Función para procesar placeholders en el prompt con logs detallados
+            const procesarPromptConInputs = (prompt, filaVariables = {}) => {
+              console.log(\`Prompt inicial: "\${prompt}"\`);
+              const regex = /{{(.*?)}}/g; // Nueva expresión regular para encontrar {{<nombre de la variable>}}
+
+              const promptProcesado = prompt.replace(regex, (match, variableName) => {
+                // Buscar la variable en las variables específicas de la fila o en las globales
+                const variableValue = filaVariables[variableName] || variables[variableName];
+                if (variableValue !== undefined) {
+                  console.log(\`Reemplazando "\${match}" con el valor: "\${variableValue}"\`);
+                  return variableValue;
+                } else {
+                  console.warn(\`No se encontró la variable para el placeholder "\${match}".\`);
+                  return "Variable no encontrada";
+                }
+              });
+
+              console.log(\`Prompt después del reemplazo: "\${promptProcesado}"\`);
+              return promptProcesado;
+            };
+
+            // Función para procesar las tablas con prompts "IA-"
+            const procesarTablasConIA = async () => {
+              for (const tabla of tablas) {
+                console.log(\`Procesando tabla "\${tabla.nombre}"...\`);
+
+                const columnasIA = []; // Guardar columnas que contienen prompts con "IA-"
+                const promptsBase = []; // Guardar los prompts base para cada columna
+
+                // Buscar columnas que contienen prompts "IA-"
+                for (let colIndex = 0; colIndex < (tabla.cuerpo[0]?.length || 0); colIndex++) {
+                  for (const row of tabla.cuerpo) {
+                    if (typeof row[colIndex] === 'string' && row[colIndex].startsWith("IA-")) {
+                      columnasIA.push(colIndex);
+                      promptsBase[colIndex] = row[colIndex];
+                      console.log(\`Prompt base encontrado en columna \${colIndex}: "\${promptsBase[colIndex]}"\`);
+                      break;
+                    }
+                  }
+                }
+
+                // Si no hay columnas con prompts "IA-", continuar con la siguiente tabla
+                if (columnasIA.length === 0) {
+                  console.warn(\`No se encontró ningún campo "IA-" en la tabla "\${tabla.nombre}".\`);
+                  continue;
+                }
+
+                // Extraer y dividir las variables de todos los prompts en las columnas IA
+                const valoresVariablesPorColumna = {};
+
+                for (const colIndex of columnasIA) {
+                  const regex = /{{(.*?)}}/g;
+                  const variablesEncontradas = [];
+                  let match;
+
+                  // Extraer variables del prompt base
+                  while ((match = regex.exec(promptsBase[colIndex])) !== null) {
+                    variablesEncontradas.push(match[1]);
+                  }
+
+                  console.log(\`Variables encontradas en el prompt de la columna \${colIndex}: \${variablesEncontradas}\`);
+
+                  // Dividir las variables por "*"
+                  const valoresVariables = {};
+                  variablesEncontradas.forEach((variable) => {
+                    const valorCompleto = variables[variable] || "";
+                    const partes = valorCompleto.split("*");
+                    valoresVariables[variable] = partes;
+                    console.log(\`Variable "\${variable}" dividida en partes:\`, partes);
+                  });
+
+                  valoresVariablesPorColumna[colIndex] = valoresVariables;
+                }
+
+                // Determinar el número máximo de filas requerido
+                const maxFilas = Math.max(
+                  tabla.cuerpo.length,
+                  ...Object.values(valoresVariablesPorColumna).flatMap((valoresVariables) =>
+                    Object.values(valoresVariables).map((partes) => partes.length)
+                  )
+                );
+
+                // Agregar filas necesarias si faltan
+                while (tabla.cuerpo.length < maxFilas) {
+                  const nuevaFila = Array(tabla.cuerpo[0]?.length || 0).fill("");
+                  tabla.cuerpo.push(nuevaFila);
+                }
+
+                console.log(\`Tabla "\${tabla.nombre}" después de agregar filas necesarias:\`, tabla.cuerpo);
+
+                // Replicar los prompts base en todas las filas de las columnas correspondientes
+                for (const colIndex of columnasIA) {
+                  for (let rowIndex = 0; rowIndex < maxFilas; rowIndex++) {
+                    tabla.cuerpo[rowIndex][colIndex] = promptsBase[colIndex];
+                  }
+                }
+
+                console.log(\`Tabla "\${tabla.nombre}" después de replicar los prompts base:\`, tabla.cuerpo);
+
+                // Procesar cada fila individualmente para todas las columnas IA
+                for (let rowIndex = 0; rowIndex < tabla.cuerpo.length; rowIndex++) {
+                  const row = tabla.cuerpo[rowIndex];
+
+                  for (const colIndex of columnasIA) {
+                    const value = row[colIndex];
+                    console.log(\`Procesando valor en fila \${rowIndex}, columna \${colIndex}. Tipo: \${typeof value}, Valor:\`, value);
+
+                    if (typeof value === 'string' && value.startsWith("IA-")) {
+                      console.log(\`Campo identificado como IA. Valor: \${value}\`);
+                      const [_, modeloIA, rawPrompt] = value.split('-');
+
+                      // Construir variables específicas para esta fila
+                      const filaVariables = {};
+                      const valoresVariables = valoresVariablesPorColumna[colIndex];
+                      for (const variable in valoresVariables) {
+                        filaVariables[variable] = valoresVariables[variable]?.[rowIndex] || "Variable no encontrada";
+                      }
+
+                      // Procesar el prompt con las variables específicas de esta fila
+                      const prompt = procesarPromptConInputs(rawPrompt, filaVariables);
+
+                      const modeloEncontrado = aiModels.find((ai) => ai.name === modeloIA);
+                      if (!modeloEncontrado) {
+                        console.warn(\`Modelo IA no encontrado para el campo en la tabla "\${tabla.nombre}".\`);
+                        row[colIndex] = "Modelo no encontrado";
+                        continue;
+                      }
+
+                      const { model, personality } = modeloEncontrado;
+                      try {
+                        console.log(\`Consultando GPT con modelo: "\${model}", personalidad: "\${personality}"\`);
+                        // Usar await para resolver la Promesa
+                        const resultadoIA = await consultarGPT(model, personality, prompt);
+                        row[colIndex] = resultadoIA;
+                        console.log(\`Valor generado por la IA para fila \${rowIndex}, columna \${colIndex}: \${resultadoIA}\`);
+                      } catch (error) {
+                        console.error(\`Error al consultar IA para fila \${rowIndex}, columna \${colIndex}:\`, error);
+                        row[colIndex] = "Error al generar valor con IA";
+                      }
+                    }
+                  }
+                }
+
+                console.log(\`Tabla "\${tabla.nombre}" actualizada:\`, tabla.cuerpo);
+              }
+            };
+
+            // Llamar a la función para procesar las tablas IA
+            await procesarTablasConIA();
+
+            // Procesar variables específicas que inician con "IA-"
+            const procesarVariablesIA = async () => {
+              for (const [key, value] of Object.entries(variables)) {
+                if (typeof value === 'string' && value.startsWith("IA-")) {
+                  const [_, modeloIA, rawPrompt] = value.split('-');
+
+                  console.log(\`Procesando variable "\${key}" con modelo IA: \${modeloIA}\`);
+                  console.log(\`Prompt inicial: "\${rawPrompt}"\`);
+
+                  // Extraer las variables dentro del prompt
+                  const regex = /{{(.*?)}}/g;
+                  const variablesEncontradas = [];
+                  let match;
+
+                  while ((match = regex.exec(rawPrompt)) !== null) {
+                    variablesEncontradas.push(match[1]);
+                  }
+
+                  console.log(\`Variables encontradas en el prompt: \${variablesEncontradas}\`);
+
+                  // Reemplazar las variables en el prompt
+                  const promptProcesado = rawPrompt.replace(regex, (match, variableName) => {
+                    const variableValue = variables[variableName];
+                    if (variableValue !== undefined) {
+                      console.log(\`Reemplazando "\${match}" con el valor: "\${variableValue}"\`);
+                      return variableValue;
+                    } else {
+                      console.warn(\`No se encontró la variable "\${variableName}" para el placeholder "\${match}".\`);
+                      return "Variable no encontrada";
+                    }
+                  });
+
+                  console.log(\`Prompt después del reemplazo: "\${promptProcesado}"\`);
+
+                  // Buscar el modelo en la lista de modelos disponibles
+                  const modeloEncontrado = aiModels.find((ai) => ai.name === modeloIA);
+
+                  if (!modeloEncontrado) {
+                    console.warn(\`Modelo IA no encontrado para la variable "\${key}".\`);
+                    variables[key] = "Modelo no encontrado";
+                    continue;
+                  }
+
+                  const { model, personality } = modeloEncontrado;
+
+                  // Consultar GPT para generar el valor
+                  try {
+                    console.log(\`Consultando GPT con modelo: "\${model}", personalidad: "\${personality}"\`);
+                    const resultadoIA = await consultarGPT(model, personality, promptProcesado);
+
+                    // Asignar el resultado generado a la variable
+                    variables[key] = resultadoIA;
+                    console.log(\`Variable "\${key}" actualizada con el valor generado por la IA:\`, resultadoIA);
+                  } catch (error) {
+                    console.error(\`Error al procesar la variable "\${key}" con IA:\`, error);
+                    variables[key] = "Error al generar valor con IA";
+                  }
+                }
+              }
+            };
+
+            // Llamar a esta función para procesar las variables "IA-" de manera global
+            await procesarVariablesIA();
 
               // 1. Obtener plantilla desde S3
               console.log("Obteniendo plantilla...");
@@ -4135,67 +4420,338 @@ router.post('/save-configuration', async (req, res) => {
                 });
               };
 
+              const extractCellAttributes = (cell) => {
+                const attributes = {
+                  width: 2000,
+                  gridSpan: 1,
+                  textColor: null,
+                  bgColor: null,
+                  fontStyle: null,
+                  fontSize: null,
+                  textAlign: null,
+                  verticalAlign: null,
+                };
+              
+                const tcPr = cell?.elements?.find((el) => el.name === 'w:tcPr');
+                const widthElement = tcPr?.elements?.find((el) => el.name === 'w:tcW');
+                const gridSpanElement = tcPr?.elements?.find((el) => el.name === 'w:gridSpan');
+                const shadingElement = tcPr?.elements?.find((el) => el.name === 'w:shd');
+                const verticalAlignElement = tcPr?.elements?.find((el) => el.name === 'w:vAlign');
+                const paragraph = cell?.elements?.find((el) => el.name === 'w:p');
+                const run = paragraph?.elements?.find((el) => el.name === 'w:r');
+                const runProps = run?.elements?.find((el) => el.name === 'w:rPr');
+              
+                // Extract width
+                if (widthElement) {
+                  attributes.width = parseInt(widthElement.attributes['w:w'], 10);
+                }
+              
+                // Extract gridSpan
+                if (gridSpanElement) {
+                  attributes.gridSpan = parseInt(gridSpanElement.attributes['w:val'], 10);
+                }
+              
+                // Extract background color
+                if (shadingElement) {
+                  attributes.bgColor = shadingElement.attributes['w:fill'];
+                }
+              
+                // Extract vertical alignment
+                if (verticalAlignElement) {
+                  attributes.verticalAlign = verticalAlignElement.attributes['w:val'];
+                }
+              
+                // Extract run properties
+                if (runProps) {
+                  const colorElement = runProps.elements?.find((el) => el.name === 'w:color');
+                  const fontSizeElement = runProps.elements?.find((el) => el.name === 'w:sz');
+                  const boldElement = runProps.elements?.find((el) => el.name === 'w:b');
+                  const italicElement = runProps.elements?.find((el) => el.name === 'w:i');
+              
+                  // Extract text color
+                  if (colorElement) {
+                    attributes.textColor = colorElement.attributes['w:val'];
+                  }
+              
+                  // Extract font size
+                  if (fontSizeElement) {
+                    attributes.fontSize = parseInt(fontSizeElement.attributes['w:val'], 10);
+                  }
+              
+                  // Extract bold style
+                  if (boldElement) {
+                    attributes.fontStyle = 'bold';
+                  }
+              
+                  // Extract italic style
+                  if (italicElement) {
+                    attributes.fontStyle = attributes.fontStyle
+                      ? \`\${attributes.fontStyle} italic\`
+                      : 'italic';
+                  }
+                }
+              
+                // Extract text alignment
+                const pPr = paragraph?.elements?.find((el) => el.name === 'w:pPr');
+                const textAlignElement = pPr?.elements?.find((el) => el.name === 'w:jc');
+                if (textAlignElement) {
+                  attributes.textAlign = textAlignElement.attributes['w:val'];
+                }
+              
+                return attributes;
+              };
+                            
+
+              const extractCellWidthsAndSpans = (row) => {
+                console.log("=== Extrayendo y reestructurando celdas (combinación hacia la izquierda) ===");
+              
+                const elements = row.elements;
+                const restructuredCells = [];
+                const cellsToRemove = []; // Lista de índices de celdas que serán eliminadas
+              
+                // Fase 1: Detectar todas las celdas y su estado
+                console.log("=== Fase 1: Detección inicial de celdas ===");
+                const cellDetails = elements.map((cell, index) => {
+                  // Log para mostrar el elemento completo
+                  console.log(\`Evaluando elemento en índice \${index}:\`, JSON.stringify(cell, null, 2));
+              
+                  const attributes = extractCellAttributes(cell); // Usa la función que extrae atributos de la celda
+                  const isCell = cell?.name === 'w:tc'; // Confirmar si el elemento es una celda
+                  if (!isCell) {
+                    console.log(\`Elemento en índice \${index} no es una celda válida. Se ignora.\`);
+                    return null;
+                  }
+              
+                  const cellDetail = {
+                    index: index + 1,
+                    ...attributes,
+                    combinedWith: [], // Inicialmente vacío
+                  };
+              
+                  console.log(
+                    \`Celda \${cellDetail.index}: Ancho = \${cellDetail.width}, GridSpan = \${cellDetail.gridSpan}, Atributos = \`,
+                    cellDetail
+                  );
+                  return cellDetail;
+                }).filter(Boolean); // Filtrar elementos nulos o no válidos
+              
+                // Fase 2: Detectar combinaciones hacia la izquierda
+                console.log("=== Fase 2: Detectar combinaciones hacia la izquierda ===");
+                cellDetails.forEach((cell, idx) => {
+                  if (cell.gridSpan > 1) {
+                    console.log(\`Celda \${cell.index}: Detectada combinación con GridSpan = \${cell.gridSpan}\`);
+                    let combinedWidth = cell.width;
+              
+                    // Revisar celdas anteriores para la combinación
+                    for (let i = 1; i < cell.gridSpan; i++) {
+                      const prevCellIndex = idx - i;
+                      if (prevCellIndex >= 0) {
+                        const prevCell = cellDetails[prevCellIndex];
+                        combinedWidth += prevCell.width;
+                        cell.combinedWith.push(prevCell.index);
+                        cellsToRemove.push(prevCell.index);
+                      }
+                    }
+              
+                    cell.width = combinedWidth;
+                    console.log(
+                      \`Celda \${cell.index}: Combinada con \${cell.combinedWith.join(", ")}. Ancho combinado = \${cell.width}\`
+                    );
+                  }
+                });
+              
+                // Fase 3: Registrar celdas a eliminar
+                console.log("=== Fase 3: Celdas a eliminar ===");
+                console.log(\`Celdas que serán eliminadas: \${[...new Set(cellsToRemove)].join(", ")}\`);
+              
+                // Fase 4: Filtrar celdas restantes
+                console.log("=== Fase 4: Filtrar celdas restantes ===");
+                const remainingCells = cellDetails.filter(
+                  (cell) => !cellsToRemove.includes(cell.index)
+                );
+              
+                console.log("Celdas restantes:");
+                remainingCells.forEach((cell) =>
+                  console.log(\`Celda \${cell.index}: Ancho = \${cell.width}, GridSpan = \${cell.gridSpan}\`)
+                );
+              
+                // Fase 5: Reordenar índices de celdas
+                console.log("=== Fase 5: Reordenar índices ===");
+                const reorderedCells = remainingCells.map((cell, newIndex) => {
+                  console.log(\`Celda original \${cell.index} ahora es Celda \${newIndex + 1}\`);
+                  return {
+                    ...cell,
+                    index: newIndex + 1,
+                  };
+                });
+              
+                console.log("Celdas reestructuradas finales:");
+                reorderedCells.forEach((cell) =>
+                  console.log(\`Celda \${cell.index}: Ancho = \${cell.width}, GridSpan = \${cell.gridSpan}\`)
+                );
+              
+                // Retornar las celdas reestructuradas
+                return reorderedCells.map((cell) => ({
+                  ...cell,
+                  widthAttributes: { 'w:w': cell.width.toString(), 'w:type': 'dxa' },
+                }));
+              };                                                       
+              
               // Función para crear una fila de tabla con bordes opcionales
-              const createRow = (values, withBorders = true) => ({
-                type: 'element',
-                name: 'w:tr',
-                elements: values.map((value) => ({
+              const createRow = (values, cellStyles = [], withBorders = true) => {
+                console.log("=== Creando nueva fila ===");
+                return {
                   type: 'element',
-                  name: 'w:tc',
-                  elements: [
-                    ...(withBorders
-                      ? [
-                          {
+                  name: 'w:tr',
+                  elements: values.map((value, index) => {
+                    const {
+                      widthAttributes,
+                      gridSpan,
+                      textColor,
+                      bgColor,
+                      fontStyle,
+                      fontSize,
+                      textAlign,
+                      verticalAlign,
+                    } = cellStyles[index] || { widthAttributes: { 'w:w': '2000', 'w:type': 'dxa' }, gridSpan: 1 };
+              
+                    console.log(
+                      \`Celda \${index + 1}: Aplicando atributos\`,
+                      widthAttributes,
+                      \`GridSpan: \${gridSpan}, TextColor: \${textColor}, BgColor: \${bgColor}, FontStyle: \${fontStyle}, FontSize: \${fontSize}, TextAlign: \${textAlign}, VerticalAlign: \${verticalAlign}\`
+                    );
+              
+                    const gridSpanElement =
+                      gridSpan > 1
+                        ? {
                             type: 'element',
-                            name: 'w:tcPr',
-                            elements: [
-                              {
-                                type: 'element',
-                                name: 'w:tcBorders',
-                                elements: [
-                                  { name: 'w:top', type: 'element', attributes: { 'w:val': 'single', 'w:sz': '4', 'w:space': '0', 'w:color': 'auto' } },
-                                  { name: 'w:bottom', type: 'element', attributes: { 'w:val': 'single', 'w:sz': '4', 'w:space': '0', 'w:color': 'auto' } },
-                                  { name: 'w:left', type: 'element', attributes: { 'w:val': 'single', 'w:sz': '4', 'w:space': '0', 'w:color': 'auto' } },
-                                  { name: 'w:right', type: 'element', attributes: { 'w:val': 'single', 'w:sz': '4', 'w:space': '0', 'w:color': 'auto' } },
-                                ],
-                              },
-                            ],
-                          },
-                        ]
-                      : []),
-                    {
+                            name: 'w:gridSpan',
+                            attributes: { 'w:val': gridSpan.toString() },
+                          }
+                        : null;
+              
+                    const bgColorElement = bgColor
+                      ? {
+                          type: 'element',
+                          name: 'w:shd',
+                          attributes: { 'w:fill': bgColor },
+                        }
+                      : null;
+              
+                    const textAlignElement = textAlign
+                      ? {
+                          type: 'element',
+                          name: 'w:jc',
+                          attributes: { 'w:val': textAlign },
+                        }
+                      : null;
+              
+                    const verticalAlignElement = verticalAlign
+                      ? {
+                          type: 'element',
+                          name: 'w:vAlign',
+                          attributes: { 'w:val': verticalAlign },
+                        }
+                      : null;
+              
+                    return {
                       type: 'element',
-                      name: 'w:p',
+                      name: 'w:tc',
                       elements: [
                         {
                           type: 'element',
-                          name: 'w:pPr', // Propiedades del párrafo
+                          name: 'w:tcPr',
                           elements: [
                             {
                               type: 'element',
-                              name: 'w:spacing',
-                              attributes: {
-                                'w:before': '150', // Margen superior de 200 twips (~0.14 pulgadas)
-                              },
+                              name: 'w:tcW',
+                              attributes: widthAttributes, // Aplicar ancho original o combinado
                             },
+                            ...(gridSpanElement ? [gridSpanElement] : []), // Añadir gridSpan si aplica
+                            ...(bgColorElement ? [bgColorElement] : []), // Añadir bgColor si aplica
+                            ...(verticalAlignElement ? [verticalAlignElement] : []), // Añadir alineación vertical si aplica
+                            ...(withBorders
+                              ? [
+                                  {
+                                    type: 'element',
+                                    name: 'w:tcBorders',
+                                    elements: [
+                                      { name: 'w:top', type: 'element', attributes: { 'w:val': 'single', 'w:sz': '4', 'w:space': '0', 'w:color': 'auto' } },
+                                      { name: 'w:bottom', type: 'element', attributes: { 'w:val': 'single', 'w:sz': '4', 'w:space': '0', 'w:color': 'auto' } },
+                                      { name: 'w:left', type: 'element', attributes: { 'w:val': 'single', 'w:sz': '4', 'w:space': '0', 'w:color': 'auto' } },
+                                      { name: 'w:right', type: 'element', attributes: { 'w:val': 'single', 'w:sz': '4', 'w:space': '0', 'w:color': 'auto' } },
+                                    ],
+                                  },
+                                ]
+                              : []),
                           ],
                         },
                         {
                           type: 'element',
-                          name: 'w:r',
+                          name: 'w:p',
                           elements: [
                             {
                               type: 'element',
-                              name: 'w:t',
-                              elements: [{ type: 'text', text: value }],
+                              name: 'w:pPr', // Propiedades del párrafo
+                              elements: [
+                                ...(textAlignElement ? [textAlignElement] : []), // Añadir alineación horizontal si aplica
+                                {
+                                  type: 'element',
+                                  name: 'w:spacing',
+                                  attributes: {
+                                    'w:before': '150', // Margen superior
+                                  },
+                                },
+                              ],
+                            },
+                            {
+                              type: 'element',
+                              name: 'w:r',
+                              elements: [
+                                {
+                                  type: 'element',
+                                  name: 'w:rPr',
+                                  elements: [
+                                    ...(textColor
+                                      ? [
+                                          {
+                                            type: 'element',
+                                            name: 'w:color',
+                                            attributes: { 'w:val': textColor },
+                                          },
+                                        ]
+                                      : []),
+                                    ...(fontStyle
+                                      ? fontStyle.split(' ').map((style) => ({
+                                          type: 'element',
+                                          name: \`w:\${style}\`,
+                                        }))
+                                      : []),
+                                    ...(fontSize
+                                      ? [
+                                          {
+                                            type: 'element',
+                                            name: 'w:sz',
+                                            attributes: { 'w:val': fontSize.toString() },
+                                          },
+                                        ]
+                                      : []),
+                                  ],
+                                },
+                                {
+                                  type: 'element',
+                                  name: 'w:t',
+                                  elements: [{ type: 'text', text: value }],
+                                },
+                              ],
                             },
                           ],
                         },
                       ],
-                    },
-                  ],
-                })),
-              });
+                    };
+                  }),
+                };
+              };
 
               // Función para agregar bordes a una fila (encabezado)
               const addBordersToRow = (row) => {
@@ -4266,7 +4822,8 @@ router.post('/save-configuration', async (req, res) => {
                       }
 
                       // Validar si el encabezado coincide
-                      const headerRow = tableRows[0]; // Primera fila de la tabla
+                      const headerRow = tableRows[0];
+                      const bodyRows = tableRows.slice(1);
                       const headerTexts = extractRowTexts(headerRow);
 
                       console.log("Encabezado encontrado en tabla:", headerTexts);
@@ -4315,8 +4872,9 @@ router.post('/save-configuration', async (req, res) => {
                         const updatedRows = [headerRow];
 
                         // Generar las filas nuevas del cuerpo
-                        cuerpo.forEach((rowValues) => {
-                          const newRow = createRow(rowValues);
+                        cuerpo.forEach((rowValues, rowIndex) => {
+                          const cellWidthsAndSpans = extractCellWidthsAndSpans(bodyRows[rowIndex] || bodyRows[bodyRows.length - 1]);
+                          const newRow = createRow(rowValues, cellWidthsAndSpans);
                           updatedRows.push(newRow);
                         });
 
@@ -4599,6 +5157,7 @@ router.post('/save-configuration', async (req, res) => {
     `;
 
     const configuration = {
+      aiModels,
       variables,
       tablas,
     };
@@ -4659,6 +5218,8 @@ router.post('/create-document-client', async (req, res) => {
       Buffer: Buffer, // Agregar Buffer al sandbox
       sharp,
       moment,
+      axios,
+      process: { env: process.env },
     };    
 
      // Crear un script envolviendo el código generado en una función `async`
@@ -4722,6 +5283,8 @@ router.post('/create-document-service', async (req, res) => {
       Buffer: Buffer, // Agregar Buffer al sandbox
       sharp,
       moment,
+      axios,
+      process: { env: process.env },
     };    
 
      // Crear un script envolviendo el código generado en una función `async`
@@ -4785,6 +5348,8 @@ router.post('/create-document-inspeccion', async (req, res) => {
       Buffer: Buffer, // Agregar Buffer al sandbox
       sharp,
       moment,
+      axios,
+      process: { env: process.env },
     };    
 
      // Crear un script envolviendo el código generado en una función `async`
