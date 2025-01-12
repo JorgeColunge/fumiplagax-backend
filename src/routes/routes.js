@@ -1161,6 +1161,10 @@ router.post('/inspections', async (req, res) => {
   }
 
   try {
+    // Formatear la hora en formato HH:MM
+    const formattedTime = time.slice(0, 5); // Suponiendo que el formato original es HH:MM:SS
+    console.log("Hora formateada:", formattedTime);
+
     // Crear inspección en la tabla
     const query = `
       INSERT INTO inspections (date, time, service_id, inspection_type, inspection_sub_type)
@@ -1168,7 +1172,7 @@ router.post('/inspections', async (req, res) => {
     `;
     const values = [
       date,
-      time,
+      formattedTime,
       service_id,
       Array.isArray(inspection_type) ? inspection_type.join(", ") : inspection_type,
       inspection_sub_type || null,
