@@ -1,148 +1,288 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <w:document xmlns:wpc="http://schemas.microsoft.com/office/word/2010/wordprocessingCanvas" xmlns:cx="http://schemas.microsoft.com/office/drawing/2014/chartex" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:m="http://schemas.openxmlformats.org/officeDocument/2006/math" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:wp14="http://schemas.microsoft.com/office/word/2010/wordprocessingDrawing" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:w10="urn:schemas-microsoft-com:office:word" xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:w14="http://schemas.microsoft.com/office/word/2010/wordml" xmlns:w15="http://schemas.microsoft.com/office/word/2012/wordml" xmlns:w16se="http://schemas.microsoft.com/office/word/2015/wordml/symex" xmlns:wpg="http://schemas.microsoft.com/office/word/2010/wordprocessingGroup" xmlns:wpi="http://schemas.microsoft.com/office/word/2010/wordprocessingInk" xmlns:wne="http://schemas.microsoft.com/office/word/2006/wordml" xmlns:wps="http://schemas.microsoft.com/office/word/2010/wordprocessingShape" mc:Ignorable="w14 w15 w16se wp14" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture">
     <w:body>
-        <w:p w:rsidR="00CF7287" w:rsidRDefault="00CF7287">
-            <w:pPr>
-                <w:spacing w:after="0" w:line="240" w:lineRule="auto"/>
-                <w:jc w:val="both"/>
+        <w:p w14:paraId="124C4AFB" w14:textId="77777777" w:rsidR="003D58CD" w:rsidRDefault="00017D9B">
+            <w:bookmarkStart w:id="0" w:name="_GoBack"/>
+            <w:bookmarkEnd w:id="0"/>
+            <w:r>
                 <w:rPr>
-                    <w:rFonts w:ascii="Arial" w:eastAsia="Arial" w:hAnsi="Arial" w:cs="Arial"/>
-                    <w:b/>
+                    <w:noProof/>
+                    <w:lang w:val="en-US" w:eastAsia="en-US"/>
                 </w:rPr>
-            </w:pPr>
+                <w:drawing>
+                    <wp:anchor distT="114300" distB="114300" distL="114300" distR="114300" simplePos="0" relativeHeight="251658240" behindDoc="0" locked="0" layoutInCell="1" hidden="0" allowOverlap="1" wp14:anchorId="74CEDD55" wp14:editId="3F0DF346">
+                        <wp:simplePos x="0" y="0"/>
+                        <wp:positionH relativeFrom="column">
+                            <wp:posOffset>34927</wp:posOffset>
+                        </wp:positionH>
+                        <wp:positionV relativeFrom="paragraph">
+                            <wp:posOffset>196850</wp:posOffset>
+                        </wp:positionV>
+                        <wp:extent cx="2426778" cy="1321513"/>
+                        <wp:effectExtent l="0" t="0" r="0" b="0"/>
+                        <wp:wrapSquare wrapText="bothSides" distT="114300" distB="114300" distL="114300" distR="114300"/>
+                        <wp:docPr id="2" name="image2.png"/>
+                        <wp:cNvGraphicFramePr/>
+                        <a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                            <a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture">
+                                <pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture">
+                                    <pic:nvPicPr>
+                                        <pic:cNvPr id="0" name="image2.png"/>
+                                        <pic:cNvPicPr preferRelativeResize="0"/>
+                                    </pic:nvPicPr>
+                                    <pic:blipFill>
+                                        <a:blip r:embed="rId4"/>
+                                        <a:srcRect/>
+                                        <a:stretch>
+                                            <a:fillRect/>
+                                        </a:stretch>
+                                    </pic:blipFill>
+                                    <pic:spPr>
+                                        <a:xfrm>
+                                            <a:off x="0" y="0"/>
+                                            <a:ext cx="2426778" cy="1321513"/>
+                                        </a:xfrm>
+                                        <a:prstGeom prst="rect">
+                                            <a:avLst/>
+                                        </a:prstGeom>
+                                        <a:ln/>
+                                    </pic:spPr>
+                                </pic:pic>
+                            </a:graphicData>
+                        </a:graphic>
+                    </wp:anchor>
+                </w:drawing>
+            </w:r>
         </w:p>
-        <w:p w:rsidR="00CF7287" w:rsidRDefault="00521EFB">
+        <w:p w14:paraId="13E5453F" w14:textId="77777777" w:rsidR="003D58CD" w:rsidRDefault="00017D9B">
+            <w:r>
+                <w:t xml:space="preserve"></w:t>
+            </w:r>
+        </w:p>
+        <w:p w14:paraId="5D9E2EFE" w14:textId="77777777" w:rsidR="003D58CD" w:rsidRDefault="00017D9B">
             <w:pPr>
-                <w:spacing w:after="0" w:line="240" w:lineRule="auto"/>
                 <w:jc w:val="center"/>
-                <w:rPr>
-                    <w:rFonts w:ascii="Roboto" w:eastAsia="Roboto" w:hAnsi="Roboto" w:cs="Roboto"/>
-                    <w:b/>
-                    <w:color w:val="0F0F0F"/>
-                    <w:sz w:val="24"/>
-                    <w:szCs w:val="24"/>
-                </w:rPr>
             </w:pPr>
             <w:r>
-                <w:rPr>
-                    <w:rFonts w:ascii="Roboto" w:eastAsia="Roboto" w:hAnsi="Roboto" w:cs="Roboto"/>
-                    <w:b/>
-                    <w:color w:val="0F0F0F"/>
-                    <w:sz w:val="24"/>
-                    <w:szCs w:val="24"/>
-                </w:rPr>
-                <w:t>Prueba de tabla</w:t>
+                <w:t xml:space="preserve">                       FUMIPLAGAX COLOMBIA SAS </w:t>
             </w:r>
         </w:p>
-        <w:p w:rsidR="00CF7287" w:rsidRDefault="00CF7287">
+        <w:p w14:paraId="187DAD74" w14:textId="77777777" w:rsidR="003D58CD" w:rsidRDefault="00017D9B">
             <w:pPr>
-                <w:spacing w:after="0" w:line="240" w:lineRule="auto"/>
-                <w:jc w:val="both"/>
-                <w:rPr>
-                    <w:rFonts w:ascii="Roboto" w:eastAsia="Roboto" w:hAnsi="Roboto" w:cs="Roboto"/>
-                    <w:color w:val="0F0F0F"/>
-                    <w:sz w:val="24"/>
-                    <w:szCs w:val="24"/>
-                </w:rPr>
-            </w:pPr>
-        </w:p>
-        <w:p w:rsidR="00CF7287" w:rsidRDefault="00A100B9">
-            <w:pPr>
-                <w:spacing w:after="0" w:line="240" w:lineRule="auto"/>
-                <w:jc w:val="both"/>
-                <w:rPr>
-                    <w:rFonts w:ascii="Roboto" w:eastAsia="Roboto" w:hAnsi="Roboto" w:cs="Roboto"/>
-                    <w:color w:val="0F0F0F"/>
-                    <w:sz w:val="24"/>
-                    <w:szCs w:val="24"/>
-                </w:rPr>
-            </w:pPr>
-            <w:r>
-                <w:rPr>
-                    <w:rFonts w:ascii="Roboto" w:eastAsia="Roboto" w:hAnsi="Roboto" w:cs="Roboto"/>
-                    <w:color w:val="0F0F0F"/>
-                    <w:sz w:val="24"/>
-                    <w:szCs w:val="24"/>
-                </w:rPr>
-                <w:t>En el siguiente documento se reflejan las estaciones registradas para el cliente sasdasdas.</w:t>
-            </w:r>
-        </w:p>
-        <w:p w:rsidR="00CF7287" w:rsidRDefault="00CF7287">
-            <w:pPr>
-                <w:spacing w:after="0" w:line="240" w:lineRule="auto"/>
-                <w:jc w:val="both"/>
-                <w:rPr>
-                    <w:rFonts w:ascii="Roboto" w:eastAsia="Roboto" w:hAnsi="Roboto" w:cs="Roboto"/>
-                    <w:color w:val="0F0F0F"/>
-                    <w:sz w:val="24"/>
-                    <w:szCs w:val="24"/>
-                </w:rPr>
-            </w:pPr>
-        </w:p>
-        <w:p w:rsidR="00A100B9" w:rsidRDefault="00A100B9">
-            <w:pPr>
-                <w:spacing w:after="0" w:line="240" w:lineRule="auto"/>
-                <w:jc w:val="both"/>
-                <w:rPr>
-                    <w:rFonts w:ascii="Roboto" w:eastAsia="Roboto" w:hAnsi="Roboto" w:cs="Roboto"/>
-                    <w:color w:val="0F0F0F"/>
-                    <w:sz w:val="24"/>
-                    <w:szCs w:val="24"/>
-                </w:rPr>
-            </w:pPr>
-        </w:p>
-        <w:p w:rsidR="00CF7287" w:rsidRDefault="00A100B9">
-            <w:pPr>
-                <w:spacing w:after="0" w:line="240" w:lineRule="auto"/>
                 <w:jc w:val="center"/>
+            </w:pPr>
+            <w:r>
+                <w:t xml:space="preserve">                          NIT. 900.823.391  -  1</w:t>
+            </w:r>
+            <w:r>
                 <w:rPr>
-                    <w:rFonts w:ascii="Roboto" w:eastAsia="Roboto" w:hAnsi="Roboto" w:cs="Roboto"/>
-                    <w:b/>
-                    <w:color w:val="0F0F0F"/>
-                    <w:sz w:val="24"/>
-                    <w:szCs w:val="24"/>
+                    <w:noProof/>
+                    <w:lang w:val="en-US" w:eastAsia="en-US"/>
+                </w:rPr>
+                <w:drawing>
+                    <wp:anchor distT="0" distB="0" distL="0" distR="0" simplePos="0" relativeHeight="251659264" behindDoc="1" locked="0" layoutInCell="1" hidden="0" allowOverlap="1" wp14:anchorId="153AA5C4" wp14:editId="05F601CF">
+                        <wp:simplePos x="0" y="0"/>
+                        <wp:positionH relativeFrom="column">
+                            <wp:posOffset>3276600</wp:posOffset>
+                        </wp:positionH>
+                        <wp:positionV relativeFrom="paragraph">
+                            <wp:posOffset>76200</wp:posOffset>
+                        </wp:positionV>
+                        <wp:extent cx="381000" cy="381000"/>
+                        <wp:effectExtent l="0" t="0" r="0" b="0"/>
+                        <wp:wrapNone/>
+                        <wp:docPr id="1" name="image1.png"/>
+                        <wp:cNvGraphicFramePr/>
+                        <a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                            <a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture">
+                                <pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture">
+                                    <pic:nvPicPr>
+                                        <pic:cNvPr id="0" name="image1.png"/>
+                                        <pic:cNvPicPr preferRelativeResize="0"/>
+                                    </pic:nvPicPr>
+                                    <pic:blipFill>
+                                        <a:blip r:embed="rId5"/>
+                                        <a:srcRect/>
+                                        <a:stretch>
+                                            <a:fillRect/>
+                                        </a:stretch>
+                                    </pic:blipFill>
+                                    <pic:spPr>
+                                        <a:xfrm>
+                                            <a:off x="0" y="0"/>
+                                            <a:ext cx="381000" cy="381000"/>
+                                        </a:xfrm>
+                                        <a:prstGeom prst="rect">
+                                            <a:avLst/>
+                                        </a:prstGeom>
+                                        <a:ln/>
+                                    </pic:spPr>
+                                </pic:pic>
+                            </a:graphicData>
+                        </a:graphic>
+                    </wp:anchor>
+                </w:drawing>
+            </w:r>
+        </w:p>
+        <w:p w14:paraId="2873F330" w14:textId="77777777" w:rsidR="003D58CD" w:rsidRDefault="00017D9B">
+            <w:pPr>
+                <w:jc w:val="center"/>
+            </w:pPr>
+            <w:r>
+                <w:t xml:space="preserve">                        3154264568 - 3206869092 - 3182749357</w:t>
+            </w:r>
+        </w:p>
+        <w:p w14:paraId="03454D2F" w14:textId="77777777" w:rsidR="003D58CD" w:rsidRDefault="00017D9B">
+            <w:pPr>
+                <w:jc w:val="center"/>
+            </w:pPr>
+            <w:r>
+                <w:t xml:space="preserve">                      ACTA DE SERVICIO No. </w:t>
+            </w:r>
+        </w:p>
+        <w:p w14:paraId="14AEC843" w14:textId="77777777" w:rsidR="003D58CD" w:rsidRDefault="003D58CD"/>
+        <w:p w14:paraId="1045710F" w14:textId="77777777" w:rsidR="003D58CD" w:rsidRDefault="003D58CD"/>
+        <w:p w14:paraId="530F1833" w14:textId="77777777" w:rsidR="003D58CD" w:rsidRDefault="003D58CD"/>
+        <w:p w14:paraId="05204EDF" w14:textId="77777777" w:rsidR="003D58CD" w:rsidRDefault="00017D9B">
+            <w:r>
+                <w:t xml:space="preserve">EMPRESA: </w:t>
+            </w:r>
+            <w:r>
+                <w:rPr>
+                    <w:u w:val="single"/>
+                </w:rPr>
+                <w:t xml:space="preserve">          .</w:t>
+            </w:r>
+            <w:r/>
+            <w:r>
+                <w:rPr>
+                    <w:u w:val="single"/>
+                </w:rPr>
+            </w:r>
+            <w:proofErr w:type="spellStart"/>
+            <w:r>
+                <w:rPr>
+                    <w:u w:val="single"/>
+                </w:rPr>
+            </w:r>
+            <w:proofErr w:type="spellEnd"/>
+            <w:r>
+                <w:rPr>
+                    <w:u w:val="single"/>
+                </w:rPr>
+            </w:r>
+            <w:r>
+                <w:t xml:space="preserve"></w:t>
+            </w:r>
+        </w:p>
+        <w:p w14:paraId="437E7B88" w14:textId="77777777" w:rsidR="003D58CD" w:rsidRDefault="00017D9B">
+            <w:pPr>
+                <w:rPr>
+                    <w:u w:val="single"/>
                 </w:rPr>
             </w:pPr>
             <w:r>
+                <w:t>TELEFONO:</w:t>
+            </w:r>
+            <w:r>
                 <w:rPr>
-                    <w:rFonts w:ascii="Roboto" w:eastAsia="Roboto" w:hAnsi="Roboto" w:cs="Roboto"/>
-                    <w:b/>
-                    <w:color w:val="0F0F0F"/>
-                    <w:sz w:val="24"/>
-                    <w:szCs w:val="24"/>
+                    <w:u w:val="single"/>
                 </w:rPr>
-                <w:t>Estaciones de Roedores</w:t>
+                <w:t xml:space="preserve"></w:t>
+            </w:r>
+            <w:proofErr w:type="spellStart"/>
+            <w:r>
+                <w:rPr>
+                    <w:u w:val="single"/>
+                </w:rPr>
+            </w:r>
+            <w:proofErr w:type="spellEnd"/>
+            <w:r>
+                <w:rPr>
+                    <w:u w:val="single"/>
+                </w:rPr>
+            </w:r>
+            <w:r>
+                <w:t xml:space="preserve"> CORREO:</w:t>
+            </w:r>
+            <w:r>
+                <w:rPr>
+                    <w:u w:val="single"/>
+                </w:rPr>
+                <w:t xml:space="preserve">        .</w:t>
             </w:r>
         </w:p>
-        <w:p w:rsidR="00CF7287" w:rsidRDefault="00CF7287">
+        <w:p w14:paraId="6655E4EC" w14:textId="77777777" w:rsidR="003D58CD" w:rsidRDefault="00017D9B">
             <w:pPr>
-                <w:spacing w:after="0" w:line="240" w:lineRule="auto"/>
-                <w:jc w:val="both"/>
                 <w:rPr>
-                    <w:rFonts w:ascii="Roboto" w:eastAsia="Roboto" w:hAnsi="Roboto" w:cs="Roboto"/>
-                    <w:color w:val="0F0F0F"/>
-                    <w:sz w:val="24"/>
-                    <w:szCs w:val="24"/>
+                    <w:u w:val="single"/>
+                </w:rPr>
+            </w:pPr>
+            <w:r>
+                <w:t xml:space="preserve">FECHA: </w:t>
+            </w:r>
+            <w:r>
+                <w:rPr>
+                    <w:u w:val="single"/>
+                </w:rPr>
+                <w:t xml:space="preserve"></w:t>
+            </w:r>
+            <w:r/>
+            <w:r>
+                <w:rPr>
+                    <w:u w:val="single"/>
+                </w:rPr>
+            </w:r>
+            <w:proofErr w:type="spellStart"/>
+            <w:r>
+                <w:rPr>
+                    <w:u w:val="single"/>
+                </w:rPr>
+            </w:r>
+            <w:proofErr w:type="spellEnd"/>
+            <w:r>
+                <w:rPr>
+                    <w:u w:val="single"/>
+                </w:rPr>
+            </w:r>
+            <w:r>
+                <w:t xml:space="preserve"> HORA SALIDA: </w:t>
+            </w:r>
+            <w:r>
+                <w:rPr>
+                    <w:u w:val="single"/>
+                </w:rPr>
+                <w:t xml:space="preserve">        .</w:t>
+            </w:r>
+            <w:proofErr w:type="spellStart"/>
+            <w:r>
+                <w:rPr>
+                    <w:u w:val="single"/>
+                </w:rPr>
+            </w:r>
+            <w:proofErr w:type="spellEnd"/>
+            <w:r>
+                <w:rPr>
+                    <w:u w:val="single"/>
+                </w:rPr>
+            </w:r>
+        </w:p>
+        <w:p w14:paraId="7E5B9F7B" w14:textId="77777777" w:rsidR="00794D94" w:rsidRDefault="00794D94">
+            <w:pPr>
+                <w:rPr>
+                    <w:u w:val="single"/>
                 </w:rPr>
             </w:pPr>
         </w:p>
         <w:tbl>
-            <w:tr w:rsidR="00EA7ECF" w:rsidTr="00796246">
+            <w:tr w:rsidR="00794D94" w14:paraId="25147EE4" w14:textId="77777777" w:rsidTr="00794D94">
                 <w:trPr>
-                    <w:trHeight w:val="277"/>
-                    <w:jc w:val="center"/>
+                    <w:trHeight w:val="463"/>
                 </w:trPr>
                 <w:tc>
                     <w:tcPr>
-                        <w:tcW w:w="7645" w:type="dxa"/>
+                        <w:tcW w:w="10204" w:type="dxa"/>
                         <w:gridSpan w:val="3"/>
-                        <w:shd w:val="clear" w:color="auto" w:fill="92D050"/>
-                        <w:tcMar>
-                            <w:top w:w="100" w:type="dxa"/>
-                            <w:left w:w="100" w:type="dxa"/>
-                            <w:bottom w:w="100" w:type="dxa"/>
-                            <w:right w:w="100" w:type="dxa"/>
-                        </w:tcMar>
                         <w:vAlign w:val="center"/>
                         <w:tcBorders>
                             <w:top w:val="single" w:sz="4" w:space="0" w:color="auto"/>
@@ -151,35 +291,20 @@
                             <w:right w:val="single" w:sz="4" w:space="0" w:color="auto"/>
                         </w:tcBorders>
                     </w:tcPr>
-                    <w:p w:rsidR="00EA7ECF" w:rsidRPr="00796246" w:rsidRDefault="00EA7ECF" w:rsidP="00796246">
+                    <w:p w14:paraId="3B0AB6D3" w14:textId="6EC73996" w:rsidR="00794D94" w:rsidRPr="00794D94" w:rsidRDefault="00794D94" w:rsidP="00794D94">
                         <w:pPr>
-                            <w:widowControl w:val="0"/>
-                            <w:pBdr>
-                                <w:top w:val="nil"/>
-                                <w:left w:val="nil"/>
-                                <w:bottom w:val="nil"/>
-                                <w:right w:val="nil"/>
-                                <w:between w:val="nil"/>
-                            </w:pBdr>
-                            <w:spacing w:after="0" w:line="240" w:lineRule="auto"/>
                             <w:jc w:val="center"/>
                             <w:rPr>
-                                <w:rFonts w:ascii="Roboto" w:eastAsia="Roboto" w:hAnsi="Roboto" w:cs="Roboto"/>
                                 <w:b/>
-                                <w:color w:val="0F0F0F"/>
-                                <w:sz w:val="34"/>
-                                <w:szCs w:val="24"/>
+                                <w:bCs/>
                             </w:rPr>
                         </w:pPr>
-                        <w:r w:rsidRPr="00796246">
+                        <w:r w:rsidRPr="00794D94">
                             <w:rPr>
-                                <w:rFonts w:ascii="Roboto" w:eastAsia="Roboto" w:hAnsi="Roboto" w:cs="Roboto"/>
                                 <w:b/>
-                                <w:color w:val="0F0F0F"/>
-                                <w:sz w:val="34"/>
-                                <w:szCs w:val="24"/>
+                                <w:bCs/>
                             </w:rPr>
-                            <w:t>Tabla prueba</w:t>
+                            <w:t>Información del servicio</w:t>
                         </w:r>
                     </w:p>
                 </w:tc>
@@ -187,10 +312,8 @@
             <w:tr>
                 <w:tc>
                     <w:tcPr>
-                        <w:tcW w:w="5660" w:type="dxa"/>
+                        <w:tcW w:w="10204" w:type="dxa"/>
                         <w:gridSpan w:val="2"/>
-                        <w:shd w:fill="92D050"/>
-                        <w:vAlign w:val="center"/>
                         <w:tcBorders>
                             <w:top w:val="single" w:sz="4" w:space="0" w:color="auto"/>
                             <w:bottom w:val="single" w:sz="4" w:space="0" w:color="auto"/>
@@ -200,20 +323,17 @@
                     </w:tcPr>
                     <w:p>
                         <w:pPr>
-                            <w:jc w:val="center"/>
                             <w:spacing w:before="150"/>
                         </w:pPr>
                         <w:r>
                             <w:rPr/>
-                            <w:t>Fecha</w:t>
+                            <w:t>En el baño, se han hallado cerámicas agrietadas, lo que está provocando humedad en el piso inferior.</w:t>
                         </w:r>
                     </w:p>
                 </w:tc>
                 <w:tc>
                     <w:tcPr>
-                        <w:tcW w:w="1985" w:type="dxa"/>
-                        <w:shd w:fill="92D050"/>
-                        <w:vAlign w:val="center"/>
+                        <w:tcW w:w="2000" w:type="dxa"/>
                         <w:tcBorders>
                             <w:top w:val="single" w:sz="4" w:space="0" w:color="auto"/>
                             <w:bottom w:val="single" w:sz="4" w:space="0" w:color="auto"/>
@@ -223,12 +343,11 @@
                     </w:tcPr>
                     <w:p>
                         <w:pPr>
-                            <w:jc w:val="center"/>
                             <w:spacing w:before="150"/>
                         </w:pPr>
                         <w:r>
                             <w:rPr/>
-                            <w:t>Mon Dec 30 2024 00:00:00 GMT-0500 (hora estándar de Colombia)</w:t>
+                            <w:t>2</w:t>
                         </w:r>
                     </w:p>
                 </w:tc>
@@ -236,9 +355,8 @@
             <w:tr>
                 <w:tc>
                     <w:tcPr>
-                        <w:tcW w:w="1691" w:type="dxa"/>
-                        <w:shd w:fill="9BBB59"/>
-                        <w:vAlign w:val="center"/>
+                        <w:tcW w:w="10204" w:type="dxa"/>
+                        <w:gridSpan w:val="2"/>
                         <w:tcBorders>
                             <w:top w:val="single" w:sz="4" w:space="0" w:color="auto"/>
                             <w:bottom w:val="single" w:sz="4" w:space="0" w:color="auto"/>
@@ -248,20 +366,17 @@
                     </w:tcPr>
                     <w:p>
                         <w:pPr>
-                            <w:jc w:val="right"/>
                             <w:spacing w:before="150"/>
                         </w:pPr>
                         <w:r>
                             <w:rPr/>
-                            <w:t>Lugar 1</w:t>
+                            <w:t>En la cocina se encontró una gran acumulación de suciedad, lo que puede atraer plagas y generar problemas de higiene. Es importante realizar una limpieza profunda para prevenir estos riesgos.</w:t>
                         </w:r>
                     </w:p>
                 </w:tc>
                 <w:tc>
                     <w:tcPr>
-                        <w:tcW w:w="3969" w:type="dxa"/>
-                        <w:shd w:fill="9BBB59"/>
-                        <w:vAlign w:val="center"/>
+                        <w:tcW w:w="2000" w:type="dxa"/>
                         <w:tcBorders>
                             <w:top w:val="single" w:sz="4" w:space="0" w:color="auto"/>
                             <w:bottom w:val="single" w:sz="4" w:space="0" w:color="auto"/>
@@ -271,35 +386,11 @@
                     </w:tcPr>
                     <w:p>
                         <w:pPr>
-                            <w:jc w:val="center"/>
                             <w:spacing w:before="150"/>
                         </w:pPr>
                         <w:r>
                             <w:rPr/>
-                            <w:t>Lugar 2</w:t>
-                        </w:r>
-                    </w:p>
-                </w:tc>
-                <w:tc>
-                    <w:tcPr>
-                        <w:tcW w:w="1985" w:type="dxa"/>
-                        <w:shd w:fill="9BBB59"/>
-                        <w:vAlign w:val="center"/>
-                        <w:tcBorders>
-                            <w:top w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                            <w:bottom w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                            <w:left w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                            <w:right w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                        </w:tcBorders>
-                    </w:tcPr>
-                    <w:p>
-                        <w:pPr>
-                            <w:jc w:val="center"/>
-                            <w:spacing w:before="150"/>
-                        </w:pPr>
-                        <w:r>
-                            <w:rPr/>
-                            <w:t>Descripción</w:t>
+                            <w:t>4</w:t>
                         </w:r>
                     </w:p>
                 </w:tc>
@@ -307,8 +398,8 @@
             <w:tr>
                 <w:tc>
                     <w:tcPr>
-                        <w:tcW w:w="1691" w:type="dxa"/>
-                        <w:shd w:fill="auto"/>
+                        <w:tcW w:w="10204" w:type="dxa"/>
+                        <w:gridSpan w:val="2"/>
                         <w:tcBorders>
                             <w:top w:val="single" w:sz="4" w:space="0" w:color="auto"/>
                             <w:bottom w:val="single" w:sz="4" w:space="0" w:color="auto"/>
@@ -318,19 +409,17 @@
                     </w:tcPr>
                     <w:p>
                         <w:pPr>
-                            <w:jc w:val="center"/>
                             <w:spacing w:before="150"/>
                         </w:pPr>
                         <w:r>
                             <w:rPr/>
-                            <w:t>baño</w:t>
+                            <w:t>Parece que no se han encontrado variables específicas relacionadas con "haalazgos" y "lugares". Por favor, proporciona más contexto o detalles para que pueda ayudarte mejor.</w:t>
                         </w:r>
                     </w:p>
                 </w:tc>
                 <w:tc>
                     <w:tcPr>
-                        <w:tcW w:w="3969" w:type="dxa"/>
-                        <w:shd w:fill="auto"/>
+                        <w:tcW w:w="2000" w:type="dxa"/>
                         <w:tcBorders>
                             <w:top w:val="single" w:sz="4" w:space="0" w:color="auto"/>
                             <w:bottom w:val="single" w:sz="4" w:space="0" w:color="auto"/>
@@ -340,33 +429,11 @@
                     </w:tcPr>
                     <w:p>
                         <w:pPr>
-                            <w:jc w:val="center"/>
                             <w:spacing w:before="150"/>
                         </w:pPr>
                         <w:r>
                             <w:rPr/>
-                            <w:t>baño</w:t>
-                        </w:r>
-                    </w:p>
-                </w:tc>
-                <w:tc>
-                    <w:tcPr>
-                        <w:tcW w:w="1985" w:type="dxa"/>
-                        <w:tcBorders>
-                            <w:top w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                            <w:bottom w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                            <w:left w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                            <w:right w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                        </w:tcBorders>
-                    </w:tcPr>
-                    <w:p>
-                        <w:pPr>
-                            <w:jc w:val="center"/>
-                            <w:spacing w:before="150"/>
-                        </w:pPr>
-                        <w:r>
-                            <w:rPr/>
-                            <w:t>En el baño se encuentran las ceramicas agrietadas y eso esta generando humedad al piso de mas abajo.</w:t>
+                            <w:t>6</w:t>
                         </w:r>
                     </w:p>
                 </w:tc>
@@ -374,8 +441,8 @@
             <w:tr>
                 <w:tc>
                     <w:tcPr>
-                        <w:tcW w:w="1691" w:type="dxa"/>
-                        <w:shd w:fill="auto"/>
+                        <w:tcW w:w="10204" w:type="dxa"/>
+                        <w:gridSpan w:val="3"/>
                         <w:tcBorders>
                             <w:top w:val="single" w:sz="4" w:space="0" w:color="auto"/>
                             <w:bottom w:val="single" w:sz="4" w:space="0" w:color="auto"/>
@@ -385,19 +452,63 @@
                     </w:tcPr>
                     <w:p>
                         <w:pPr>
-                            <w:jc w:val="center"/>
                             <w:spacing w:before="150"/>
                         </w:pPr>
                         <w:r>
                             <w:rPr/>
-                            <w:t>cocina</w:t>
+                            <w:t>Parece que estás buscando información sobre "hallazgos" y "lugares", pero las variables no están definidas o no se han encontrado. Podrías aclarar un poco más tu pregunta o proporcionar contexto para que pueda ayudarte mejor.</w:t>
+                        </w:r>
+                    </w:p>
+                </w:tc>
+            </w:tr>
+            <w:tr>
+                <w:tc>
+                    <w:tcPr>
+                        <w:tcW w:w="10204" w:type="dxa"/>
+                        <w:gridSpan w:val="3"/>
+                        <w:tcBorders>
+                            <w:top w:val="single" w:sz="4" w:space="0" w:color="auto"/>
+                            <w:bottom w:val="single" w:sz="4" w:space="0" w:color="auto"/>
+                            <w:left w:val="single" w:sz="4" w:space="0" w:color="auto"/>
+                            <w:right w:val="single" w:sz="4" w:space="0" w:color="auto"/>
+                        </w:tcBorders>
+                    </w:tcPr>
+                    <w:p>
+                        <w:pPr>
+                            <w:spacing w:before="150"/>
+                        </w:pPr>
+                        <w:r>
+                            <w:rPr/>
+                            <w:t>Parece que no hay información disponible sobre "haalazgos" o "lugares" en el contexto que mencionas. Podrías proporcionar más detalles o aclarar el tema para que pueda ayudarte mejor.</w:t>
+                        </w:r>
+                    </w:p>
+                </w:tc>
+            </w:tr>
+            <w:tr>
+                <w:tc>
+                    <w:tcPr>
+                        <w:tcW w:w="5102" w:type="dxa"/>
+                        <w:gridSpan w:val="2"/>
+                        <w:tcBorders>
+                            <w:top w:val="single" w:sz="4" w:space="0" w:color="auto"/>
+                            <w:bottom w:val="single" w:sz="4" w:space="0" w:color="auto"/>
+                            <w:left w:val="single" w:sz="4" w:space="0" w:color="auto"/>
+                            <w:right w:val="single" w:sz="4" w:space="0" w:color="auto"/>
+                        </w:tcBorders>
+                    </w:tcPr>
+                    <w:p>
+                        <w:pPr>
+                            <w:spacing w:before="150"/>
+                        </w:pPr>
+                        <w:r>
+                            <w:rPr/>
+                            <w:t>Parece que las variables "lugares" y "hallazgos" no han sido definidas o están ausentes en el contexto proporcionado. Por favor, proporciona más información o contexto para poder ayudarte mejor.</w:t>
                         </w:r>
                     </w:p>
                 </w:tc>
                 <w:tc>
                     <w:tcPr>
-                        <w:tcW w:w="3969" w:type="dxa"/>
-                        <w:shd w:fill="auto"/>
+                        <w:tcW w:w="5102" w:type="dxa"/>
                         <w:tcBorders>
                             <w:top w:val="single" w:sz="4" w:space="0" w:color="auto"/>
                             <w:bottom w:val="single" w:sz="4" w:space="0" w:color="auto"/>
@@ -407,18 +518,40 @@
                     </w:tcPr>
                     <w:p>
                         <w:pPr>
-                            <w:jc w:val="center"/>
                             <w:spacing w:before="150"/>
                         </w:pPr>
                         <w:r>
                             <w:rPr/>
-                            <w:t>cocina</w:t>
+                            <w:t>6</w:t>
+                        </w:r>
+                    </w:p>
+                </w:tc>
+            </w:tr>
+            <w:tr>
+                <w:tc>
+                    <w:tcPr>
+                        <w:tcW w:w="5102" w:type="dxa"/>
+                        <w:gridSpan w:val="2"/>
+                        <w:tcBorders>
+                            <w:top w:val="single" w:sz="4" w:space="0" w:color="auto"/>
+                            <w:bottom w:val="single" w:sz="4" w:space="0" w:color="auto"/>
+                            <w:left w:val="single" w:sz="4" w:space="0" w:color="auto"/>
+                            <w:right w:val="single" w:sz="4" w:space="0" w:color="auto"/>
+                        </w:tcBorders>
+                    </w:tcPr>
+                    <w:p>
+                        <w:pPr>
+                            <w:spacing w:before="150"/>
+                        </w:pPr>
+                        <w:r>
+                            <w:rPr/>
+                            <w:t>Parece que no se encontraron datos específicos sobre "haazagos" y "lugares". Podrías darme más contexto o detalles para poder ayudarte mejor.</w:t>
                         </w:r>
                     </w:p>
                 </w:tc>
                 <w:tc>
                     <w:tcPr>
-                        <w:tcW w:w="1985" w:type="dxa"/>
+                        <w:tcW w:w="5102" w:type="dxa"/>
                         <w:tcBorders>
                             <w:top w:val="single" w:sz="4" w:space="0" w:color="auto"/>
                             <w:bottom w:val="single" w:sz="4" w:space="0" w:color="auto"/>
@@ -428,31 +561,24 @@
                     </w:tcPr>
                     <w:p>
                         <w:pPr>
-                            <w:jc w:val="center"/>
                             <w:spacing w:before="150"/>
                         </w:pPr>
                         <w:r>
                             <w:rPr/>
-                            <w:t>en la cocina existe mucha suciedad, todo esta muy puerco y eso genera plagas</w:t>
+                            <w:t>9</w:t>
                         </w:r>
                     </w:p>
                 </w:tc>
             </w:tr>
         </w:tbl>
-        <w:p w:rsidR="00CF7287" w:rsidRDefault="00CF7287">
+        <w:p w14:paraId="220D56FD" w14:textId="77777777" w:rsidR="003D58CD" w:rsidRDefault="003D58CD">
             <w:pPr>
-                <w:spacing w:after="0" w:line="240" w:lineRule="auto"/>
-                <w:jc w:val="both"/>
-                <w:rPr>
-                    <w:rFonts w:ascii="Arial" w:eastAsia="Arial" w:hAnsi="Arial" w:cs="Arial"/>
-                </w:rPr>
+                <w:spacing w:line="360" w:lineRule="auto"/>
             </w:pPr>
         </w:p>
-        <w:sectPr w:rsidR="00CF7287">
-            <w:headerReference w:type="default" r:id="rId6"/>
-            <w:footerReference w:type="default" r:id="rId7"/>
-            <w:pgSz w:w="12240" w:h="15840"/>
-            <w:pgMar w:top="1417" w:right="1467" w:bottom="1417" w:left="1418" w:header="708" w:footer="708" w:gutter="0"/>
+        <w:sectPr w:rsidR="003D58CD">
+            <w:pgSz w:w="11909" w:h="16834"/>
+            <w:pgMar w:top="425" w:right="845" w:bottom="1440" w:left="850" w:header="720" w:footer="720" w:gutter="0"/>
             <w:pgNumType w:start="1"/>
             <w:cols w:space="720"/>
         </w:sectPr>
