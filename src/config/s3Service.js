@@ -28,11 +28,17 @@ const getSignedUrl = async (bucketName, key) => {
 
 // Eliminar un archivo de S3
 const deleteObject = async (bucketName, key) => {
-    const params = {
-        Bucket: bucketName,
-        Key: key,
-    };
-    return s3.deleteObject(params).promise();
+    try {
+        const params = {
+            Bucket: bucketName,
+            Key: key,
+        };
+        await s3.deleteObject(params).promise();
+        console.log(`Archivo eliminado de S3: ${key}`);
+    } catch (error) {
+        console.error(`Error al eliminar el archivo de S3 (${key}):`, error.message);
+        throw error;
+    }
 };
 
 module.exports = { uploadFile, getSignedUrl, deleteObject };
