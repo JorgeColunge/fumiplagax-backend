@@ -6008,16 +6008,19 @@ router.post('/save-configuration', async (req, res) => {
               console.log("Documento generado con éxito:", uploadResult.Location);
               const documentUrl = uploadResult.Location;
 
+              let generatedDocumentId = '';
+
               // Inserción en la tabla generated_documents
               try {
                   const query = \`
                       INSERT INTO generated_documents (entity_type, entity_id, document_url, document_name, document_type)
-                      VALUES ($1, $2, $3, $4, $5);
+                      VALUES ($1, $2, $3, $4, $5)
+                      RETURNING id;
                   \`;
-                  const values = [entity, idEntity, documentUrl, documentName, documentType];
+                  const values = [entity, idEntity, documentUrl, documentName, 'doc'];
                   const result = await pool.query(query, values);
 
-                  const generatedDocumentId = result.rows[0].id;
+                  generatedDocumentId = result.rows[0].id;
 
                   console.log("Registro insertado correctamente en la tabla generated_documents.");
               } catch (error) {
@@ -6029,7 +6032,7 @@ router.post('/save-configuration', async (req, res) => {
                   console.log("Iniciando conversión a PDF...");
                   try {
                       const response = await axios.post(
-                          \`\${process.env.REACT_APP_API_URL}/api/convert-to-pdf\`,
+                          \`\${process.env.BACKEND_URL}/api/convert-to-pdf\`,
                           { generatedDocumentId }
                       );
 
