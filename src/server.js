@@ -1,18 +1,28 @@
 const express = require('express');
-const http = require('http');
+const https = require('https'); // Importar módulo HTTPS
+const fs = require('fs');
 const { Server } = require('socket.io');
 const cors = require('cors');
 const bodyParser = require('body-parser');
 const routes = require('./routes/routes');
 const path = require('path');
-const fs = require('fs');
 const dotenv = require('dotenv');
 
 // Configurar dotenv para cargar variables de entorno
 dotenv.config();
 
 const app = express();
-const server = http.createServer(app); // Crear servidor HTTP
+
+// Leer los certificados SSL
+const sslOptions = {
+  key: fs.readFileSync('/etc/letsencrypt/live/fumiplagax.axiomarobotics.com/privkey.pem'),
+  cert: fs.readFileSync('/etc/letsencrypt/live/fumiplagax.axiomarobotics.com/fullchain.pem')
+};
+
+// Crear servidor HTTPS
+const server = https.createServer(sslOptions, app);
+
+// Configurar Socket.IO
 const io = new Server(server, {
   cors: {
     origin: [process.env.FRONTEND_URL || 'http://localhost:3000', 'https://localhost'],
@@ -70,7 +80,7 @@ io.on('connection', (socket) => {
   });
 });
 
-// Inicio del servidor
+// Inicio del servidor HTTPS
 server.listen(PORT, () => {
-  console.log(`Servidor escuchando en el puerto ${PORT}`);
+  console.log(`Servidor HTTPS escuchando en el puerto ${PORT}`);
 });
