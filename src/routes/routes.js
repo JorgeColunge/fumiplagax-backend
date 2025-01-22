@@ -671,66 +671,83 @@ router.delete('/clients/:id', async (req, res) => {
   }
 });
 
-// Crear servicio
 router.post('/services', async (req, res) => {
-  const { service_type, description, pest_to_control, intervention_areas, category, quantity_per_month, client_id, value, created_by, responsible, companion } = req.body;
+  const {
+    service_type,
+    description,
+    pest_to_control,
+    intervention_areas,
+    category,
+    quantity_per_month,
+    client_id,
+    value,
+    created_by,
+    responsible,
+    companion,
+  } = req.body;
 
   try {
+    // Asegúrate de que los valores vacíos sean tratados como null
+    const formattedData = {
+      service_type,
+      description,
+      pest_to_control: pest_to_control || null,
+      intervention_areas: intervention_areas || null,
+      category: category || null,
+      quantity_per_month: quantity_per_month || null,
+      client_id: client_id || null,
+      value: value || null,
+      created_by,
+      responsible: responsible || null,
+      companion: companion || null,
+    };
+
     // Insertar el servicio en la tabla
     const query = `
       INSERT INTO services (service_type, description, pest_to_control, intervention_areas, category, quantity_per_month, client_id, value, created_by, responsible, companion)
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *
     `;
-    const values = [service_type, description, pest_to_control, intervention_areas, category, quantity_per_month, client_id, value, created_by, responsible, companion];
+    const values = Object.values(formattedData);
     const result = await pool.query(query, values);
 
     const service = result.rows[0]; // Servicio creado
     const notificationMessage = `Tu servicio ${service.id} ha sido creado con éxito.`;
 
     // Notificar al responsable
-    const notificationQuery = `
-      INSERT INTO notifications (user_id, notification, state)
-      VALUES ($1, $2, $3) RETURNING *
-    `;
-    const responsibleNotificationValues = [responsible, notificationMessage, 'pending'];
-    const responsibleNotificationResult = await pool.query(notificationQuery, responsibleNotificationValues);
+    if (responsible) {
+      const notificationQuery = `
+        INSERT INTO notifications (user_id, notification, state)
+        VALUES ($1, $2, $3) RETURNING *
+      `;
+      const responsibleNotificationValues = [responsible, notificationMessage, 'pending'];
+      const responsibleNotificationResult = await pool.query(notificationQuery, responsibleNotificationValues);
 
-    // Emitir la notificación al responsable
-    req.io.to(responsible.toString()).emit('notification', {
-      user_id: responsible,
-      notification: responsibleNotificationResult.rows[0],
-    });
+      // Emitir la notificación al responsable
+      req.io.to(responsible.toString()).emit('notification', {
+        user_id: responsible,
+        notification: responsibleNotificationResult.rows[0],
+      });
+    }
 
     // Procesar el campo companion (acompañantes)
     let parsedCompanion = [];
-    console.log(`Valor inicial de companion: ${companion}`); // Log inicial
-
     if (typeof companion === 'string') {
       if (companion.startsWith('{') && companion.endsWith('}')) {
-        console.log(`Companion detectado como formato JSON-like.`);
         parsedCompanion = JSON.parse(companion.replace(/'/g, '"'));
       } else if (companion.includes(',')) {
-        console.log(`Companion detectado como lista separada por comas.`);
         parsedCompanion = companion.split(',').map(id => id.trim());
       } else {
-        console.log(`Companion detectado como string simple.`);
         parsedCompanion = [companion];
       }
     } else if (typeof companion === 'number') {
-      console.log(`Companion detectado como número simple.`);
       parsedCompanion = [companion.toString()];
     } else if (Array.isArray(companion)) {
-      console.log(`Companion detectado como array.`);
       parsedCompanion = companion.map(id => id.toString());
-    } else {
-      console.error(`Formato de companion no soportado: ${companion}`);
     }
 
     // Iterar sobre los IDs de los acompañantes
     if (parsedCompanion.length > 0) {
-      console.log(`Iniciando notificaciones para acompañantes: ${JSON.stringify(parsedCompanion)}`);
       for (let companionId of parsedCompanion) {
-        console.log(`Procesando notificación para el acompañante ID: ${companionId}`);
         try {
           const companionNotificationValues = [companionId, notificationMessage, 'pending'];
           const companionNotificationResult = await pool.query(notificationQuery, companionNotificationValues);
@@ -740,13 +757,10 @@ router.post('/services', async (req, res) => {
             user_id: companionId,
             notification: companionNotificationResult.rows[0],
           });
-          console.log(`Notificación emitida al acompañante ${companionId}: ${notificationMessage}`);
         } catch (notifError) {
           console.error(`Error al enviar notificación al acompañante ${companionId}: ${notifError.message}`);
         }
       }
-    } else {
-      console.warn("No se enviaron notificaciones a acompañantes. Lista vacía o formato no soportado.");
     }
 
     res.status(201).json({ success: true, message: "Service created successfully", service });
@@ -755,7 +769,6 @@ router.post('/services', async (req, res) => {
     res.status(500).json({ success: false, message: "Error interno del servidor" });
   }
 });
-
 
 // Obtener todos los servicios
 router.get('/services', async (req, res) => {
