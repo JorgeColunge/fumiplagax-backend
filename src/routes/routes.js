@@ -2878,7 +2878,7 @@ const uploadInspectionImages = multer({
 router.post('/inspections/:inspectionId/save', uploadInspectionImages, async (req, res) => {
   try {
     const { inspectionId } = req.params;
-    const { generalObservations, findingsByType, productsByType, stationsFindings, signatures } = req.body;
+    const { generalObservations, findingsByType, productsByType, stationsFindings, signatures, userId} = req.body;
 
     console.log('Datos recibidos en el body:', {
       generalObservations,
@@ -2954,7 +2954,9 @@ const genericImagePaths = req.files.images
         signature: clientSignaturePath,
       },
       technician: {
-        name: parsedSignatures?.technician?.name || "Técnico",
+        id: parsedSignatures?.technician?.id || null,
+        name: parsedSignatures?.technician?.name || null,
+        role: parsedSignatures?.technician?.role || null,
         signature: techSignaturePath,
       },
     };
@@ -2991,8 +2993,10 @@ const genericImagePaths = req.files.images
           signature: clientSignaturePath, // URL pública de la firma del cliente
         },
         technician: {
-          name: parsedSignatures?.technician?.name || "Técnico",
-          signature: techSignaturePath, // URL pública de la firma del técnico
+          id: parsedSignatures?.technician?.id || null,
+          name: parsedSignatures?.technician?.name || null,
+          role: parsedSignatures?.technician?.role || null,
+          signature: techSignaturePath,
         },
       },
       genericImages: genericImagePaths, // URLs públicas de imágenes genéricas
@@ -3003,21 +3007,21 @@ const genericImagePaths = req.files.images
     console.log('findingsData preparado para guardar en la base de datos:', JSON.stringify(findingsData, null, 2));
 
     // Definir la consulta para actualizar la inspección
-const query = `
-UPDATE inspections
-SET 
-  observations = $1,
-  findings = $2,
-  exit_time = NOW()
-WHERE id = $3
-RETURNING *, NOW() AS exit_time;
-`;
+    const query = `
+    UPDATE inspections
+    SET 
+      observations = $1,
+      findings = $2,
+      exit_time = NOW()
+    WHERE id = $3
+    RETURNING *, NOW() AS exit_time;
+    `;
 
-// Valores para la consulta
-const values = [generalObservations, findingsData, inspectionId];
+    // Valores para la consulta
+    const values = [generalObservations, findingsData, inspectionId];
 
-// Ejecutar la consulta
-const result = await pool.query(query, values);
+    // Ejecutar la consulta
+    const result = await pool.query(query, values);
 
     if (result.rowCount === 0) {
       console.warn(`Inspección no encontrada para ID: ${inspectionId}`);
@@ -3036,30 +3040,57 @@ const result = await pool.query(query, values);
     
     console.log('Datos guardados en la base de datos:', updatedInspection);
     
-    // Obtener el responsable desde la tabla `services`
-    const responsibleQuery = `
-      SELECT u.name AS responsible_name 
-      FROM services s
-      JOIN users u ON s.responsible::text = u.id::text
-      WHERE s.id::text = $1;
-    `;
-    const responsibleResult = await pool.query(responsibleQuery, [String(updatedInspection.service_id)]);
-    
-    if (responsibleResult.rowCount === 0) {
-      console.warn(`Responsable no encontrado para el servicio asociado a la inspección ${inspectionId}`);
-      return res.status(404).json({ success: false, message: 'Responsable no encontrado' });
-    }
-    
-    const responsibleName = responsibleResult.rows[0].responsible_name;
-    console.log(`Responsable del servicio: ${responsibleName}`);
-    
-    // Crear mensaje de notificación condicional con fecha formateada
+    // Obtener el nombre del responsable, ya sea usuario o cliente
+    const getResponsibleName = async (userId) => {
+      // Consultar en la tabla de usuarios
+      const userQuery = `
+        SELECT name, lastname 
+        FROM users 
+        WHERE id::text = $1;
+      `;
+      const userResult = await pool.query(userQuery, [userId]);
+
+      if (userResult.rowCount > 0) {
+        const user = userResult.rows[0];
+        return { name: `${user.name} ${user.lastname}`, type: "user" };
+      }
+
+      // Consultar en la tabla de clientes
+      const clientQuery = `
+        SELECT name 
+        FROM clients 
+        WHERE id::text = $1;
+      `;
+      const clientResult = await pool.query(clientQuery, [userId]);
+
+      if (clientResult.rowCount > 0) {
+        const client = clientResult.rows[0];
+        return { name: client.name, type: "client" };
+      }
+
+      return null;
+    };
+
+    // Lógica principal
+    const responsibleNameResult = await getResponsibleName(userId);
     let notificationMessage;
+
+    if (!responsibleNameResult) {
+      console.warn(`No se encontró responsable con ID ${userId}`);
+      return res.status(404).json({ success: false, message: "Responsable no encontrado" });
+    }
+
+    const { name: responsibleName, type: responsibleType } = responsibleNameResult;
+
+    // Mensaje de notificación basado en firmas y tipo de responsable
     if (updatedSignatures.client?.signature && updatedSignatures.technician?.signature) {
       notificationMessage = `${responsibleName} ha finalizado el servicio con ID ${inspectionId} a las ${formattedExitTime}.`;
-    } else {
+    } else if (responsibleType === "user") {
       notificationMessage = `${responsibleName} ha actualizado la inspección con ID ${inspectionId} a las ${formattedExitTime}.`;
+    } else if (responsibleType === "client") {
+      notificationMessage = `El cliente ${responsibleName} ha realizado un hallazgo en la inspección ${inspectionId} a las ${formattedExitTime}.`;
     }
+
     console.log(`Mensaje de notificación: ${notificationMessage}`);    
 
     // Notificar a usuarios con roles permitidos
