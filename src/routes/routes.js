@@ -1333,7 +1333,15 @@ const uploadFileToS3 = async (fileBuffer, fileName, mimeType) => {
 
 // Ruta para crear producto
 router.post('/products', uploadProductFiles, async (req, res) => {
-  const { name, description_type, dose, residual_duration, category } = req.body;
+  const {
+    name,
+    description_type,
+    dose,
+    residual_duration,
+    category,
+    active_ingredient,
+    health_record // Nuevo campo recibido del cuerpo de la solicitud
+  } = req.body;
 
   console.log('Categorías:', category);
 
@@ -1363,15 +1371,30 @@ router.post('/products', uploadProductFiles, async (req, res) => {
 
     // Insertar los datos del producto en la base de datos
     const query = `
-      INSERT INTO products (name, description_type, dose, residual_duration, category, safety_data_sheet, technical_sheet, health_registration, emergency_card)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *
+      INSERT INTO products (
+        name,
+        description_type,
+        dose,
+        residual_duration,
+        category,
+        active_ingredient,
+        health_record, -- Agregado el nuevo campo
+        safety_data_sheet,
+        technical_sheet,
+        health_registration,
+        emergency_card
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *
     `;
+    
     const values = [
       name,
       description_type,
       dose,
       residual_duration,
       formattedCategory, // Categorías separadas por comas
+      active_ingredient, // Nuevo campo
+      health_record, // Nuevo campo Registro Sanitario como texto
       fileUrls.safety_data_sheet || null,
       fileUrls.technical_sheet || null,
       fileUrls.health_registration || null,

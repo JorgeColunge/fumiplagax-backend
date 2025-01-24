@@ -23,7 +23,7 @@
     "dotenv": "^16.4.5",
     "express": "^4.21.1",
     "jszip": "^3.10.1",
-    "mammoth": "^1.8.0",
+    "mammoth": "^1.9.0",
     "moment": "^2.30.1",
     "multer": "^1.4.5-lts.1",
     "pg": "^8.13.1",
@@ -34,6 +34,7 @@
     "xml-js": "^1.6.11"
   },
   "devDependencies": {
-    "nodemon": "^2.0.22"
+    "nodemon": "^2.0.22",
+    "source-map-loader": "^5.0.0"
   }
 }
