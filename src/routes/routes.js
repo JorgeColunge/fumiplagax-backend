@@ -232,13 +232,34 @@ const compressImage = async (req, res, next) => {
   }
 };
 
+function rgbToHex(rgb) {
+  if (!rgb) return "#ffffff"; // Si el valor es nulo, retornar blanco por defecto
+
+  // Normaliza el valor eliminando espacios y convirtiendo a minúsculas
+  const normalizedRgb = rgb.trim().toLowerCase();
+
+  // Si ya es HEX, devolverlo tal cual
+  if (normalizedRgb.startsWith("#")) return normalizedRgb;
+
+  // Extraer valores RGB usando regex
+  const result = normalizedRgb.match(/\d+/g);
+  if (!result || result.length < 3) return "#ffffff"; // Si hay error, devolver blanco
+
+  // Convertir cada componente a HEX
+  const r = parseInt(result[0]).toString(16).padStart(2, "0");
+  const g = parseInt(result[1]).toString(16).padStart(2, "0");
+  const b = parseInt(result[2]).toString(16).padStart(2, "0");
+
+  return `#${r}${g}${b}`;
+}
+
 router.post('/updateProfile', uploadImage, compressImage, async (req, res) => {
-  const { name, lastname, email, phone, userId, color } = req.body;
+  const { name, lastname, email, phone, userId, color, role } = req.body;
+  const adminId = req.headers["admin-id"];
 
   let imageUrl = null;
 
   try {
-    // Subir nueva imagen y eliminar la anterior si se proporciona
     if (req.file) {
       const result = await pool.query('SELECT image FROM users WHERE id = $1', [userId]);
       const previousImage = result.rows[0]?.image;
@@ -246,17 +267,16 @@ router.post('/updateProfile', uploadImage, compressImage, async (req, res) => {
       if (previousImage && previousImage.includes('.amazonaws.com/')) {
         const bucketName = 'fumiplagax';
         const previousKey = previousImage.split('.amazonaws.com/')[1];
-        await deleteObject(bucketName, previousKey); // Eliminar la imagen anterior
+        await deleteObject(bucketName, previousKey);
         console.log(`Imagen anterior eliminada: ${previousKey}`);
       }
 
       const bucketName = 'fumiplagax';
       const key = `profile_pictures/${Date.now()}-${req.file.originalname}`;
       const uploadResult = await uploadFile(bucketName, key, req.file.buffer);
-      imageUrl = uploadResult.Location; // URL pública generada por S3
+      imageUrl = uploadResult.Location;
     }
 
-    // Construir partes dinámicas para la consulta
     const fields = [];
     const values = [];
     let index = 1;
@@ -265,7 +285,12 @@ router.post('/updateProfile', uploadImage, compressImage, async (req, res) => {
     if (lastname) fields.push(`lastname = $${index++}`) && values.push(lastname);
     if (email) fields.push(`email = $${index++}`) && values.push(email);
     if (phone) fields.push(`phone = $${index++}`) && values.push(phone);
-    if (color) fields.push(`color = $${index++}`) && values.push(color);
+    if (color) {
+      const hexColor = rgbToHex(color); // ✅ Convierte a HEX si es necesario
+      fields.push(`color = $${index++}`);
+      values.push(hexColor);
+    }
+    if (role) fields.push(`rol = $${index++}`) && values.push(role);
     if (imageUrl) fields.push(`image = $${index++}`) && values.push(imageUrl);
     values.push(userId);
 
@@ -276,11 +301,10 @@ router.post('/updateProfile', uploadImage, compressImage, async (req, res) => {
     const query = `UPDATE users SET ${fields.join(', ')} WHERE id = $${index}`;
     await pool.query(query, values);
 
-    // Generar enlace prefirmado para la nueva imagen
     if (imageUrl) {
       const bucketName = 'fumiplagax';
       const key = imageUrl.split('.amazonaws.com/')[1];
-      imageUrl = await getSignedUrl(bucketName, key); // Generar enlace prefirmado
+      imageUrl = await getSignedUrl(bucketName, key);
     }
 
     res.json({ message: 'Perfil actualizado exitosamente', profilePicURL: imageUrl });
@@ -480,12 +504,15 @@ router.post('/register', uploadImage, compressImage, async (req, res) => {
     // Generar la contraseña encriptada
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Función para generar colores vibrantes aleatorios
-    const getVibrantColor = () => {
-      const r = Math.floor(Math.random() * 156) + 100; // Rojo (100-255)
-      const g = Math.floor(Math.random() * 156) + 100; // Verde (100-255)
-      const b = Math.floor(Math.random() * 156) + 100; // Azul (100-255)
-      return `rgb(${r}, ${g}, ${b})`;
+    // Función para generar colores vibrantes aleatorios directamente en formato hexadecimal
+    const getVibrantColorHex = () => {
+      const getRandomHex = () => {
+        // Genera un valor aleatorio entre 100 y 255, y lo convierte a hexadecimal
+        const value = Math.floor(Math.random() * 156) + 100;
+        return value.toString(16).padStart(2, '0');
+      };
+
+      return `#${getRandomHex()}${getRandomHex()}${getRandomHex()}`;
     };
 
     // Insertar el nuevo usuario en la base de datos
@@ -1338,10 +1365,13 @@ router.post('/products', uploadProductFiles, async (req, res) => {
     description_type,
     dose,
     residual_duration,
-    category,
+    batch,
+    expiration_date,
+    unity,
     active_ingredient,
-    health_record // Nuevo campo recibido del cuerpo de la solicitud
-  } = req.body;
+    category,
+    health_record // ✅ Agregado aquí
+  } = req.body;  
 
   console.log('Categorías:', category);
 
@@ -1371,35 +1401,40 @@ router.post('/products', uploadProductFiles, async (req, res) => {
 
     // Insertar los datos del producto en la base de datos
     const query = `
-      INSERT INTO products (
-        name,
-        description_type,
-        dose,
-        residual_duration,
-        category,
-        active_ingredient,
-        health_record, -- Agregado el nuevo campo
-        safety_data_sheet,
-        technical_sheet,
-        health_registration,
-        emergency_card
-      )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *
-    `;
+    INSERT INTO products (
+      name,
+      description_type,
+      dose,
+      residual_duration,
+      batch, 
+      expiration_date,
+      category,
+      active_ingredient,
+      health_record,
+      unity,
+      safety_data_sheet,
+      technical_sheet,
+      health_registration,
+      emergency_card
+    ) VALUES ($1, $2, $3, $4, $5, TO_DATE($6, 'YYYY-MM-DD'), $7, $8, $9, $10, $11, $12, $13, $14) RETURNING *
+    `;    
     
     const values = [
       name,
       description_type,
       dose,
       residual_duration,
-      formattedCategory, // Categorías separadas por comas
-      active_ingredient, // Nuevo campo
-      health_record, // Nuevo campo Registro Sanitario como texto
+      batch || null, // Asegurar que no sea undefined
+      expiration_date ? expiration_date.split('T')[0] : null, // Formatea la fecha correctamente
+      JSON.stringify(Array.isArray(category) ? category : category.split(',')), // Guarda `category` como JSON en la DB
+      active_ingredient,
+      health_record || null,
+      unity,
       fileUrls.safety_data_sheet || null,
       fileUrls.technical_sheet || null,
       fileUrls.health_registration || null,
-      fileUrls.emergency_card || null,
-    ];
+      fileUrls.emergency_card || null
+    ];            
 
     const result = await pool.query(query, values);
 
@@ -1410,55 +1445,185 @@ router.post('/products', uploadProductFiles, async (req, res) => {
   }
 });
 
-// Obtener todos los productos
+// Obtener todos los productos con debug para Batch y Expiration Date
 router.get('/products', async (req, res) => {
   try {
-    const result = await pool.query('SELECT * FROM products');
-    res.json(result.rows);
+    const result = await pool.query(`
+      SELECT id, name, description_type, dose, residual_duration, batch, 
+             TO_CHAR(expiration_date, 'YYYY-MM-DD') AS expiration_date, -- ✅ Convierte la fecha correctamente
+             category, active_ingredient, health_record, unity, 
+             safety_data_sheet, technical_sheet, health_registration, emergency_card 
+      FROM products
+    `);
+
+    // Convertir `category` correctamente a array
+    const formattedProducts = result.rows.map(product => ({
+      ...product,
+      category: parseCategory(product.category) // ✅ Se usa la función para procesar correctamente la categoría
+    }));
+
+    // Debug para verificar los valores en la base de datos
+    formattedProducts.forEach(product => {
+      console.log(`Producto ID ${product.id}: Batch - ${product.batch}, Expiration Date - ${product.expiration_date}`);
+    });
+
+    res.json(formattedProducts);
   } catch (error) {
-    console.error("Error fetching products:", error);
-    res.status(500).json({ success: false, message: "Server error" });
+    console.error("Error al obtener productos:", error);
+    res.status(500).json({ success: false, message: "Error del servidor" });
   }
 });
 
-// Obtener un producto por ID
+// Obtener un producto por ID con debug
 router.get('/products/:id', async (req, res) => {
-  const { id } = req.params;
+  const { id } = req.params; // Captura el ID de la URL
 
   try {
-    const result = await pool.query('SELECT * FROM products WHERE id = $1', [id]);
+    const result = await pool.query(`
+      SELECT id, name, description_type, dose, residual_duration, batch, 
+             TO_CHAR(expiration_date, 'YYYY-MM-DD') AS expiration_date, -- ✅ Convierte la fecha correctamente
+             category, active_ingredient, health_record, unity, 
+             safety_data_sheet, technical_sheet, health_registration, emergency_card 
+      FROM products
+      WHERE id = $1
+    `, [id]);
+
     if (result.rows.length === 0) {
-      return res.status(404).json({ success: false, message: "Product not found" });
+      return res.status(404).json({ success: false, message: "Producto no encontrado" });
     }
-    res.json(result.rows[0]);
+
+    let product = result.rows[0];
+
+    // Convertir `category` correctamente a array
+    product.category = parseCategory(product.category);
+
+    console.log(`Producto obtenido (ID ${id}): Batch - ${product.batch}, Expiration Date - ${product.expiration_date}`);
+
+    res.json(product);
   } catch (error) {
-    console.error("Error fetching product:", error);
-    res.status(500).json({ success: false, message: "Server error" });
+    console.error("Error al obtener producto:", error);
+    res.status(500).json({ success: false, message: "Error del servidor" });
   }
 });
 
-// Editar producto
-router.put('/products/:id', async (req, res) => {
+/**
+ * ✅ Función para manejar `category` correctamente
+ * - Si ya es un array, lo devuelve tal cual
+ * - Si es un string JSON válido, lo parsea
+ * - Si es un string separado por comas, lo divide en un array
+ */
+function parseCategory(category) {
+  try {
+    if (!category) return []; // Si está vacío, retorna array vacío
+    if (Array.isArray(category)) return category; // Si ya es un array, lo retorna
+    if (category.startsWith("[") && category.endsWith("]")) return JSON.parse(category); // Si es JSON válido, lo parsea
+    return category.split(',').map(cat => cat.trim()); // Si es una cadena separada por comas, lo divide
+  } catch (error) {
+    console.error("⚠️ Error al procesar categorías:", error);
+    return []; // En caso de error, retorna un array vacío
+  }
+}
+
+
+router.put('/products/:id', uploadProductFiles, async (req, res) => {
   const { id } = req.params;
-  const { name, description_type, dose, residual_duration, safety_data_sheet, technical_sheet, health_registration, emergency_card } = req.body;
+  const {
+    name,
+    description_type,
+    dose,
+    residual_duration,
+    batch,
+    expiration_date,
+    unity,
+    active_ingredient,
+    category,
+    health_record // ✅ Agregado aquí
+  } = req.body;  
+  
+  console.log("Datos recibidos en la actualización:", req.body); // Debug para verificar datos  
+
+  // 🔍 Convierte `category` en array si es necesario
+  let formattedCategory = [];
+  try {
+    formattedCategory = typeof category === "string"
+      ? JSON.parse(category.replace(/\\/g, "")) // ✅ Corrige caracteres especiales
+      : category;
+  } catch (error) {
+    console.error("Error al procesar categorías:", error);
+  }  
+
+  let fileUrls = {};
 
   try {
+    // Procesar archivos opcionales
+    if (req.files?.safety_data_sheet) {
+      const file = req.files.safety_data_sheet[0];
+      fileUrls.safety_data_sheet = await uploadFileToS3(file.buffer, file.originalname, file.mimetype);
+    }
+    if (req.files?.technical_sheet) {
+      const file = req.files.technical_sheet[0];
+      fileUrls.technical_sheet = await uploadFileToS3(file.buffer, file.originalname, file.mimetype);
+    }
+    if (req.files?.health_registration) {
+      const file = req.files.health_registration[0];
+      fileUrls.health_registration = await uploadFileToS3(file.buffer, file.originalname, file.mimetype);
+    }
+    if (req.files?.emergency_card) {
+      const file = req.files.emergency_card[0];
+      fileUrls.emergency_card = await uploadFileToS3(file.buffer, file.originalname, file.mimetype);
+    }
+
+    // 🔍 Maneja el caso en que `name` sea null
+    if (!name) {
+      return res.status(400).json({ success: false, message: "El campo 'name' es obligatorio." });
+    }
+
     const query = `
-      UPDATE products
-      SET name = $1, description_type = $2, dose = $3, residual_duration = $4, safety_data_sheet = $5,
-          technical_sheet = $6, health_registration = $7, emergency_card = $8
-      WHERE id = $9 RETURNING *
-    `;
-    const values = [name, description_type, dose, residual_duration, safety_data_sheet, technical_sheet, health_registration, emergency_card, id];
+    UPDATE products
+    SET name = $1, 
+        description_type = $2, 
+        dose = $3, 
+        residual_duration = $4, 
+        batch = $5, 
+        expiration_date = TO_DATE($6, 'YYYY-MM-DD'), -- ✅ Conversión correcta de fecha
+        unity = $7,
+        active_ingredient = $8,
+        health_record = $9,
+        category = $10, -- ✅ Se guarda correctamente
+        safety_data_sheet = COALESCE($11, safety_data_sheet),
+        technical_sheet = COALESCE($12, technical_sheet),
+        health_registration = COALESCE($13, health_registration),
+        emergency_card = COALESCE($14, emergency_card)
+    WHERE id = $15 RETURNING *
+    `;    
+
+    const values = [
+      name,
+      description_type,
+      dose,
+      residual_duration,
+      batch || null,
+      expiration_date ? expiration_date.split('T')[0] : null, // Formatea la fecha correctamente
+      unity,
+      active_ingredient,
+      health_record || null,
+      JSON.stringify(Array.isArray(category) ? category : category.split(',')), // Guarda `category` como JSON
+      fileUrls.safety_data_sheet || null,
+      fileUrls.technical_sheet || null,
+      fileUrls.health_registration || null,
+      fileUrls.emergency_card || null,
+      id
+    ];       
+
     const result = await pool.query(query, values);
 
     if (result.rows.length === 0) {
-      return res.status(404).json({ success: false, message: "Product not found" });
+      return res.status(404).json({ success: false, message: "Producto no encontrado" });
     }
-    res.json({ success: true, message: "Product updated successfully", product: result.rows[0] });
+    res.json({ success: true, message: "Producto actualizado correctamente", product: result.rows[0] });
   } catch (error) {
-    console.error("Error updating product:", error);
-    res.status(500).json({ success: false, message: "Server error" });
+    console.error("Error al actualizar el producto:", error);
+    res.status(500).json({ success: false, message: "Error del servidor" });
   }
 });
 
@@ -1466,16 +1631,39 @@ router.put('/products/:id', async (req, res) => {
 router.delete('/products/:id', async (req, res) => {
   const { id } = req.params;
 
+  console.log(`🔍 Recibida solicitud para eliminar producto con ID: ${id}`);
+
   try {
+    // Verificar si el producto existe antes de intentar eliminarlo
+    const checkExistence = await pool.query('SELECT * FROM products WHERE id = $1', [id]);
+
+    if (checkExistence.rows.length === 0) {
+      console.log(`⚠️ Producto con ID ${id} no encontrado.`);
+      return res.status(404).json({ success: false, message: "Producto no encontrado" });
+    }
+
+    console.log(`✅ Producto con ID ${id} encontrado, procediendo con la eliminación...`);
+
+    // Intentar eliminar el producto
     const result = await pool.query('DELETE FROM products WHERE id = $1 RETURNING *', [id]);
 
     if (result.rows.length === 0) {
-      return res.status(404).json({ success: false, message: "Product not found" });
+      console.log(`❌ No se pudo eliminar el producto con ID ${id}.`);
+      return res.status(500).json({ success: false, message: "Error al eliminar el producto" });
     }
-    res.json({ success: true, message: "Product deleted successfully" });
+
+    console.log(`✅ Producto eliminado correctamente:`, result.rows[0]);
+
+    res.json({ success: true, message: "Producto eliminado exitosamente", deletedProduct: result.rows[0] });
   } catch (error) {
-    console.error("Error deleting product:", error);
-    res.status(500).json({ success: false, message: "Server error" });
+    console.error("❌ Error al eliminar producto:", error);
+
+    // Verificar si el error se debe a restricciones de clave foránea
+    if (error.code === '23503') {
+      return res.status(400).json({ success: false, message: "No se puede eliminar el producto porque está relacionado con otras tablas." });
+    }
+
+    res.status(500).json({ success: false, message: "Error del servidor" });
   }
 });
 
@@ -1493,7 +1681,7 @@ router.post('/inspections', async (req, res) => {
 
   try {
     // Formatear la hora en formato HH:MM
-    const formattedTime = time.slice(0, 5); // Suponiendo que el formato original es HH:MM:SS
+    const formattedTime = moment(time, "HH:mm:ss").format("HH:mm");
     console.log("Hora formateada:", formattedTime);
 
     // Crear inspección en la tabla
