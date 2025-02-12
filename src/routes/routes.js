@@ -3114,7 +3114,7 @@ const uploadInspectionImages = multer({
 router.post('/inspections/:inspectionId/save', uploadInspectionImages, async (req, res) => {
   try {
     const { inspectionId } = req.params;
-    const { generalObservations, findingsByType, productsByType, stationsFindings, signatures, userId} = req.body;
+    const { generalObservations, findingsByType, productsByType, stationsFindings, signatures, userId, exitTime} = req.body;
 
     console.log('Datos recibidos en el body:', {
       generalObservations,
@@ -3242,19 +3242,26 @@ const genericImagePaths = req.files.images
 
     console.log('findingsData preparado para guardar en la base de datos:', JSON.stringify(findingsData, null, 2));
 
+    // Formatear exitTime para que sea más amigable
+    const formattedExitTime = new Intl.DateTimeFormat('es-CO', {
+      dateStyle: 'full',
+      timeStyle: 'short',
+      timeZone: 'America/Bogota',
+    }).format(new Date(exitTime));
+
     // Definir la consulta para actualizar la inspección
     const query = `
     UPDATE inspections
     SET 
       observations = $1,
       findings = $2,
-      exit_time = NOW()
-    WHERE id = $3
+      exit_time = $3
+    WHERE id = $4
     RETURNING *, NOW() AS exit_time;
     `;
 
     // Valores para la consulta
-    const values = [generalObservations, findingsData, inspectionId];
+    const values = [generalObservations, findingsData, formattedExitTime, inspectionId];
 
     // Ejecutar la consulta
     const result = await pool.query(query, values);
@@ -3265,14 +3272,6 @@ const genericImagePaths = req.files.images
     }
 
     const updatedInspection = result.rows[0];
-    const exitTime = updatedInspection.exit_time;
-    
-    // Formatear exitTime para que sea más amigable
-    const formattedExitTime = new Intl.DateTimeFormat('es-CO', {
-      dateStyle: 'full',
-      timeStyle: 'short',
-      timeZone: 'America/Bogota',
-    }).format(new Date(exitTime));
     
     console.log('Datos guardados en la base de datos:', updatedInspection);
     
