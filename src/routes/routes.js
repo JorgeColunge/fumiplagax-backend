@@ -970,6 +970,7 @@ router.delete('/clients/:id', async (req, res) => {
 
 router.post('/services', async (req, res) => {
   const {
+    company,
     service_type,
     description,
     pest_to_control,
@@ -986,6 +987,7 @@ router.post('/services', async (req, res) => {
   try {
     // Asegúrate de que los valores vacíos sean tratados como null
     const formattedData = {
+      company,
       service_type,
       description,
       pest_to_control: pest_to_control || null,
@@ -1001,8 +1003,8 @@ router.post('/services', async (req, res) => {
 
     // Insertar el servicio en la tabla
     const query = `
-      INSERT INTO services (service_type, description, pest_to_control, intervention_areas, category, quantity_per_month, client_id, value, created_by, responsible, companion)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *
+      INSERT INTO services (company,service_type, description, pest_to_control, intervention_areas, category, quantity_per_month, client_id, value, created_by, responsible, companion)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING *
     `;
     const values = Object.values(formattedData);
     const result = await pool.query(query, values);
