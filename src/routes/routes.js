@@ -2460,10 +2460,33 @@ router.delete('/inspections/:id', async (req, res) => {
   }
 });
 
-// Ruta para obtener todos los registros
+// Ruta para obtener los registros filtrados por mes y año
 router.get('/service-schedule', async (req, res) => {
   try {
-    const result = await pool.query('SELECT * FROM service_schedule');
+    const { month } = req.query; // Recibe mesComp en formato MM/YYYY
+
+    console.log('Consultando eventos para: ', month)
+
+    if (!month) {
+      return res.status(400).json({ success: false, message: "El parámetro 'month' es requerido en el formato MM/YYYY." });
+    }
+
+    // Extrae el mes y el año del parámetro mesComp
+    const [mm, yyyy] = month.split('/');
+
+    if (!mm || !yyyy) {
+      return res.status(400).json({ success: false, message: "Formato inválido. Usa MM/YYYY." });
+    }
+
+    // Consulta SQL para filtrar por mes y año
+    const query = `
+      SELECT * FROM service_schedule 
+      WHERE EXTRACT(MONTH FROM date) = $1 
+      AND EXTRACT(YEAR FROM date) = $2
+    `;
+
+    const result = await pool.query(query, [mm, yyyy]);
+    
     res.json(result.rows);
   } catch (error) {
     console.error("Error al obtener los registros:", error);
