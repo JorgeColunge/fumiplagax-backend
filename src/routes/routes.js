@@ -3122,6 +3122,7 @@ router.post('/inspections/:inspectionId/save', uploadInspectionImages, async (re
       productsByType,
       stationsFindings,
       signatures,
+      exitTime,
     });
 
     // Parsear datos de strings a objetos si es necesario
@@ -3242,13 +3243,6 @@ const genericImagePaths = req.files.images
 
     console.log('findingsData preparado para guardar en la base de datos:', JSON.stringify(findingsData, null, 2));
 
-    // Formatear exitTime para que sea más amigable
-    const formattedExitTime = new Intl.DateTimeFormat('es-CO', {
-      dateStyle: 'full',
-      timeStyle: 'short',
-      timeZone: 'America/Bogota',
-    }).format(new Date(exitTime));
-
     // Definir la consulta para actualizar la inspección
     const query = `
     UPDATE inspections
@@ -3261,7 +3255,7 @@ const genericImagePaths = req.files.images
     `;
 
     // Valores para la consulta
-    const values = [generalObservations, findingsData, formattedExitTime, inspectionId];
+    const values = [generalObservations, findingsData, exitTime, inspectionId];
 
     // Ejecutar la consulta
     const result = await pool.query(query, values);
@@ -3319,11 +3313,11 @@ const genericImagePaths = req.files.images
 
     // Mensaje de notificación basado en firmas y tipo de responsable
     if (updatedSignatures.client?.signature && updatedSignatures.technician?.signature) {
-      notificationMessage = `${responsibleName} ha finalizado el servicio con ID ${inspectionId} a las ${formattedExitTime}.`;
+      notificationMessage = `${responsibleName} ha finalizado el servicio con ID ${inspectionId} a las ${exitTime}.`;
     } else if (responsibleType === "user") {
-      notificationMessage = `${responsibleName} ha actualizado la inspección con ID ${inspectionId} a las ${formattedExitTime}.`;
+      notificationMessage = `${responsibleName} ha actualizado la inspección con ID ${inspectionId} a las ${exitTime}.`;
     } else if (responsibleType === "client") {
-      notificationMessage = `El cliente ${responsibleName} ha realizado un hallazgo en la inspección ${inspectionId} a las ${formattedExitTime}.`;
+      notificationMessage = `El cliente ${responsibleName} ha realizado un hallazgo en la inspección ${inspectionId} a las ${exitTime}.`;
     }
 
     console.log(`Mensaje de notificación: ${notificationMessage}`);    
