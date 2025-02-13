@@ -2460,6 +2460,47 @@ router.delete('/inspections/:id', async (req, res) => {
   }
 });
 
+// Ruta para obtener todos los registros
+router.get('/all-service-schedule', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT * FROM service_schedule');
+    res.json(result.rows);
+  } catch (error) {
+    console.error("Error al obtener los registros:", error);
+    res.status(500).json({ success: false, message: "Error en el servidor", error: error.message });
+  }
+});
+
+// Ruta para obtener los eventos de los servicios específicos del usuario
+router.get('/service-service-schedule', async (req, res) => {
+  try {
+    const { serviceIds } = req.query; // Se reciben los IDs de los servicios como una lista
+
+    if (!serviceIds || serviceIds.length === 0) {
+      return res.status(400).json({ success: false, message: "No se proporcionaron servicios." });
+    }
+
+    // Convertir el array de IDs en una lista válida para la consulta SQL
+    const serviceIdList = serviceIds.split(',').map(id => id.trim()); // Mantener los IDs como strings
+
+    if (serviceIdList.length === 0) {
+      return res.status(400).json({ success: false, message: "IDs de servicio inválidos." });
+    }
+
+    // Consulta para obtener solo los eventos de los servicios del usuario
+    const result = await pool.query(
+      `SELECT * FROM service_schedule WHERE service_id = ANY($1)`,
+      [serviceIdList]
+    );
+
+    res.json(result.rows);
+  } catch (error) {
+    console.error("Error al obtener los registros:", error);
+    res.status(500).json({ success: false, message: "Error en el servidor", error: error.message });
+  }
+});
+
+
 // Ruta para obtener los registros filtrados por mes y año
 router.get('/service-schedule', async (req, res) => {
   try {
