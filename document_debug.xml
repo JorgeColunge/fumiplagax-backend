@@ -1,13 +1,14 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <w:document xmlns:wpc="http://schemas.microsoft.com/office/word/2010/wordprocessingCanvas" xmlns:cx="http://schemas.microsoft.com/office/drawing/2014/chartex" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:m="http://schemas.openxmlformats.org/officeDocument/2006/math" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:wp14="http://schemas.microsoft.com/office/word/2010/wordprocessingDrawing" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:w10="urn:schemas-microsoft-com:office:word" xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:w14="http://schemas.microsoft.com/office/word/2010/wordml" xmlns:w15="http://schemas.microsoft.com/office/word/2012/wordml" xmlns:w16se="http://schemas.microsoft.com/office/word/2015/wordml/symex" xmlns:wpg="http://schemas.microsoft.com/office/word/2010/wordprocessingGroup" xmlns:wpi="http://schemas.microsoft.com/office/word/2010/wordprocessingInk" xmlns:wne="http://schemas.microsoft.com/office/word/2006/wordml" xmlns:wps="http://schemas.microsoft.com/office/word/2010/wordprocessingShape" mc:Ignorable="w14 w15 w16se wp14" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture">
     <w:body>
-        <w:p w14:paraId="124C4AFB" w14:textId="77777777" w:rsidR="003D58CD" w:rsidRDefault="00176289">
+        <w:p w:rsidR="00DF6989" w:rsidRDefault="00E00DD1">
             <w:r>
                 <w:rPr>
-                    <w:b/>
+                    <w:noProof/>
+                    <w:lang w:val="es-CO"/>
                 </w:rPr>
                 <w:drawing>
-                    <wp:anchor distT="114300" distB="114300" distL="114300" distR="114300" simplePos="0" relativeHeight="251658240" behindDoc="0" locked="0" layoutInCell="1" hidden="0" allowOverlap="1" wp14:anchorId="74CEDD55" wp14:editId="3F0DF346">
+                    <wp:anchor distT="114300" distB="114300" distL="114300" distR="114300" simplePos="0" relativeHeight="251658240" behindDoc="0" locked="0" layoutInCell="1" hidden="0" allowOverlap="1">
                         <wp:simplePos x="0" y="0"/>
                         <wp:positionH relativeFrom="column">
                             <wp:posOffset>34927</wp:posOffset>
@@ -18,17 +19,17 @@
                         <wp:extent cx="2426778" cy="1321513"/>
                         <wp:effectExtent l="0" t="0" r="0" b="0"/>
                         <wp:wrapSquare wrapText="bothSides" distT="114300" distB="114300" distL="114300" distR="114300"/>
-                        <wp:docPr id="2" name="image2.png"/>
+                        <wp:docPr id="2" name="image1.png"/>
                         <wp:cNvGraphicFramePr/>
                         <a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
                             <a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture">
                                 <pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture">
                                     <pic:nvPicPr>
-                                        <pic:cNvPr id="0" name="image2.png"/>
+                                        <pic:cNvPr id="0" name="image1.png"/>
                                         <pic:cNvPicPr preferRelativeResize="0"/>
                                     </pic:nvPicPr>
                                     <pic:blipFill>
-                                        <a:blip r:embed="rId4"/>
+                                        <a:blip r:embed="rId5"/>
                                         <a:srcRect/>
                                         <a:stretch>
                                             <a:fillRect/>
@@ -51,34 +52,22 @@
                 </w:drawing>
             </w:r>
         </w:p>
-        <w:p w14:paraId="13E5453F" w14:textId="77777777" w:rsidR="003D58CD" w:rsidRDefault="00176289">
+        <w:p w:rsidR="00DF6989" w:rsidRDefault="00E00DD1">
             <w:r>
-                <w:rPr>
-                    <w:b/>
-                </w:rPr>
-                <w:t xml:space="preserve"> Hallazgos y tratamientos realizados</w:t>
+                <w:t xml:space="preserve"></w:t>
             </w:r>
         </w:p>
-        <w:p w14:paraId="5D9E2EFE" w14:textId="77777777" w:rsidR="003D58CD" w:rsidRDefault="00176289">
+        <w:p w:rsidR="00DF6989" w:rsidRDefault="00E00DD1">
             <w:pPr>
-                <w:tabs>
-                    <w:tab w:val="left" w:pos="2475"/>
-                </w:tabs>
+                <w:jc w:val="center"/>
             </w:pPr>
             <w:r>
-                <w:t>Introducción</w:t>
+                <w:t xml:space="preserve">                       FUMIPLAGAX COLOMBIA SAS </w:t>
             </w:r>
-            <w:proofErr w:type="spellStart"/>
-            <w:r/>
-            <w:r w:rsidR="00FB3518"/>
-            <w:proofErr w:type="spellEnd"/>
-            <w:r w:rsidR="00FB3518"/>
         </w:p>
-        <w:p w14:paraId="187DAD74" w14:textId="77777777" w:rsidR="003D58CD" w:rsidRDefault="00176289">
+        <w:p w:rsidR="00DF6989" w:rsidRDefault="00E00DD1">
             <w:pPr>
-                <w:tabs>
-                    <w:tab w:val="left" w:pos="2475"/>
-                </w:tabs>
+                <w:jc w:val="center"/>
             </w:pPr>
             <w:r>
                 <w:t xml:space="preserve">                          NIT. 900.823.391  -  1</w:t>
@@ -86,10 +75,10 @@
             <w:r>
                 <w:rPr>
                     <w:noProof/>
-                    <w:lang w:val="en-US" w:eastAsia="en-US"/>
+                    <w:lang w:val="es-CO"/>
                 </w:rPr>
                 <w:drawing>
-                    <wp:anchor distT="0" distB="0" distL="0" distR="0" simplePos="0" relativeHeight="251659264" behindDoc="1" locked="0" layoutInCell="1" hidden="0" allowOverlap="1" wp14:anchorId="153AA5C4" wp14:editId="05F601CF">
+                    <wp:anchor distT="0" distB="0" distL="0" distR="0" simplePos="0" relativeHeight="251659264" behindDoc="1" locked="0" layoutInCell="1" hidden="0" allowOverlap="1">
                         <wp:simplePos x="0" y="0"/>
                         <wp:positionH relativeFrom="column">
                             <wp:posOffset>3276600</wp:posOffset>
@@ -100,17 +89,17 @@
                         <wp:extent cx="381000" cy="381000"/>
                         <wp:effectExtent l="0" t="0" r="0" b="0"/>
                         <wp:wrapNone/>
-                        <wp:docPr id="1" name="image1.png"/>
+                        <wp:docPr id="1" name="image2.png"/>
                         <wp:cNvGraphicFramePr/>
                         <a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
                             <a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture">
                                 <pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture">
                                     <pic:nvPicPr>
-                                        <pic:cNvPr id="0" name="image1.png"/>
+                                        <pic:cNvPr id="0" name="image2.png"/>
                                         <pic:cNvPicPr preferRelativeResize="0"/>
                                     </pic:nvPicPr>
                                     <pic:blipFill>
-                                        <a:blip r:embed="rId5"/>
+                                        <a:blip r:embed="rId6"/>
                                         <a:srcRect/>
                                         <a:stretch>
                                             <a:fillRect/>
@@ -133,879 +122,826 @@
                 </w:drawing>
             </w:r>
         </w:p>
-        <w:p w14:paraId="2873F330" w14:textId="77777777" w:rsidR="003D58CD" w:rsidRDefault="00176289">
+        <w:p w:rsidR="00DF6989" w:rsidRDefault="00E00DD1">
             <w:pPr>
-                <w:tabs>
-                    <w:tab w:val="left" w:pos="2475"/>
-                </w:tabs>
+                <w:jc w:val="center"/>
             </w:pPr>
             <w:r>
-                <w:t>Proceso</w:t>
+                <w:t xml:space="preserve">                        3154264568 - 3206869092 - 3182749357</w:t>
             </w:r>
         </w:p>
-        <w:p w14:paraId="03454D2F" w14:textId="77777777" w:rsidR="003D58CD" w:rsidRDefault="00176289">
+        <w:p w:rsidR="00DF6989" w:rsidRDefault="00E00DD1">
             <w:pPr>
-                <w:tabs>
-                    <w:tab w:val="left" w:pos="2475"/>
-                </w:tabs>
                 <w:jc w:val="center"/>
+            </w:pPr>
+            <w:r>
+                <w:t xml:space="preserve">                      ACTA DE SERVICIO No. 1/1/140225</w:t>
+            </w:r>
+        </w:p>
+        <w:p w:rsidR="00DF6989" w:rsidRDefault="00DF6989"/>
+        <w:p w:rsidR="00DF6989" w:rsidRDefault="00DF6989"/>
+        <w:p w:rsidR="00DF6989" w:rsidRDefault="00DF6989"/>
+        <w:p w:rsidR="001F03FC" w:rsidRDefault="001F03FC" w:rsidP="001F03FC">
+            <w:pPr>
+                <w:sectPr w:rsidR="001F03FC">
+                    <w:pgSz w:w="11909" w:h="16834"/>
+                    <w:pgMar w:top="425" w:right="845" w:bottom="1440" w:left="850" w:header="720" w:footer="720" w:gutter="0"/>
+                    <w:pgNumType w:start="1"/>
+                    <w:cols w:space="720"/>
+                </w:sectPr>
+            </w:pPr>
+        </w:p>
+        <w:p w:rsidR="0047456F" w:rsidRPr="0016586B" w:rsidRDefault="001F03FC" w:rsidP="001F03FC">
+            <w:pPr>
+                <w:rPr>
+                    <w:b/>
+                </w:rPr>
+            </w:pPr>
+            <w:r w:rsidRPr="0047456F">
+                <w:rPr>
+                    <w:b/>
+                </w:rPr>
+                <w:lastRenderedPageBreak/>
+                <w:t>Empresa:</w:t>
+            </w:r>
+            <w:r w:rsidR="0016586B">
+                <w:rPr>
+                    <w:b/>
+                </w:rPr>
+                <w:t xml:space="preserve"></w:t>
+            </w:r>
+            <w:r w:rsidRPr="00A83680">
+                <w:t>prueba</w:t>
+            </w:r>
+            <w:proofErr w:type="spellStart"/>
+            <w:r w:rsidRPr="00A83680"/>
+            <w:proofErr w:type="spellEnd"/>
+            <w:r w:rsidRPr="00A83680"/>
+        </w:p>
+        <w:p w:rsidR="0047456F" w:rsidRPr="0016586B" w:rsidRDefault="0016586B" w:rsidP="001F03FC">
+            <w:pPr>
                 <w:rPr>
                     <w:b/>
                 </w:rPr>
             </w:pPr>
             <w:r>
-                <w:t xml:space="preserve">                      ACTA DE SERVICIO No. aaaaaaa</w:t>
+                <w:rPr>
+                    <w:noProof/>
+                    <w:lang w:val="es-CO"/>
+                </w:rPr>
+                <mc:AlternateContent>
+                    <mc:Choice Requires="wps">
+                        <w:drawing>
+                            <wp:anchor distT="0" distB="0" distL="114300" distR="114300" simplePos="0" relativeHeight="251661312" behindDoc="0" locked="0" layoutInCell="1" allowOverlap="1" wp14:anchorId="24DF0975" wp14:editId="1B7A84F4">
+                                <wp:simplePos x="0" y="0"/>
+                                <wp:positionH relativeFrom="margin">
+                                    <wp:align>center</wp:align>
+                                </wp:positionH>
+                                <wp:positionV relativeFrom="paragraph">
+                                    <wp:posOffset>241935</wp:posOffset>
+                                </wp:positionV>
+                                <wp:extent cx="6705600" cy="19050"/>
+                                <wp:effectExtent l="38100" t="38100" r="76200" b="95250"/>
+                                <wp:wrapTopAndBottom/>
+                                <wp:docPr id="6" name="Conector recto 6"/>
+                                <wp:cNvGraphicFramePr/>
+                                <a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                                    <a:graphicData uri="http://schemas.microsoft.com/office/word/2010/wordprocessingShape">
+                                        <wps:wsp>
+                                            <wps:cNvCnPr/>
+                                            <wps:spPr>
+                                                <a:xfrm flipV="1">
+                                                    <a:off x="0" y="0"/>
+                                                    <a:ext cx="6705600" cy="19050"/>
+                                                </a:xfrm>
+                                                <a:prstGeom prst="line">
+                                                    <a:avLst/>
+                                                </a:prstGeom>
+                                            </wps:spPr>
+                                            <wps:style>
+                                                <a:lnRef idx="2">
+                                                    <a:schemeClr val="accent3"/>
+                                                </a:lnRef>
+                                                <a:fillRef idx="0">
+                                                    <a:schemeClr val="accent3"/>
+                                                </a:fillRef>
+                                                <a:effectRef idx="1">
+                                                    <a:schemeClr val="accent3"/>
+                                                </a:effectRef>
+                                                <a:fontRef idx="minor">
+                                                    <a:schemeClr val="tx1"/>
+                                                </a:fontRef>
+                                            </wps:style>
+                                            <wps:bodyPr/>
+                                        </wps:wsp>
+                                    </a:graphicData>
+                                </a:graphic>
+                            </wp:anchor>
+                        </w:drawing>
+                    </mc:Choice>
+                    <mc:Fallback>
+                        <w:pict>
+                            <v:line w14:anchorId="43746402" id="Conector recto 6" o:spid="_x0000_s1026" style="position:absolute;flip:y;z-index:251661312;visibility:visible;mso-wrap-style:square;mso-wrap-distance-left:9pt;mso-wrap-distance-top:0;mso-wrap-distance-right:9pt;mso-wrap-distance-bottom:0;mso-position-horizontal:center;mso-position-horizontal-relative:margin;mso-position-vertical:absolute;mso-position-vertical-relative:text" from="0,19.05pt" to="528pt,20.55pt" o:gfxdata="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
+" strokecolor="#9bbb59 [3206]" strokeweight="2pt">
+                                <v:shadow on="t" color="black" opacity="24903f" origin=",.5" offset="0,.55556mm"/>
+                                <w10:wrap type="topAndBottom" anchorx="margin"/>
+                            </v:line>
+                        </w:pict>
+                    </mc:Fallback>
+                </mc:AlternateContent>
             </w:r>
+            <w:r w:rsidR="001F03FC" w:rsidRPr="0047456F">
+                <w:rPr>
+                    <w:b/>
+                </w:rPr>
+                <w:t>Dirección:</w:t>
+            </w:r>
+            <w:r>
+                <w:rPr>
+                    <w:b/>
+                </w:rPr>
+                <w:t xml:space="preserve"></w:t>
+            </w:r>
+            <w:r w:rsidR="001F03FC" w:rsidRPr="00A83680">
+                <w:t>cra 25a No 5 sur 09</w:t>
+            </w:r>
+            <w:proofErr w:type="spellStart"/>
+            <w:r w:rsidR="001F03FC" w:rsidRPr="00A83680"/>
+            <w:proofErr w:type="spellEnd"/>
+            <w:r w:rsidR="001F03FC" w:rsidRPr="00A83680"/>
         </w:p>
-        <w:p w14:paraId="14AEC843" w14:textId="77777777" w:rsidR="003D58CD" w:rsidRDefault="003D58CD"/>
-        <w:p w14:paraId="1045710F" w14:textId="29FC15D0" w:rsidR="003D58CD" w:rsidRDefault="003D58CD"/>
-        <w:p w14:paraId="46DD9F0F" w14:textId="3F2BDBC4" w:rsidR="00B05554" w:rsidRDefault="00B05554"/>
-        <w:tbl>
-            <w:tr w:rsidR="00B05554" w14:paraId="486E5444" w14:textId="77777777" w:rsidTr="00F51CA9">
-                <w:tc>
-                    <w:tcPr>
-                        <w:tcW w:w="10204" w:type="dxa"/>
-                        <w:gridSpan w:val="4"/>
-                        <w:tcBorders>
-                            <w:top w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                            <w:bottom w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                            <w:left w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                            <w:right w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                        </w:tcBorders>
-                    </w:tcPr>
-                    <w:p w14:paraId="0CD45284" w14:textId="726A88BC" w:rsidR="00B05554" w:rsidRPr="00B05554" w:rsidRDefault="00B05554" w:rsidP="00B05554">
-                        <w:pPr>
-                            <w:jc w:val="center"/>
-                            <w:rPr>
-                                <w:b/>
-                            </w:rPr>
-                        </w:pPr>
-                        <w:r w:rsidRPr="00B05554">
-                            <w:rPr>
-                                <w:b/>
-                            </w:rPr>
-                            <w:t>Información cliente</w:t>
-                        </w:r>
-                    </w:p>
-                </w:tc>
-            </w:tr>
-            <w:tr>
-                <w:tc>
-                    <w:tcPr>
-                        <w:tcW w:w="2551" w:type="dxa"/>
-                        <w:tcBorders>
-                            <w:top w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                            <w:bottom w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                            <w:left w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                            <w:right w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                        </w:tcBorders>
-                    </w:tcPr>
-                    <w:p>
-                        <w:pPr>
-                            <w:spacing w:before="150"/>
-                        </w:pPr>
-                        <w:r>
-                            <w:rPr/>
-                            <w:t>1</w:t>
-                        </w:r>
-                    </w:p>
-                </w:tc>
-                <w:tc>
-                    <w:tcPr>
-                        <w:tcW w:w="2551" w:type="dxa"/>
-                        <w:tcBorders>
-                            <w:top w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                            <w:bottom w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                            <w:left w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                            <w:right w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                        </w:tcBorders>
-                    </w:tcPr>
-                    <w:p>
-                        <w:pPr>
-                            <w:spacing w:before="150"/>
-                        </w:pPr>
-                        <w:r>
-                            <w:rPr/>
-                            <w:t>2</w:t>
-                        </w:r>
-                    </w:p>
-                </w:tc>
-                <w:tc>
-                    <w:tcPr>
-                        <w:tcW w:w="2551" w:type="dxa"/>
-                        <w:tcBorders>
-                            <w:top w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                            <w:bottom w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                            <w:left w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                            <w:right w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                        </w:tcBorders>
-                    </w:tcPr>
-                    <w:p>
-                        <w:pPr>
-                            <w:spacing w:before="150"/>
-                        </w:pPr>
-                        <w:r>
-                            <w:rPr/>
-                            <w:t>3</w:t>
-                        </w:r>
-                    </w:p>
-                </w:tc>
-                <w:tc>
-                    <w:tcPr>
-                        <w:tcW w:w="2551" w:type="dxa"/>
-                        <w:tcBorders>
-                            <w:top w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                            <w:bottom w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                            <w:left w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                            <w:right w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                        </w:tcBorders>
-                    </w:tcPr>
-                    <w:p>
-                        <w:pPr>
-                            <w:spacing w:before="150"/>
-                        </w:pPr>
-                        <w:r>
-                            <w:rPr/>
-                            <w:t>4</w:t>
-                        </w:r>
-                    </w:p>
-                </w:tc>
-            </w:tr>
-            <w:tr>
-                <w:tc>
-                    <w:tcPr>
-                        <w:tcW w:w="2551" w:type="dxa"/>
-                        <w:tcBorders>
-                            <w:top w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                            <w:bottom w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                            <w:left w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                            <w:right w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                        </w:tcBorders>
-                    </w:tcPr>
-                    <w:p>
-                        <w:pPr>
-                            <w:spacing w:before="150"/>
-                        </w:pPr>
-                        <w:r>
-                            <w:rPr/>
-                            <w:t/>
-                        </w:r>
-                    </w:p>
-                </w:tc>
-                <w:tc>
-                    <w:tcPr>
-                        <w:tcW w:w="2551" w:type="dxa"/>
-                        <w:tcBorders>
-                            <w:top w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                            <w:bottom w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                            <w:left w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                            <w:right w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                        </w:tcBorders>
-                    </w:tcPr>
-                    <w:p>
-                        <w:pPr>
-                            <w:spacing w:before="150"/>
-                        </w:pPr>
-                        <w:r>
-                            <w:rPr/>
-                            <w:t/>
-                        </w:r>
-                    </w:p>
-                </w:tc>
-                <w:tc>
-                    <w:tcPr>
-                        <w:tcW w:w="2551" w:type="dxa"/>
-                        <w:tcBorders>
-                            <w:top w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                            <w:bottom w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                            <w:left w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                            <w:right w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                        </w:tcBorders>
-                    </w:tcPr>
-                    <w:p>
-                        <w:pPr>
-                            <w:spacing w:before="150"/>
-                        </w:pPr>
-                        <w:r>
-                            <w:rPr/>
-                            <w:t/>
-                        </w:r>
-                    </w:p>
-                </w:tc>
-                <w:tc>
-                    <w:tcPr>
-                        <w:tcW w:w="2551" w:type="dxa"/>
-                        <w:tcBorders>
-                            <w:top w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                            <w:bottom w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                            <w:left w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                            <w:right w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                        </w:tcBorders>
-                    </w:tcPr>
-                    <w:p>
-                        <w:pPr>
-                            <w:spacing w:before="150"/>
-                        </w:pPr>
-                        <w:r>
-                            <w:rPr/>
-                            <w:t/>
-                        </w:r>
-                    </w:p>
-                </w:tc>
-            </w:tr>
-            <w:tr>
-                <w:tc>
-                    <w:tcPr>
-                        <w:tcW w:w="7653" w:type="dxa"/>
-                        <w:gridSpan w:val="2"/>
-                        <w:tcBorders>
-                            <w:top w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                            <w:bottom w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                            <w:left w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                            <w:right w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                        </w:tcBorders>
-                    </w:tcPr>
-                    <w:p>
-                        <w:pPr>
-                            <w:jc w:val="center"/>
-                            <w:spacing w:before="150"/>
-                        </w:pPr>
-                        <w:r>
-                            <w:rPr/>
-                            <w:t/>
-                        </w:r>
-                    </w:p>
-                </w:tc>
-                <w:tc>
-                    <w:tcPr>
-                        <w:tcW w:w="2551" w:type="dxa"/>
-                        <w:tcBorders>
-                            <w:top w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                            <w:bottom w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                            <w:left w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                            <w:right w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                        </w:tcBorders>
-                    </w:tcPr>
-                    <w:p>
-                        <w:pPr>
-                            <w:jc w:val="center"/>
-                            <w:spacing w:before="150"/>
-                        </w:pPr>
-                        <w:r>
-                            <w:rPr/>
-                            <w:t/>
-                        </w:r>
-                    </w:p>
-                </w:tc>
-                <w:tc>
-                    <w:tcPr>
-                        <w:tcW w:w="2000" w:type="dxa"/>
-                        <w:tcBorders>
-                            <w:top w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                            <w:bottom w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                            <w:left w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                            <w:right w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                        </w:tcBorders>
-                    </w:tcPr>
-                    <w:p>
-                        <w:pPr>
-                            <w:spacing w:before="150"/>
-                        </w:pPr>
-                        <w:r>
-                            <w:rPr/>
-                            <w:t/>
-                        </w:r>
-                    </w:p>
-                </w:tc>
-            </w:tr>
-            <w:tr>
-                <w:tc>
-                    <w:tcPr>
-                        <w:tcW w:w="7653" w:type="dxa"/>
-                        <w:gridSpan w:val="2"/>
-                        <w:tcBorders>
-                            <w:top w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                            <w:bottom w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                            <w:left w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                            <w:right w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                        </w:tcBorders>
-                    </w:tcPr>
-                    <w:p>
-                        <w:pPr>
-                            <w:jc w:val="center"/>
-                            <w:spacing w:before="150"/>
-                        </w:pPr>
-                        <w:r>
-                            <w:rPr/>
-                            <w:t/>
-                        </w:r>
-                    </w:p>
-                </w:tc>
-                <w:tc>
-                    <w:tcPr>
-                        <w:tcW w:w="2551" w:type="dxa"/>
-                        <w:tcBorders>
-                            <w:top w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                            <w:bottom w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                            <w:left w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                            <w:right w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                        </w:tcBorders>
-                    </w:tcPr>
-                    <w:p>
-                        <w:pPr>
-                            <w:jc w:val="center"/>
-                            <w:spacing w:before="150"/>
-                        </w:pPr>
-                        <w:r>
-                            <w:rPr/>
-                            <w:t/>
-                        </w:r>
-                    </w:p>
-                </w:tc>
-                <w:tc>
-                    <w:tcPr>
-                        <w:tcW w:w="2000" w:type="dxa"/>
-                        <w:tcBorders>
-                            <w:top w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                            <w:bottom w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                            <w:left w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                            <w:right w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                        </w:tcBorders>
-                    </w:tcPr>
-                    <w:p>
-                        <w:pPr>
-                            <w:spacing w:before="150"/>
-                        </w:pPr>
-                        <w:r>
-                            <w:rPr/>
-                            <w:t/>
-                        </w:r>
-                    </w:p>
-                </w:tc>
-            </w:tr>
-        </w:tbl>
-        <w:p w14:paraId="1DA468E3" w14:textId="1BEA6359" w:rsidR="004B17D1" w:rsidRPr="00040B88" w:rsidRDefault="004B17D1" w:rsidP="004F08E1">
+        <w:p w:rsidR="0047456F" w:rsidRPr="0016586B" w:rsidRDefault="0047456F" w:rsidP="001F03FC">
             <w:pPr>
                 <w:rPr>
-                    <w:u w:val="single"/>
+                    <w:b/>
                 </w:rPr>
             </w:pPr>
+            <w:proofErr w:type="spellStart"/>
+            <w:r w:rsidRPr="0047456F">
+                <w:rPr>
+                    <w:b/>
+                </w:rPr>
+                <w:lastRenderedPageBreak/>
+                <w:t>Telefono</w:t>
+            </w:r>
+            <w:proofErr w:type="spellEnd"/>
+            <w:r w:rsidRPr="0047456F">
+                <w:rPr>
+                    <w:b/>
+                </w:rPr>
+                <w:t>:</w:t>
+            </w:r>
+            <w:r w:rsidR="0016586B">
+                <w:rPr>
+                    <w:b/>
+                </w:rPr>
+                <w:t xml:space="preserve"></w:t>
+            </w:r>
+            <w:r w:rsidR="001F03FC" w:rsidRPr="00A83680">
+                <w:t>7371383</w:t>
+            </w:r>
+            <w:proofErr w:type="spellStart"/>
+            <w:r w:rsidR="001F03FC" w:rsidRPr="00A83680"/>
+            <w:proofErr w:type="spellEnd"/>
+            <w:r w:rsidR="001F03FC" w:rsidRPr="00A83680"/>
         </w:p>
-        <w:p w14:paraId="7E5B9F7B" w14:textId="20BF14E2" w:rsidR="00794D94" w:rsidRDefault="00794D94">
+        <w:p w:rsidR="001F03FC" w:rsidRPr="0016586B" w:rsidRDefault="0047456F" w:rsidP="001F03FC">
             <w:pPr>
                 <w:rPr>
-                    <w:u w:val="single"/>
+                    <w:b/>
                 </w:rPr>
             </w:pPr>
+            <w:r w:rsidRPr="0047456F">
+                <w:rPr>
+                    <w:b/>
+                </w:rPr>
+                <w:t>Correo:</w:t>
+            </w:r>
+            <w:r w:rsidR="0016586B">
+                <w:rPr>
+                    <w:b/>
+                </w:rPr>
+                <w:t xml:space="preserve"></w:t>
+            </w:r>
+            <w:r w:rsidR="001F03FC" w:rsidRPr="00A83680">
+                <w:t>cliente@gmail.com</w:t>
+            </w:r>
+            <w:proofErr w:type="spellStart"/>
+            <w:r w:rsidR="001F03FC" w:rsidRPr="00A83680"/>
+            <w:proofErr w:type="spellEnd"/>
+            <w:r w:rsidR="001F03FC" w:rsidRPr="00A83680"/>
         </w:p>
-        <w:tbl>
-            <w:tr w:rsidR="008B31B7" w14:paraId="7CF9C26D" w14:textId="77777777" w:rsidTr="00A7698A">
-                <w:tc>
-                    <w:tcPr>
-                        <w:tcW w:w="10204" w:type="dxa"/>
-                        <w:gridSpan w:val="3"/>
-                        <w:tcBorders>
-                            <w:top w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                            <w:bottom w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                            <w:left w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                            <w:right w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                        </w:tcBorders>
-                    </w:tcPr>
-                    <w:p w14:paraId="31C21058" w14:textId="6DDE5A78" w:rsidR="008B31B7" w:rsidRPr="008B31B7" w:rsidRDefault="008B31B7" w:rsidP="008B31B7">
-                        <w:pPr>
-                            <w:jc w:val="center"/>
-                            <w:rPr>
-                                <w:b/>
-                            </w:rPr>
-                        </w:pPr>
-                        <w:r w:rsidRPr="00794D94">
-                            <w:rPr>
-                                <w:b/>
-                                <w:bCs/>
-                            </w:rPr>
-                            <w:t>Información del servicio</w:t>
-                        </w:r>
-                    </w:p>
-                </w:tc>
-            </w:tr>
-            <w:tr>
-                <w:tc>
-                    <w:tcPr>
-                        <w:tcW w:w="2122" w:type="dxa"/>
-                        <w:tcBorders>
-                            <w:top w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                            <w:bottom w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                            <w:left w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                            <w:right w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                        </w:tcBorders>
-                    </w:tcPr>
-                    <w:p>
-                        <w:pPr>
-                            <w:spacing w:before="150"/>
-                        </w:pPr>
-                        <w:r>
-                            <w:rPr/>
-                            <w:t/>
-                        </w:r>
-                    </w:p>
-                </w:tc>
-                <w:tc>
-                    <w:tcPr>
-                        <w:tcW w:w="2976" w:type="dxa"/>
-                        <w:tcBorders>
-                            <w:top w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                            <w:bottom w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                            <w:left w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                            <w:right w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                        </w:tcBorders>
-                    </w:tcPr>
-                    <w:p>
-                        <w:pPr>
-                            <w:spacing w:before="150"/>
-                        </w:pPr>
-                        <w:r>
-                            <w:rPr/>
-                            <w:t/>
-                        </w:r>
-                    </w:p>
-                </w:tc>
-                <w:tc>
-                    <w:tcPr>
-                        <w:tcW w:w="5106" w:type="dxa"/>
-                        <w:tcBorders>
-                            <w:top w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                            <w:bottom w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                            <w:left w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                            <w:right w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                        </w:tcBorders>
-                    </w:tcPr>
-                    <w:p>
-                        <w:pPr>
-                            <w:spacing w:before="150"/>
-                        </w:pPr>
-                        <w:r>
-                            <w:rPr/>
-                            <w:t/>
-                        </w:r>
-                    </w:p>
-                </w:tc>
-            </w:tr>
-            <w:tr>
-                <w:tc>
-                    <w:tcPr>
-                        <w:tcW w:w="10204" w:type="dxa"/>
-                        <w:gridSpan w:val="2"/>
-                        <w:tcBorders>
-                            <w:top w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                            <w:bottom w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                            <w:left w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                            <w:right w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                        </w:tcBorders>
-                    </w:tcPr>
-                    <w:p>
-                        <w:pPr>
-                            <w:spacing w:before="150"/>
-                        </w:pPr>
-                        <w:r>
-                            <w:rPr/>
-                            <w:t/>
-                        </w:r>
-                    </w:p>
-                </w:tc>
-                <w:tc>
-                    <w:tcPr>
-                        <w:tcW w:w="2000" w:type="dxa"/>
-                        <w:tcBorders>
-                            <w:top w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                            <w:bottom w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                            <w:left w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                            <w:right w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                        </w:tcBorders>
-                    </w:tcPr>
-                    <w:p>
-                        <w:pPr>
-                            <w:spacing w:before="150"/>
-                        </w:pPr>
-                        <w:r>
-                            <w:rPr/>
-                            <w:t/>
-                        </w:r>
-                    </w:p>
-                </w:tc>
-            </w:tr>
-            <w:tr>
-                <w:tc>
-                    <w:tcPr>
-                        <w:tcW w:w="10204" w:type="dxa"/>
-                        <w:gridSpan w:val="2"/>
-                        <w:tcBorders>
-                            <w:top w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                            <w:bottom w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                            <w:left w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                            <w:right w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                        </w:tcBorders>
-                    </w:tcPr>
-                    <w:p>
-                        <w:pPr>
-                            <w:spacing w:before="150"/>
-                        </w:pPr>
-                        <w:r>
-                            <w:rPr/>
-                            <w:t/>
-                        </w:r>
-                    </w:p>
-                </w:tc>
-                <w:tc>
-                    <w:tcPr>
-                        <w:tcW w:w="2000" w:type="dxa"/>
-                        <w:tcBorders>
-                            <w:top w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                            <w:bottom w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                            <w:left w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                            <w:right w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                        </w:tcBorders>
-                    </w:tcPr>
-                    <w:p>
-                        <w:pPr>
-                            <w:spacing w:before="150"/>
-                        </w:pPr>
-                        <w:r>
-                            <w:rPr/>
-                            <w:t/>
-                        </w:r>
-                    </w:p>
-                </w:tc>
-            </w:tr>
-            <w:tr>
-                <w:tc>
-                    <w:tcPr>
-                        <w:tcW w:w="10204" w:type="dxa"/>
-                        <w:gridSpan w:val="2"/>
-                        <w:tcBorders>
-                            <w:top w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                            <w:bottom w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                            <w:left w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                            <w:right w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                        </w:tcBorders>
-                    </w:tcPr>
-                    <w:p>
-                        <w:pPr>
-                            <w:spacing w:before="150"/>
-                        </w:pPr>
-                        <w:r>
-                            <w:rPr/>
-                            <w:t/>
-                        </w:r>
-                    </w:p>
-                </w:tc>
-                <w:tc>
-                    <w:tcPr>
-                        <w:tcW w:w="2000" w:type="dxa"/>
-                        <w:tcBorders>
-                            <w:top w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                            <w:bottom w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                            <w:left w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                            <w:right w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                        </w:tcBorders>
-                    </w:tcPr>
-                    <w:p>
-                        <w:pPr>
-                            <w:spacing w:before="150"/>
-                        </w:pPr>
-                        <w:r>
-                            <w:rPr/>
-                            <w:t/>
-                        </w:r>
-                    </w:p>
-                </w:tc>
-            </w:tr>
-            <w:tr>
-                <w:tc>
-                    <w:tcPr>
-                        <w:tcW w:w="10204" w:type="dxa"/>
-                        <w:gridSpan w:val="3"/>
-                        <w:tcBorders>
-                            <w:top w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                            <w:bottom w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                            <w:left w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                            <w:right w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                        </w:tcBorders>
-                    </w:tcPr>
-                    <w:p>
-                        <w:pPr>
-                            <w:jc w:val="center"/>
-                            <w:spacing w:before="150"/>
-                        </w:pPr>
-                        <w:r>
-                            <w:rPr/>
-                            <w:t/>
-                        </w:r>
-                    </w:p>
-                </w:tc>
-            </w:tr>
-            <w:tr>
-                <w:tc>
-                    <w:tcPr>
-                        <w:tcW w:w="10204" w:type="dxa"/>
-                        <w:gridSpan w:val="3"/>
-                        <w:tcBorders>
-                            <w:top w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                            <w:bottom w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                            <w:left w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                            <w:right w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                        </w:tcBorders>
-                    </w:tcPr>
-                    <w:p>
-                        <w:pPr>
-                            <w:spacing w:before="150"/>
-                        </w:pPr>
-                        <w:r>
-                            <w:rPr/>
-                            <w:t/>
-                        </w:r>
-                    </w:p>
-                </w:tc>
-            </w:tr>
-            <w:tr>
-                <w:tc>
-                    <w:tcPr>
-                        <w:tcW w:w="10204" w:type="dxa"/>
-                        <w:gridSpan w:val="2"/>
-                        <w:tcBorders>
-                            <w:top w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                            <w:bottom w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                            <w:left w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                            <w:right w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                        </w:tcBorders>
-                    </w:tcPr>
-                    <w:p>
-                        <w:pPr>
-                            <w:jc w:val="center"/>
-                            <w:spacing w:before="150"/>
-                        </w:pPr>
-                        <w:r>
-                            <w:rPr/>
-                            <w:t/>
-                        </w:r>
-                    </w:p>
-                </w:tc>
-                <w:tc>
-                    <w:tcPr>
-                        <w:tcW w:w="2000" w:type="dxa"/>
-                        <w:tcBorders>
-                            <w:top w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                            <w:bottom w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                            <w:left w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                            <w:right w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                        </w:tcBorders>
-                    </w:tcPr>
-                    <w:p>
-                        <w:pPr>
-                            <w:spacing w:before="150"/>
-                        </w:pPr>
-                        <w:r>
-                            <w:rPr/>
-                            <w:t/>
-                        </w:r>
-                    </w:p>
-                </w:tc>
-            </w:tr>
-            <w:tr>
-                <w:tc>
-                    <w:tcPr>
-                        <w:tcW w:w="10204" w:type="dxa"/>
-                        <w:gridSpan w:val="2"/>
-                        <w:tcBorders>
-                            <w:top w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                            <w:bottom w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                            <w:left w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                            <w:right w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                        </w:tcBorders>
-                    </w:tcPr>
-                    <w:p>
-                        <w:pPr>
-                            <w:spacing w:before="150"/>
-                        </w:pPr>
-                        <w:r>
-                            <w:rPr/>
-                            <w:t/>
-                        </w:r>
-                    </w:p>
-                </w:tc>
-                <w:tc>
-                    <w:tcPr>
-                        <w:tcW w:w="2000" w:type="dxa"/>
-                        <w:tcBorders>
-                            <w:top w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                            <w:bottom w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                            <w:left w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                            <w:right w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                        </w:tcBorders>
-                    </w:tcPr>
-                    <w:p>
-                        <w:pPr>
-                            <w:spacing w:before="150"/>
-                        </w:pPr>
-                        <w:r>
-                            <w:rPr/>
-                            <w:t/>
-                        </w:r>
-                    </w:p>
-                </w:tc>
-            </w:tr>
-            <w:tr>
-                <w:tc>
-                    <w:tcPr>
-                        <w:tcW w:w="10204" w:type="dxa"/>
-                        <w:gridSpan w:val="2"/>
-                        <w:tcBorders>
-                            <w:top w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                            <w:bottom w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                            <w:left w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                            <w:right w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                        </w:tcBorders>
-                    </w:tcPr>
-                    <w:p>
-                        <w:pPr>
-                            <w:spacing w:before="150"/>
-                        </w:pPr>
-                        <w:r>
-                            <w:rPr/>
-                            <w:t/>
-                        </w:r>
-                    </w:p>
-                </w:tc>
-                <w:tc>
-                    <w:tcPr>
-                        <w:tcW w:w="2000" w:type="dxa"/>
-                        <w:tcBorders>
-                            <w:top w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                            <w:bottom w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                            <w:left w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                            <w:right w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                        </w:tcBorders>
-                    </w:tcPr>
-                    <w:p>
-                        <w:pPr>
-                            <w:spacing w:before="150"/>
-                        </w:pPr>
-                        <w:r>
-                            <w:rPr/>
-                            <w:t/>
-                        </w:r>
-                    </w:p>
-                </w:tc>
-            </w:tr>
-            <w:tr>
-                <w:tc>
-                    <w:tcPr>
-                        <w:tcW w:w="10204" w:type="dxa"/>
-                        <w:gridSpan w:val="2"/>
-                        <w:tcBorders>
-                            <w:top w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                            <w:bottom w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                            <w:left w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                            <w:right w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                        </w:tcBorders>
-                    </w:tcPr>
-                    <w:p>
-                        <w:pPr>
-                            <w:spacing w:before="150"/>
-                        </w:pPr>
-                        <w:r>
-                            <w:rPr/>
-                            <w:t/>
-                        </w:r>
-                    </w:p>
-                </w:tc>
-                <w:tc>
-                    <w:tcPr>
-                        <w:tcW w:w="2000" w:type="dxa"/>
-                        <w:tcBorders>
-                            <w:top w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                            <w:bottom w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                            <w:left w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                            <w:right w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                        </w:tcBorders>
-                    </w:tcPr>
-                    <w:p>
-                        <w:pPr>
-                            <w:spacing w:before="150"/>
-                        </w:pPr>
-                        <w:r>
-                            <w:rPr/>
-                            <w:t/>
-                        </w:r>
-                    </w:p>
-                </w:tc>
-            </w:tr>
-            <w:tr>
-                <w:tc>
-                    <w:tcPr>
-                        <w:tcW w:w="10204" w:type="dxa"/>
-                        <w:gridSpan w:val="2"/>
-                        <w:tcBorders>
-                            <w:top w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                            <w:bottom w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                            <w:left w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                            <w:right w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                        </w:tcBorders>
-                    </w:tcPr>
-                    <w:p>
-                        <w:pPr>
-                            <w:spacing w:before="150"/>
-                        </w:pPr>
-                        <w:r>
-                            <w:rPr/>
-                            <w:t/>
-                        </w:r>
-                    </w:p>
-                </w:tc>
-                <w:tc>
-                    <w:tcPr>
-                        <w:tcW w:w="2000" w:type="dxa"/>
-                        <w:tcBorders>
-                            <w:top w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                            <w:bottom w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                            <w:left w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                            <w:right w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                        </w:tcBorders>
-                    </w:tcPr>
-                    <w:p>
-                        <w:pPr>
-                            <w:spacing w:before="150"/>
-                        </w:pPr>
-                        <w:r>
-                            <w:rPr/>
-                            <w:t/>
-                        </w:r>
-                    </w:p>
-                </w:tc>
-            </w:tr>
-        </w:tbl>
-        <w:p w14:paraId="220D56FD" w14:textId="64A11B64" w:rsidR="003D58CD" w:rsidRDefault="003D58CD">
+        <w:p w:rsidR="001F03FC" w:rsidRDefault="001F03FC">
+            <w:pPr>
+                <w:sectPr w:rsidR="001F03FC" w:rsidSect="0016586B">
+                    <w:type w:val="continuous"/>
+                    <w:pgSz w:w="11909" w:h="16834"/>
+                    <w:pgMar w:top="425" w:right="845" w:bottom="1440" w:left="850" w:header="720" w:footer="720" w:gutter="0"/>
+                    <w:pgNumType w:start="1"/>
+                    <w:cols w:num="2" w:space="284"/>
+                </w:sectPr>
+            </w:pPr>
+        </w:p>
+        <w:p w:rsidR="00DF6989" w:rsidRDefault="00DF6989"/>
+        <w:p w:rsidR="0047456F" w:rsidRDefault="0047456F" w:rsidP="0047456F">
             <w:pPr>
                 <w:spacing w:line="360" w:lineRule="auto"/>
+                <w:rPr>
+                    <w:b/>
+                </w:rPr>
+                <w:sectPr w:rsidR="0047456F" w:rsidSect="001F03FC">
+                    <w:type w:val="continuous"/>
+                    <w:pgSz w:w="11909" w:h="16834"/>
+                    <w:pgMar w:top="425" w:right="845" w:bottom="1440" w:left="850" w:header="720" w:footer="720" w:gutter="0"/>
+                    <w:pgNumType w:start="1"/>
+                    <w:cols w:space="720"/>
+                </w:sectPr>
             </w:pPr>
+        </w:p>
+        <w:p w:rsidR="0047456F" w:rsidRPr="0016586B" w:rsidRDefault="0047456F" w:rsidP="0047456F">
+            <w:pPr>
+                <w:spacing w:line="360" w:lineRule="auto"/>
+                <w:rPr>
+                    <w:b/>
+                </w:rPr>
+            </w:pPr>
+            <w:r w:rsidRPr="0047456F">
+                <w:rPr>
+                    <w:b/>
+                </w:rPr>
+                <w:lastRenderedPageBreak/>
+                <w:t>Fecha:</w:t>
+            </w:r>
+            <w:r w:rsidR="0016586B">
+                <w:rPr>
+                    <w:b/>
+                </w:rPr>
+                <w:t xml:space="preserve"></w:t>
+            </w:r>
+            <w:r>
+                <w:t>14/2/2025</w:t>
+            </w:r>
+        </w:p>
+        <w:p w:rsidR="0047456F" w:rsidRPr="0016586B" w:rsidRDefault="0047456F" w:rsidP="0047456F">
+            <w:pPr>
+                <w:spacing w:line="360" w:lineRule="auto"/>
+                <w:rPr>
+                    <w:b/>
+                </w:rPr>
+            </w:pPr>
+            <w:r w:rsidRPr="0047456F">
+                <w:rPr>
+                    <w:b/>
+                </w:rPr>
+                <w:lastRenderedPageBreak/>
+                <w:t>Hora de entrada:</w:t>
+            </w:r>
+            <w:r w:rsidR="0016586B">
+                <w:rPr>
+                    <w:b/>
+                </w:rPr>
+                <w:t xml:space="preserve"></w:t>
+            </w:r>
+            <w:r>
+                <w:t>17:29:00</w:t>
+            </w:r>
+            <w:proofErr w:type="spellStart"/>
+            <w:r/>
+            <w:proofErr w:type="spellEnd"/>
+            <w:r/>
+        </w:p>
+        <w:p w:rsidR="0047456F" w:rsidRPr="0016586B" w:rsidRDefault="0047456F" w:rsidP="0047456F">
+            <w:pPr>
+                <w:spacing w:line="360" w:lineRule="auto"/>
+                <w:rPr>
+                    <w:b/>
+                </w:rPr>
+                <w:sectPr w:rsidR="0047456F" w:rsidRPr="0016586B" w:rsidSect="0016586B">
+                    <w:type w:val="continuous"/>
+                    <w:pgSz w:w="11909" w:h="16834"/>
+                    <w:pgMar w:top="425" w:right="845" w:bottom="1440" w:left="850" w:header="720" w:footer="720" w:gutter="0"/>
+                    <w:pgNumType w:start="1"/>
+                    <w:cols w:num="3" w:space="720"/>
+                </w:sectPr>
+            </w:pPr>
+            <w:r w:rsidRPr="0047456F">
+                <w:rPr>
+                    <w:b/>
+                </w:rPr>
+                <w:lastRenderedPageBreak/>
+                <w:t>Hora de salida:</w:t>
+            </w:r>
+            <w:r w:rsidR="0016586B">
+                <w:rPr>
+                    <w:b/>
+                </w:rPr>
+                <w:t xml:space="preserve"></w:t>
+            </w:r>
             <w:bookmarkStart w:id="0" w:name="_GoBack"/>
             <w:bookmarkEnd w:id="0"/>
+            <w:r w:rsidR="00D051EF">
+                <w:t>No encontrado</w:t>
+            </w:r>
         </w:p>
-        <w:p w14:paraId="03265CC1" w14:textId="77777777" w:rsidR="0056654B" w:rsidRDefault="0056654B">
+        <w:p w:rsidR="00CE3584" w:rsidRDefault="0016586B" w:rsidP="009B2269">
+            <w:pPr>
+                <w:spacing w:line="360" w:lineRule="auto"/>
+                <w:sectPr w:rsidR="00CE3584" w:rsidSect="001F03FC">
+                    <w:type w:val="continuous"/>
+                    <w:pgSz w:w="11909" w:h="16834"/>
+                    <w:pgMar w:top="425" w:right="845" w:bottom="1440" w:left="850" w:header="720" w:footer="720" w:gutter="0"/>
+                    <w:pgNumType w:start="1"/>
+                    <w:cols w:space="720"/>
+                </w:sectPr>
+            </w:pPr>
+            <w:r>
+                <w:rPr>
+                    <w:noProof/>
+                    <w:lang w:val="es-CO"/>
+                </w:rPr>
+                <w:lastRenderedPageBreak/>
+                <mc:AlternateContent>
+                    <mc:Choice Requires="wps">
+                        <w:drawing>
+                            <wp:anchor distT="0" distB="0" distL="114300" distR="114300" simplePos="0" relativeHeight="251663360" behindDoc="0" locked="0" layoutInCell="1" allowOverlap="1" wp14:anchorId="4AB0A208" wp14:editId="7544F727">
+                                <wp:simplePos x="0" y="0"/>
+                                <wp:positionH relativeFrom="margin">
+                                    <wp:align>center</wp:align>
+                                </wp:positionH>
+                                <wp:positionV relativeFrom="paragraph">
+                                    <wp:posOffset>53975</wp:posOffset>
+                                </wp:positionV>
+                                <wp:extent cx="6705600" cy="19050"/>
+                                <wp:effectExtent l="38100" t="38100" r="76200" b="95250"/>
+                                <wp:wrapTopAndBottom/>
+                                <wp:docPr id="7" name="Conector recto 7"/>
+                                <wp:cNvGraphicFramePr/>
+                                <a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                                    <a:graphicData uri="http://schemas.microsoft.com/office/word/2010/wordprocessingShape">
+                                        <wps:wsp>
+                                            <wps:cNvCnPr/>
+                                            <wps:spPr>
+                                                <a:xfrm flipV="1">
+                                                    <a:off x="0" y="0"/>
+                                                    <a:ext cx="6705600" cy="19050"/>
+                                                </a:xfrm>
+                                                <a:prstGeom prst="line">
+                                                    <a:avLst/>
+                                                </a:prstGeom>
+                                            </wps:spPr>
+                                            <wps:style>
+                                                <a:lnRef idx="2">
+                                                    <a:schemeClr val="accent3"/>
+                                                </a:lnRef>
+                                                <a:fillRef idx="0">
+                                                    <a:schemeClr val="accent3"/>
+                                                </a:fillRef>
+                                                <a:effectRef idx="1">
+                                                    <a:schemeClr val="accent3"/>
+                                                </a:effectRef>
+                                                <a:fontRef idx="minor">
+                                                    <a:schemeClr val="tx1"/>
+                                                </a:fontRef>
+                                            </wps:style>
+                                            <wps:bodyPr/>
+                                        </wps:wsp>
+                                    </a:graphicData>
+                                </a:graphic>
+                            </wp:anchor>
+                        </w:drawing>
+                    </mc:Choice>
+                    <mc:Fallback>
+                        <w:pict>
+                            <v:line w14:anchorId="0C6240CD" id="Conector recto 7" o:spid="_x0000_s1026" style="position:absolute;flip:y;z-index:251663360;visibility:visible;mso-wrap-style:square;mso-wrap-distance-left:9pt;mso-wrap-distance-top:0;mso-wrap-distance-right:9pt;mso-wrap-distance-bottom:0;mso-position-horizontal:center;mso-position-horizontal-relative:margin;mso-position-vertical:absolute;mso-position-vertical-relative:text" from="0,4.25pt" to="528pt,5.75pt" o:gfxdata="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
+" strokecolor="#9bbb59 [3206]" strokeweight="2pt">
+                                <v:shadow on="t" color="black" opacity="24903f" origin=",.5" offset="0,.55556mm"/>
+                                <w10:wrap type="topAndBottom" anchorx="margin"/>
+                            </v:line>
+                        </w:pict>
+                    </mc:Fallback>
+                </mc:AlternateContent>
+            </w:r>
+        </w:p>
+        <w:p w:rsidR="00CE3584" w:rsidRDefault="00C90750" w:rsidP="0016586B">
+            <w:pPr>
+                <w:spacing w:line="360" w:lineRule="auto"/>
+                <w:jc w:val="center"/>
+            </w:pPr>
+            <w:r>
+                <w:rPr>
+                    <w:b/>
+                </w:rPr>
+                <w:lastRenderedPageBreak/>
+                <w:t>RESUMEN DEL SERVICIO</w:t>
+            </w:r>
+        </w:p>
+        <w:p w:rsidR="00696DA2" w:rsidRDefault="00696DA2" w:rsidP="00696DA2">
+            <w:pPr>
+                <w:spacing w:line="360" w:lineRule="auto"/>
+                <w:jc w:val="center"/>
+            </w:pPr>
+        </w:p>
+        <w:p w:rsidR="00696DA2" w:rsidRDefault="00696DA2" w:rsidP="007E6959">
+            <w:pPr>
+                <w:spacing w:line="360" w:lineRule="auto"/>
+                <w:jc w:val="both"/>
+                <w:sectPr w:rsidR="00696DA2" w:rsidSect="001F03FC">
+                    <w:type w:val="continuous"/>
+                    <w:pgSz w:w="11909" w:h="16834"/>
+                    <w:pgMar w:top="425" w:right="845" w:bottom="1440" w:left="850" w:header="720" w:footer="720" w:gutter="0"/>
+                    <w:pgNumType w:start="1"/>
+                    <w:cols w:space="720"/>
+                </w:sectPr>
+            </w:pPr>
+            <w:r>
+                <w:t>El 14 de febrero de 2025 se realizó una inspección en la que no se encontraron observaciones significativas. En los lugares de los hallazgos, no se reportaron hallazgos relevantes que requirieran atención. Se utilizaron productos que no fueron identificados durante el proceso de inspección. En cuanto a las dosificaciones de los productos empleados, no se encontraron registros específicos para los mismos. Esto implica que no se pudo determinar la cantidad exacta de cada uno de los productos en términos de mililitros o gramos.</w:t>
+            </w:r>
+        </w:p>
+        <w:p w:rsidR="00CE3584" w:rsidRDefault="0016586B" w:rsidP="009B2269">
+            <w:pPr>
+                <w:spacing w:line="360" w:lineRule="auto"/>
+                <w:sectPr w:rsidR="00CE3584" w:rsidSect="001F03FC">
+                    <w:type w:val="continuous"/>
+                    <w:pgSz w:w="11909" w:h="16834"/>
+                    <w:pgMar w:top="425" w:right="845" w:bottom="1440" w:left="850" w:header="720" w:footer="720" w:gutter="0"/>
+                    <w:pgNumType w:start="1"/>
+                    <w:cols w:space="720"/>
+                </w:sectPr>
+            </w:pPr>
+            <w:r>
+                <w:rPr>
+                    <w:noProof/>
+                    <w:lang w:val="es-CO"/>
+                </w:rPr>
+                <w:lastRenderedPageBreak/>
+                <mc:AlternateContent>
+                    <mc:Choice Requires="wps">
+                        <w:drawing>
+                            <wp:anchor distT="0" distB="0" distL="114300" distR="114300" simplePos="0" relativeHeight="251665408" behindDoc="0" locked="0" layoutInCell="1" allowOverlap="1" wp14:anchorId="6A8371AE" wp14:editId="4FAD1134">
+                                <wp:simplePos x="0" y="0"/>
+                                <wp:positionH relativeFrom="margin">
+                                    <wp:align>center</wp:align>
+                                </wp:positionH>
+                                <wp:positionV relativeFrom="paragraph">
+                                    <wp:posOffset>112395</wp:posOffset>
+                                </wp:positionV>
+                                <wp:extent cx="6705600" cy="19050"/>
+                                <wp:effectExtent l="38100" t="38100" r="76200" b="95250"/>
+                                <wp:wrapTopAndBottom/>
+                                <wp:docPr id="8" name="Conector recto 8"/>
+                                <wp:cNvGraphicFramePr/>
+                                <a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                                    <a:graphicData uri="http://schemas.microsoft.com/office/word/2010/wordprocessingShape">
+                                        <wps:wsp>
+                                            <wps:cNvCnPr/>
+                                            <wps:spPr>
+                                                <a:xfrm flipV="1">
+                                                    <a:off x="0" y="0"/>
+                                                    <a:ext cx="6705600" cy="19050"/>
+                                                </a:xfrm>
+                                                <a:prstGeom prst="line">
+                                                    <a:avLst/>
+                                                </a:prstGeom>
+                                            </wps:spPr>
+                                            <wps:style>
+                                                <a:lnRef idx="2">
+                                                    <a:schemeClr val="accent3"/>
+                                                </a:lnRef>
+                                                <a:fillRef idx="0">
+                                                    <a:schemeClr val="accent3"/>
+                                                </a:fillRef>
+                                                <a:effectRef idx="1">
+                                                    <a:schemeClr val="accent3"/>
+                                                </a:effectRef>
+                                                <a:fontRef idx="minor">
+                                                    <a:schemeClr val="tx1"/>
+                                                </a:fontRef>
+                                            </wps:style>
+                                            <wps:bodyPr/>
+                                        </wps:wsp>
+                                    </a:graphicData>
+                                </a:graphic>
+                            </wp:anchor>
+                        </w:drawing>
+                    </mc:Choice>
+                    <mc:Fallback>
+                        <w:pict>
+                            <v:line w14:anchorId="2FE45F7C" id="Conector recto 8" o:spid="_x0000_s1026" style="position:absolute;flip:y;z-index:251665408;visibility:visible;mso-wrap-style:square;mso-wrap-distance-left:9pt;mso-wrap-distance-top:0;mso-wrap-distance-right:9pt;mso-wrap-distance-bottom:0;mso-position-horizontal:center;mso-position-horizontal-relative:margin;mso-position-vertical:absolute;mso-position-vertical-relative:text" from="0,8.85pt" to="528pt,10.35pt" o:gfxdata="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
+" strokecolor="#9bbb59 [3206]" strokeweight="2pt">
+                                <v:shadow on="t" color="black" opacity="24903f" origin=",.5" offset="0,.55556mm"/>
+                                <w10:wrap type="topAndBottom" anchorx="margin"/>
+                            </v:line>
+                        </w:pict>
+                    </mc:Fallback>
+                </mc:AlternateContent>
+            </w:r>
+        </w:p>
+        <w:p w:rsidR="009B2269" w:rsidRDefault="009B2269" w:rsidP="009B2269">
+            <w:pPr>
+                <w:spacing w:line="360" w:lineRule="auto"/>
+                <w:rPr>
+                    <w:b/>
+                    <w:bCs/>
+                    <w:lang w:val="es-CO"/>
+                </w:rPr>
+                <w:sectPr w:rsidR="009B2269" w:rsidSect="009B2269">
+                    <w:type w:val="continuous"/>
+                    <w:pgSz w:w="11909" w:h="16834"/>
+                    <w:pgMar w:top="425" w:right="845" w:bottom="1440" w:left="850" w:header="720" w:footer="720" w:gutter="0"/>
+                    <w:pgNumType w:start="1"/>
+                    <w:cols w:space="720"/>
+                </w:sectPr>
+            </w:pPr>
+        </w:p>
+        <w:p w:rsidR="009B2269" w:rsidRPr="009B2269" w:rsidRDefault="009B2269" w:rsidP="009B2269">
+            <w:pPr>
+                <w:spacing w:line="360" w:lineRule="auto"/>
+                <w:rPr>
+                    <w:lang w:val="es-CO"/>
+                </w:rPr>
+            </w:pPr>
+            <w:r>
+                <w:rPr>
+                    <w:bCs/>
+                    <w:lang w:val="es-CO"/>
+                </w:rPr>
+                <w:lastRenderedPageBreak/>
+                <w:t>No encontrado</w:t>
+            </w:r>
+            <w:proofErr w:type="spellStart"/>
+            <w:r>
+                <w:rPr>
+                    <w:bCs/>
+                    <w:lang w:val="es-CO"/>
+                </w:rPr>
+            </w:r>
+            <w:proofErr w:type="spellEnd"/>
+            <w:r>
+                <w:rPr>
+                    <w:bCs/>
+                    <w:lang w:val="es-CO"/>
+                </w:rPr>
+            </w:r>
+            <w:r>
+                <w:rPr>
+                    <w:lang w:val="es-CO"/>
+                </w:rPr>
+                <w:br/>
+                <w:t>No encontrado</w:t>
+            </w:r>
+            <w:proofErr w:type="spellStart"/>
+            <w:r>
+                <w:rPr>
+                    <w:lang w:val="es-CO"/>
+                </w:rPr>
+            </w:r>
+            <w:proofErr w:type="spellEnd"/>
+            <w:r>
+                <w:rPr>
+                    <w:lang w:val="es-CO"/>
+                </w:rPr>
+            </w:r>
+            <w:r>
+                <w:rPr>
+                    <w:lang w:val="es-CO"/>
+                </w:rPr>
+                <w:br/>
+                <w:t>No encontrado</w:t>
+            </w:r>
+            <w:proofErr w:type="spellStart"/>
+            <w:r>
+                <w:rPr>
+                    <w:lang w:val="es-CO"/>
+                </w:rPr>
+            </w:r>
+            <w:proofErr w:type="spellEnd"/>
+            <w:r>
+                <w:rPr>
+                    <w:lang w:val="es-CO"/>
+                </w:rPr>
+            </w:r>
+            <w:r>
+                <w:rPr>
+                    <w:lang w:val="es-CO"/>
+                </w:rPr>
+                <w:br/>
+                <w:t>No encontrado</w:t>
+            </w:r>
+            <w:proofErr w:type="spellStart"/>
+            <w:r>
+                <w:rPr>
+                    <w:lang w:val="es-CO"/>
+                </w:rPr>
+            </w:r>
+            <w:proofErr w:type="spellEnd"/>
+            <w:r>
+                <w:rPr>
+                    <w:lang w:val="es-CO"/>
+                </w:rPr>
+            </w:r>
+        </w:p>
+        <w:p w:rsidR="009B2269" w:rsidRDefault="009B2269" w:rsidP="009B2269">
+            <w:pPr>
+                <w:spacing w:line="360" w:lineRule="auto"/>
+                <w:rPr>
+                    <w:b/>
+                    <w:bCs/>
+                    <w:lang w:val="es-CO"/>
+                </w:rPr>
+            </w:pPr>
+        </w:p>
+        <w:p w:rsidR="009B2269" w:rsidRPr="009B2269" w:rsidRDefault="009B2269" w:rsidP="009B2269">
+            <w:pPr>
+                <w:spacing w:line="360" w:lineRule="auto"/>
+                <w:rPr>
+                    <w:lang w:val="es-CO"/>
+                </w:rPr>
+                <w:sectPr w:rsidR="009B2269" w:rsidRPr="009B2269" w:rsidSect="009B2269">
+                    <w:type w:val="continuous"/>
+                    <w:pgSz w:w="11909" w:h="16834"/>
+                    <w:pgMar w:top="425" w:right="845" w:bottom="1440" w:left="850" w:header="720" w:footer="720" w:gutter="0"/>
+                    <w:pgNumType w:start="1"/>
+                    <w:cols w:num="2" w:space="720"/>
+                </w:sectPr>
+            </w:pPr>
+            <w:r>
+                <w:rPr>
+                    <w:bCs/>
+                    <w:lang w:val="es-CO"/>
+                </w:rPr>
+                <w:lastRenderedPageBreak/>
+                <w:t>No encontrado</w:t>
+            </w:r>
+            <w:proofErr w:type="spellStart"/>
+            <w:r>
+                <w:rPr>
+                    <w:bCs/>
+                    <w:lang w:val="es-CO"/>
+                </w:rPr>
+            </w:r>
+            <w:proofErr w:type="spellEnd"/>
+            <w:r>
+                <w:rPr>
+                    <w:bCs/>
+                    <w:lang w:val="es-CO"/>
+                </w:rPr>
+            </w:r>
+            <w:r w:rsidRPr="009B2269">
+                <w:rPr>
+                    <w:lang w:val="es-CO"/>
+                </w:rPr>
+                <w:br/>
+            </w:r>
+            <w:r>
+                <w:rPr>
+                    <w:lang w:val="es-CO"/>
+                </w:rPr>
+                <w:t>No encontrado</w:t>
+            </w:r>
+            <w:proofErr w:type="spellStart"/>
+            <w:r>
+                <w:rPr>
+                    <w:lang w:val="es-CO"/>
+                </w:rPr>
+            </w:r>
+            <w:proofErr w:type="spellEnd"/>
+            <w:r>
+                <w:rPr>
+                    <w:lang w:val="es-CO"/>
+                </w:rPr>
+            </w:r>
+            <w:r w:rsidRPr="009B2269">
+                <w:rPr>
+                    <w:lang w:val="es-CO"/>
+                </w:rPr>
+                <w:br/>
+            </w:r>
+            <w:r>
+                <w:rPr>
+                    <w:lang w:val="es-CO"/>
+                </w:rPr>
+                <w:t>No encontrado</w:t>
+            </w:r>
+            <w:proofErr w:type="spellStart"/>
+            <w:r>
+                <w:rPr>
+                    <w:lang w:val="es-CO"/>
+                </w:rPr>
+            </w:r>
+            <w:proofErr w:type="spellEnd"/>
+            <w:r>
+                <w:rPr>
+                    <w:lang w:val="es-CO"/>
+                </w:rPr>
+            </w:r>
+            <w:r>
+                <w:rPr>
+                    <w:lang w:val="es-CO"/>
+                </w:rPr>
+                <w:br/>
+                <w:t>No encontrado</w:t>
+            </w:r>
+            <w:proofErr w:type="spellStart"/>
+            <w:r>
+                <w:rPr>
+                    <w:lang w:val="es-CO"/>
+                </w:rPr>
+            </w:r>
+            <w:proofErr w:type="spellEnd"/>
+            <w:r>
+                <w:rPr>
+                    <w:lang w:val="es-CO"/>
+                </w:rPr>
+            </w:r>
+        </w:p>
+        <w:p w:rsidR="009B2269" w:rsidRDefault="009B2269" w:rsidP="009B2269">
             <w:pPr>
                 <w:spacing w:line="360" w:lineRule="auto"/>
             </w:pPr>
         </w:p>
-        <w:p w14:paraId="6CB59AFF" w14:textId="77777777" w:rsidR="0056654B" w:rsidRDefault="0056654B">
-            <w:pPr>
-                <w:tabs>
-                    <w:tab w:val="left" w:pos="2475"/>
-                </w:tabs>
-            </w:pPr>
-            <w:r>
-                <w:t>Conclusiones</w:t>
-            </w:r>
-        </w:p>
-        <w:sectPr w:rsidR="0056654B">
+        <w:sectPr w:rsidR="009B2269" w:rsidSect="009B2269">
+            <w:type w:val="continuous"/>
             <w:pgSz w:w="11909" w:h="16834"/>
             <w:pgMar w:top="425" w:right="845" w:bottom="1440" w:left="850" w:header="720" w:footer="720" w:gutter="0"/>
             <w:pgNumType w:start="1"/>

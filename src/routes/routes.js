@@ -254,11 +254,15 @@ function rgbToHex(rgb) {
 }
 
 router.post('/updateProfile', uploadImage, compressImage, async (req, res) => {
-  const { name, lastname, email, phone, userId, color, role } = req.body;
+  const { name, lastname, email, phone, userId, color, role, password } = req.body;
   const adminId = req.headers["admin-id"];
 
   let imageUrl = null;
-
+  let hashedPassword = null;
+  if (password && password.trim() !== '') {
+      hashedPassword = await bcrypt.hash(password, 10);
+  }
+  
   try {
     if (req.file) {
       const result = await pool.query('SELECT image FROM users WHERE id = $1', [userId]);
@@ -270,6 +274,10 @@ router.post('/updateProfile', uploadImage, compressImage, async (req, res) => {
         await deleteObject(bucketName, previousKey);
         console.log(`Imagen anterior eliminada: ${previousKey}`);
       }
+
+      
+
+      
 
       const bucketName = 'fumiplagax';
       const key = `profile_pictures/${Date.now()}-${req.file.originalname}`;
@@ -291,15 +299,19 @@ router.post('/updateProfile', uploadImage, compressImage, async (req, res) => {
       values.push(hexColor);
     }
     if (role) fields.push(`rol = $${index++}`) && values.push(role);
+    if (hashedPassword) {
+      fields.push(`password = $${index++}`);
+      values.push(hashedPassword);
+  }  
     if (imageUrl) fields.push(`image = $${index++}`) && values.push(imageUrl);
     values.push(userId);
 
-    if (fields.length === 0) {
+    if (fields.length > 0) {
+      const query = `UPDATE users SET ${fields.join(', ')} WHERE id = $${index}`;
+      await pool.query(query, values);
+  } else {
       return res.status(400).json({ message: 'No se enviaron datos para actualizar' });
-    }
-
-    const query = `UPDATE users SET ${fields.join(', ')} WHERE id = $${index}`;
-    await pool.query(query, values);
+  }  
 
     if (imageUrl) {
       const bucketName = 'fumiplagax';
