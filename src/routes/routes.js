@@ -2472,6 +2472,47 @@ router.delete('/inspections/:id', async (req, res) => {
   }
 });
 
+// Ruta para obtener todos los registros
+router.get('/all-service-schedule', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT * FROM service_schedule');
+    res.json(result.rows);
+  } catch (error) {
+    console.error("Error al obtener los registros:", error);
+    res.status(500).json({ success: false, message: "Error en el servidor", error: error.message });
+  }
+});
+
+// Ruta para obtener los eventos de los servicios específicos del usuario
+router.get('/service-service-schedule', async (req, res) => {
+  try {
+    const { serviceIds } = req.query; // Se reciben los IDs de los servicios como una lista
+
+    if (!serviceIds || serviceIds.length === 0) {
+      return res.status(400).json({ success: false, message: "No se proporcionaron servicios." });
+    }
+
+    // Convertir el array de IDs en una lista válida para la consulta SQL
+    const serviceIdList = serviceIds.split(',').map(id => id.trim()); // Mantener los IDs como strings
+
+    if (serviceIdList.length === 0) {
+      return res.status(400).json({ success: false, message: "IDs de servicio inválidos." });
+    }
+
+    // Consulta para obtener solo los eventos de los servicios del usuario
+    const result = await pool.query(
+      `SELECT * FROM service_schedule WHERE service_id = ANY($1)`,
+      [serviceIdList]
+    );
+
+    res.json(result.rows);
+  } catch (error) {
+    console.error("Error al obtener los registros:", error);
+    res.status(500).json({ success: false, message: "Error en el servidor", error: error.message });
+  }
+});
+
+
 // Ruta para obtener los registros filtrados por mes y año
 router.get('/service-schedule', async (req, res) => {
   try {
@@ -3134,7 +3175,6 @@ router.post('/inspections/:inspectionId/save', uploadInspectionImages, async (re
       productsByType,
       stationsFindings,
       signatures,
-      exitTime,
     });
 
     // Parsear datos de strings a objetos si es necesario
@@ -3150,36 +3190,72 @@ router.post('/inspections/:inspectionId/save', uploadInspectionImages, async (re
 
     // Procesar imágenes recibidas (igual que antes)
     const bucketName = 'fumiplagax'; // Define el bucket
+    // Procesar imágenes recibidas y subir a S3
     const uploadImagesToS3 = async (files, folder) => {
       if (!files) return [];
       return await Promise.all(
         files.map(async (file) => {
+          // Log del nombre del archivo antes de procesar
+          console.log(`Procesando archivo: ${file.originalname}`);
+    
+          // Extraer el ID del nombre del archivo (ej: "1737653406745.jpg" o "1737653406745-nombre.jpg")
+          const idMatch = file.originalname.match(/^(\d+)/); // Busca un número al inicio del nombre
+          const id = idMatch ? idMatch[1] : null;
+    
+          // Log para verificar el ID extraído
+          console.log(`ID extraído del archivo ${file.originalname}: ${id}`);
+    
           const key = `${folder}/${Date.now()}-${file.originalname}`;
           const result = await uploadFile(bucketName, key, file.buffer);
-          return result.Location; // URL pública generada por S3
+    
+          // Log del resultado del upload
+          console.log(`Archivo subido a S3: ${result.Location}, ID: ${id}`);
+    
+          return {
+            id, // ID extraído
+            location: result.Location, // URL pública generada por S3
+          };
         })
       );
-    };
+    };    
     
 // Subir la firma del técnico a S3 o usar la existente
-const techSignaturePath = req.files.tech_signature
+const techSignature = req.files.tech_signature
   ? (await uploadImagesToS3(req.files.tech_signature, 'signatures'))[0]
   : parsedSignatures?.technician?.signature;
 
 // Subir la firma del cliente a S3 o usar la existente
-const clientSignaturePath = req.files.client_signature
+const clientSignature = req.files.client_signature
   ? (await uploadImagesToS3(req.files.client_signature, 'signatures'))[0]
   : parsedSignatures?.client?.signature;
+
+  // Log para verificar el resultado de las firmas
+console.log('Firmas procesadas:', {
+  techSignature,
+  clientSignature,
+});
 
 // Subir imágenes de hallazgos a S3
 const findingsImagePaths = req.files.findingsImages
   ? await uploadImagesToS3(req.files.findingsImages, 'findings')
   : [];
 
+// Crear un mapa de imágenes por ID
+const findingsImagesById = findingsImagePaths.reduce((map, { id, location }) => {
+  if (id) map[id] = location; // Asociar el ID con la URL pública
+  return map;
+}, {});
+
 // Subir imágenes de estaciones a S3
 const stationImagePaths = req.files.stationImages
   ? await uploadImagesToS3(req.files.stationImages, 'stations')
   : [];
+
+// Crear un mapa de imágenes por ID
+const stationImagesById = stationImagePaths.reduce((map, { id, location }) => {
+  if (id) map[id] = location; // Asociar el ID con la URL pública
+  return map;
+}, {});
 
 // Subir imágenes genéricas a S3
 const genericImagePaths = req.files.images
@@ -3187,8 +3263,6 @@ const genericImagePaths = req.files.images
   : [];
 
   console.log('Rutas de imágenes procesadas:', {
-    techSignaturePath,
-    clientSignaturePath,
     findingsImagePaths,
     stationImagePaths,
     genericImagePaths, // Mostrar las imágenes genéricas procesadas
@@ -3200,34 +3274,36 @@ const genericImagePaths = req.files.images
         id: parsedSignatures?.client?.id || null,
         name: parsedSignatures?.client?.name || null,
         position: parsedSignatures?.client?.position || null,
-        signature: clientSignaturePath,
+        signature: clientSignature?.location || clientSignature,
       },
       technician: {
         id: parsedSignatures?.technician?.id || null,
         name: parsedSignatures?.technician?.name || null,
         role: parsedSignatures?.technician?.role || null,
-        signature: techSignaturePath,
+        signature: techSignature?.location || techSignature,
       },
     };
 
         // Asociar imágenes a `findingsByType`
-        let imageIndex = 0;
         Object.keys(parsedFindingsByType).forEach((type) => {
           parsedFindingsByType[type] = parsedFindingsByType[type].map((finding) => {
-            if ((!finding.photo || finding.photo.startsWith('blob:')) && findingsImagePaths[imageIndex]) {
-              finding.photo = findingsImagePaths[imageIndex];
-              imageIndex++;
+            // Asocia la imagen correspondiente al ID del hallazgo
+            if (findingsImagesById[finding.id]) {
+              finding.photo = findingsImagesById[finding.id];
             }
             return finding;
           });
         });
+        
     
         // Asociar imágenes a `stationsFindings`
-        parsedStationsFindings.forEach((finding, index) => {
-          if ((!finding.photo || finding.photo.startsWith('blob:')) && stationImagePaths[index]) {
-            finding.photo = stationImagePaths[index];
+        parsedStationsFindings.forEach((finding) => {
+          // Asocia la imagen correspondiente al ID de la estación
+          if (stationImagesById[finding.stationId]) {
+            finding.photo = stationImagesById[finding.stationId];
           }
-        });    
+        });
+            
 
     // Construir el objeto final de datos
     const findingsData = {
@@ -3239,13 +3315,13 @@ const genericImagePaths = req.files.images
           id: parsedSignatures?.client?.id || null,
           name: parsedSignatures?.client?.name || null,
           position: parsedSignatures?.client?.position || null,
-          signature: clientSignaturePath, // URL pública de la firma del cliente
+          signature: clientSignature?.location || clientSignature, // URL pública de la firma del cliente
         },
         technician: {
           id: parsedSignatures?.technician?.id || null,
           name: parsedSignatures?.technician?.name || null,
           role: parsedSignatures?.technician?.role || null,
-          signature: techSignaturePath,
+          signature: techSignature?.location || techSignature,
         },
       },
       genericImages: genericImagePaths, // URLs públicas de imágenes genéricas
@@ -3373,19 +3449,24 @@ const genericImagePaths = req.files.images
       }
     }
 
-    //Prefirma
+    // Extraer solo las URLs de las imágenes de hallazgos, estaciones y genéricas
+    const findingsImageUrls = findingsImagePaths.map((image) => image.location);
+    const stationImageUrls = stationImagePaths.map((image) => image.location);
+    const genericImageUrls = genericImagePaths.map((image) => image.location);
+
+    // Generar URLs firmadas para las imágenes
     const generateSignedUrls = async (paths) => {
       return await Promise.all(
         paths.map(async (path) => {
-          const key = path.split('.amazonaws.com/')[1];
+          const key = path.split('.amazonaws.com/')[1]; // Extraer la clave del archivo en S3
           return await getSignedUrl(bucketName, key);
         })
       );
     };
-    
-    const signedFindingsImages = await generateSignedUrls(findingsImagePaths);
-    const signedStationImages = await generateSignedUrls(stationImagePaths);
-    const signedGenericImages = await generateSignedUrls(genericImagePaths);    
+
+    const signedFindingsImages = await generateSignedUrls(findingsImageUrls);
+    const signedStationImages = await generateSignedUrls(stationImageUrls);
+    const signedGenericImages = await generateSignedUrls(genericImageUrls);  
 
     // Respuesta exitosa al cliente
     res.status(200).json({
@@ -3393,8 +3474,8 @@ const genericImagePaths = req.files.images
       message: 'Inspección guardada exitosamente',
       inspection: updatedInspection,
       uploadedImages: {
-        techSignature: techSignaturePath,
-        clientSignature: clientSignaturePath,
+        techSignature: techSignature,
+        clientSignature: clientSignature,
         findingsImages: signedFindingsImages,
         stationImages: signedStationImages,
         genericImages: signedGenericImages,
