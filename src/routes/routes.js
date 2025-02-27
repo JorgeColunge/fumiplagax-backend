@@ -1387,10 +1387,23 @@ router.post('/products', uploadProductFiles, async (req, res) => {
     health_record // ✅ Agregado aquí
   } = req.body;  
 
-  console.log('Categorías:', category);
+  console.log('Categorías recibidas:', category);
 
-  // Convierte el arreglo de categorías en una cadena separada por comas
-  const formattedCategory = Array.isArray(category) ? category.join(', ') : category;
+  // Convierte el arreglo de categorías en una cadena JSON válida
+  let formattedCategory;
+  if (Array.isArray(category)) {
+    formattedCategory = JSON.stringify(category); // Convierte a JSON sin estructuras anidadas
+  } else if (typeof category === 'string') {
+    try {
+      formattedCategory = JSON.stringify(JSON.parse(category)); // Intenta parsear si ya es JSON en string
+    } catch (error) {
+      formattedCategory = JSON.stringify(category.split(',').map(item => item.trim())); // Divide y limpia si es una lista separada por comas
+    }
+  } else {
+    formattedCategory = '[]'; // Valor por defecto si no hay categorías
+  }
+
+  console.log('Categoría procesada:', formattedCategory); // ✅ Log para depuración
 
   let fileUrls = {};
 
@@ -1440,7 +1453,7 @@ router.post('/products', uploadProductFiles, async (req, res) => {
       residual_duration,
       batch || null, // Asegurar que no sea undefined
       expiration_date ? expiration_date.split('T')[0] : null, // Formatea la fecha correctamente
-      JSON.stringify(Array.isArray(category) ? category : category.split(',')), // Guarda `category` como JSON en la DB
+      formattedCategory, // ✅ Ahora correctamente formateado
       active_ingredient,
       health_record || null,
       unity,
@@ -1538,7 +1551,6 @@ function parseCategory(category) {
   }
 }
 
-
 router.put('/products/:id', uploadProductFiles, async (req, res) => {
   const { id } = req.params;
   const {
@@ -1556,15 +1568,23 @@ router.put('/products/:id', uploadProductFiles, async (req, res) => {
   
   console.log("Datos recibidos en la actualización:", req.body); // Debug para verificar datos  
 
-  // 🔍 Convierte `category` en array si es necesario
-  let formattedCategory = [];
-  try {
-    formattedCategory = typeof category === "string"
-      ? JSON.parse(category.replace(/\\/g, "")) // ✅ Corrige caracteres especiales
-      : category;
-  } catch (error) {
-    console.error("Error al procesar categorías:", error);
-  }  
+  console.log('Categorías recibidas:', category);
+
+  // Convierte el arreglo de categorías en una cadena JSON válida
+  let formattedCategory;
+  if (Array.isArray(category)) {
+    formattedCategory = JSON.stringify(category); // Convierte a JSON sin estructuras anidadas
+  } else if (typeof category === 'string') {
+    try {
+      formattedCategory = JSON.stringify(JSON.parse(category)); // Intenta parsear si ya es JSON en string
+    } catch (error) {
+      formattedCategory = JSON.stringify(category.split(',').map(item => item.trim())); // Divide y limpia si es una lista separada por comas
+    }
+  } else {
+    formattedCategory = '[]'; // Valor por defecto si no hay categorías
+  }
+
+  console.log('Categoría procesada:', formattedCategory); // ✅ Log para depuración
 
   let fileUrls = {};
 
@@ -1621,7 +1641,7 @@ router.put('/products/:id', uploadProductFiles, async (req, res) => {
       unity,
       active_ingredient,
       health_record || null,
-      JSON.stringify(Array.isArray(category) ? category : category.split(',')), // Guarda `category` como JSON
+      formattedCategory,
       fileUrls.safety_data_sheet || null,
       fileUrls.technical_sheet || null,
       fileUrls.health_registration || null,
