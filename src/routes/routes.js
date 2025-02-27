@@ -1683,7 +1683,7 @@ router.delete('/products/:id', async (req, res) => {
 
 // Ruta para crear una nueva inspección
 router.post('/inspections', async (req, res) => {
-  const { date, time, service_id, inspection_type, inspection_sub_type } = req.body;
+  const { date, time, service_id, inspection_type, inspection_sub_type, createdBy } = req.body;
 
   // Validación de campos obligatorios
   if (!date || !time || !inspection_type || !service_id) {
@@ -1695,13 +1695,13 @@ router.post('/inspections', async (req, res) => {
 
   try {
     // Formatear la hora en formato HH:MM
-    const formattedTime = moment(time, "HH:mm:ss").format("HH:mm");
+    const formattedTime = time.slice(0, 5); // Suponiendo que el formato original es HH:MM:SS
     console.log("Hora formateada:", formattedTime);
 
     // Crear inspección en la tabla
     const query = `
-      INSERT INTO inspections (date, time, service_id, inspection_type, inspection_sub_type)
-      VALUES ($1, $2, $3, $4, $5) RETURNING *;
+      INSERT INTO inspections (date, time, service_id, inspection_type, inspection_sub_type, created_by)
+      VALUES ($1, $2, $3, $4, $5, $6) RETURNING *;
     `;
     const values = [
       date,
@@ -1709,6 +1709,7 @@ router.post('/inspections', async (req, res) => {
       service_id,
       Array.isArray(inspection_type) ? inspection_type.join(", ") : inspection_type,
       inspection_sub_type || null,
+      createdBy,
     ];
     const result = await pool.query(query, values);
 
@@ -2343,6 +2344,22 @@ router.get('/inspections/:id', async (req, res) => {
       return res.status(404).json({ success: false, message: "Inspección no encontrada" });
     }
     res.json(result.rows[0]);
+  } catch (error) {
+    console.error("Error al obtener inspección:", error);
+    res.status(500).json({ success: false, message: "Error en el servidor", error: error.message });
+  }
+});
+
+router.get('/inspections_service/:id', async (req, res) => {
+  const { id } = req.params;
+  console.log("Consultando inspecciones de servicio ", id);
+
+  try {
+    const result = await pool.query('SELECT * FROM inspections WHERE service_id = $1', [id]);
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, message: "Inspección no encontrada" });
+    }
+    res.json(result.rows); // ✅ SOLUCIÓN: Enviar un array de inspecciones
   } catch (error) {
     console.error("Error al obtener inspección:", error);
     res.status(500).json({ success: false, message: "Error en el servidor", error: error.message });
@@ -6678,6 +6695,20 @@ router.post('/create-document-inspeccion', async (req, res) => {
       success: false 
     });
   }
+});
+
+router.post('/emit-inspection-update', (req, res) => {
+  const { oldId, newId } = req.body;
+
+  if (!oldId || !newId) {
+    return res.status(400).json({ success: false, message: "Faltan parámetros oldId o newId" });
+  }
+
+  console.log(`📡 Backend emitiendo evento 'inspection_synced' con oldId: ${oldId}, newId: ${newId}`);
+
+  req.io.emit('inspection_synced', { oldId, newId });
+
+  res.json({ success: true, message: "Evento emitido con éxito" });
 });
 
 module.exports = router;
