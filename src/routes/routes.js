@@ -1533,12 +1533,6 @@ router.get('/products/:id', async (req, res) => {
   }
 });
 
-/**
- * ✅ Función para manejar `category` correctamente
- * - Si ya es un array, lo devuelve tal cual
- * - Si es un string JSON válido, lo parsea
- * - Si es un string separado por comas, lo divide en un array
- */
 function parseCategory(category) {
   try {
     if (!category) return []; // Si está vacío, retorna array vacío
@@ -5220,15 +5214,27 @@ router.post('/save-configuration', async (req, res) => {
                 Object.entries(variables).forEach(([key, value]) => {
                   if (typeof value === 'string' && value.startsWith("Inspección-")) {
                     const [_, periodo, tipoInspeccion, campo] = value.split('-');
-
+                
                     console.log(\`Procesando variable para tipo: "\${tipoInspeccion}" y campo: "\${campo}"\`);
-
+                
                     if (campo.startsWith("findings_")) {
-                      const keyPath = campo.replace('findings_', ''); // Extraer jerarquía de claves
-                      const result = getValueFromJson(inspectionData.findings || {}, keyPath, tipoInspeccion);
-                      variables[key] = Array.isArray(result) ? result.join("* ") : result || "No encontrado";
+                        const keyPath = campo.replace('findings_', ''); // Extraer jerarquía de claves
+                        const result = getValueFromJson(inspectionData.findings || {}, keyPath, tipoInspeccion);
+                        variables[key] = Array.isArray(result) ? result.join("* ") : result || "No encontrado";
+                    } else if (campo === "date") {
+                        const rawDate = inspectionData[campo];
+                        if (rawDate) {
+                            const formattedDate = new Date(rawDate).toLocaleDateString('es-ES', {
+                                day: '2-digit',
+                                month: '2-digit',
+                                year: 'numeric'
+                            });
+                            variables[key] = formattedDate;
+                        } else {
+                            variables[key] = "No encontrado";
+                        }
                     } else {
-                      variables[key] = inspectionData[campo] || "No encontrado";
+                        variables[key] = inspectionData[campo] || "No encontrado";
                     }
                   } else if (typeof value === 'string' && value.startsWith("Servicio-")) {
                     const serviceField = value.split('-')[1];
@@ -5292,6 +5298,31 @@ router.post('/save-configuration', async (req, res) => {
                           } else {
                             filasGeneradas[0][colIndex] = findings || "No encontrado";
                           }
+                        } else if (campo === "date") {
+                            const rawDate = inspectionData[campo];
+                            if (rawDate) {
+                                const formattedDate = new Date(rawDate).toLocaleDateString('es-ES', {
+                                    day: '2-digit',
+                                    month: '2-digit',
+                                    year: 'numeric'
+                                });
+                                filasGeneradas[0][colIndex] = formattedDate;
+                            } else {
+                                filasGeneradas[0][colIndex] = "No encontrado";
+                            }
+                        } else if (campo === "time" || campo === "exit_time") {
+                            const rawTime = inspectionData[campo];
+                            if (rawTime) {
+                                const dateObj = new Date(\`1970-01-01T\${rawTime}\`); // Se usa una fecha base
+                                const formattedTime = dateObj.toLocaleTimeString('en-US', {
+                                    hour: '2-digit',
+                                    minute: '2-digit',
+                                    hour12: true
+                                });
+                                filasGeneradas[0][colIndex] = formattedTime;
+                            } else {
+                                filasGeneradas[0][colIndex] = "No encontrado";
+                            }
                         } else {
                           filasGeneradas[0][colIndex] = inspectionData[campo] || "No encontrado";
                         }
@@ -5650,20 +5681,121 @@ router.post('/save-configuration', async (req, res) => {
               };
 
               // Función para reemplazar variables en el documento XML
-              const replaceVariables = (nodes) => {
-                nodes.forEach((node) => {
-                  if (node.type === 'element' && node.name === 'w:t' && node.elements) {
+              const replaceVariables = (nodes, parent = null) => {
+                nodes.forEach((node, index) => {
+                  if (node.type === 'element' && node.name === 'w:t' && node.elements && node.elements.length > 0) {
                     let text = node.elements[0]?.text || '';
+              
                     Object.entries(variables).forEach(([key, value]) => {
-                      const regex = new RegExp(\`{{\s*\${key}\s*}}\`, 'g');
-                      text = text.replace(regex, value);
+                      if (text.includes(\`{{\${key}}}\`)) {
+                        console.log(\`Reemplazando variable: {{\${key}}} con:\\n\${value}\`);
+              
+                        // Reemplazar la variable en el texto con su valor
+                        let replacedText = text.replace(\`{{\${key}}}\`, value);
+              
+                        // Si el valor tiene saltos de línea, hay que dividirlo correctamente
+                        if (value.includes("\\r\\n")) {
+                          const parts = replacedText.includes('\\r\\n') ? replacedText.split(/\\r\\n/) : replacedText.split(/\\n/);
+                          let newElements = [];
+              
+                          parts.forEach((part, index) => {
+                            if (index > 0) {
+                              // Obtener el último elemento de la línea anterior para agregarle el TAB antes del salto de línea
+                              let lastElement = newElements[newElements.length - 1];
+                              
+                              if (lastElement && lastElement.name === 'w:r') {
+                                let lastText = lastElement.elements.find(e => e.name === 'w:t');
+                                
+                                if (lastText) {
+                                  lastText.elements[0].text += '\\t'; // Agregar el TAB al final de la línea
+                                }
+                              }
+                            
+                              newElements.push({ type: 'element', name: 'w:br', elements: [] });
+                            }  
+                            if (part.trim() !== '') {
+                              let formattedElements = processFormatting(part);
+                              newElements.push(...formattedElements);
+                            }
+                          });
+              
+                          // Si el nodo tiene un padre, lo reemplazamos correctamente
+                          if (parent && parent.elements) {
+                            console.log("Reemplazando nodo en el documento.");
+                            parent.elements.splice(parent.elements.indexOf(node), 1, ...newElements);
+                          }
+                        } else {
+                          // Si no tiene saltos de línea, simplemente aplicar formato sin dividir
+                          let formattedElements = processFormatting(replacedText);
+                          if (parent && parent.elements) {
+                            parent.elements.splice(parent.elements.indexOf(node), 1, ...formattedElements);
+                          }
+                        }
+                      }
                     });
-                    text = text.replace(/{{.*?}}/g, ''); // Eliminar llaves residuales no reemplazadas
-                    node.elements[0].text = text;
                   }
-                  if (node.elements) replaceVariables(node.elements);
+              
+                  if (node.elements && node.elements.length > 0) {
+                    replaceVariables(node.elements, node);
+                  }
                 });
-              };
+              };              
+                          
+              const processFormatting = (text) => {
+                let elements = [];
+                let regex = /(\\*\\*(.*?)\\*\\*|\\*(.*?)\\*|\\\`(.*?)\\\`)/g; // Detectar **negrita**, *cursiva* y \`código\`
+                let lastIndex = 0;
+                let match;
+              
+                while ((match = regex.exec(text)) !== null) {
+                  // Agregar el texto normal antes de la coincidencia
+                  if (match.index > lastIndex) {
+                    elements.push({
+                      type: 'element',
+                      name: 'w:r',
+                      elements: [
+                        { type: 'element', name: 'w:t', attributes: { 'xml:space': 'preserve' }, elements: [{ type: 'text', text: text.substring(lastIndex, match.index) }] }
+                      ]
+                    });
+                  }
+              
+                  // Identificar si es **negrita**, *cursiva* o \`código\`
+                  let isBold = match[1] && match[1].startsWith('**');
+                  let isItalic = match[1] && match[1].startsWith('*') && !isBold;
+                  let isCode = match[4] !== undefined;
+                  let formattedText = isBold ? match[2] : isItalic ? match[3] : match[4];
+              
+                  // Crear el nodo con formato
+                  let formatting = [];
+                  if (isBold) formatting.push({ type: 'element', name: 'w:b' });
+                  if (isItalic) formatting.push({ type: 'element', name: 'w:i' });
+                  if (isCode) formatting.push({ type: 'element', name: 'w:highlight', attributes: { 'w:val': 'lightGray' } });
+              
+                  elements.push({
+                    type: 'element',
+                    name: 'w:r',
+                    elements: [
+                      { type: 'element', name: 'w:rPr', elements: formatting },
+                      { type: 'element', name: 'w:t', attributes: { 'xml:space': 'preserve' }, elements: [{ type: 'text', text: formattedText }] }
+                    ]
+                  });
+              
+                  lastIndex = match.index + match[0].length;
+                }
+              
+                // Agregar el resto del texto después de la última coincidencia
+                if (lastIndex < text.length) {
+                  elements.push({
+                    type: 'element',
+                    name: 'w:r',
+                    elements: [
+                      { type: 'element', name: 'w:t', attributes: { 'xml:space': 'preserve' }, elements: [{ type: 'text', text: text.substring(lastIndex) }] }
+                    ]
+                  });
+                }
+              
+                return elements;
+              };      
 
               const extractCellAttributes = (cell) => {
                 const attributes = {
@@ -6004,11 +6136,7 @@ router.post('/save-configuration', async (req, res) => {
                                       : []),
                                   ],
                                 },
-                                {
-                                  type: 'element',
-                                  name: 'w:t',
-                                  elements: [{ type: 'text', text: value }],
-                                },
+                                ...processTableText(value),
                               ],
                             },
                           ],
@@ -6017,6 +6145,34 @@ router.post('/save-configuration', async (req, res) => {
                     };
                   }),
                 };
+              };
+
+              const processTableText = (text) => {
+                let newElements = [];
+                const parts = text.includes('\\r\\n') ? text.split(/\\r\\n/) : text.split(/\\n/);
+              
+                parts.forEach((part, index) => {
+                  if (index > 0) {
+                    // Obtener el último elemento de la línea anterior para agregarle el TAB antes del salto de línea
+                    let lastElement = newElements[newElements.length - 1];
+                    
+                    if (lastElement && lastElement.name === 'w:r') {
+                      let lastText = lastElement.elements.find(e => e.name === 'w:t');
+                      
+                      if (lastText) {
+                        lastText.elements[0].text += '\\t'; // Agregar el TAB al final de la línea
+                      }
+                    }
+                  
+                    newElements.push({ type: 'element', name: 'w:br', elements: [] });
+                  }   
+                  if (part.trim() !== '') {
+                    let formattedElements = processFormatting(part);
+                    newElements.push(...formattedElements);
+                  }
+                });
+              
+                return newElements;
               };
 
               // Función para agregar bordes a una fila (encabezado)
