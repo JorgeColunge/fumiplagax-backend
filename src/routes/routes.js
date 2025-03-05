@@ -1533,12 +1533,6 @@ router.get('/products/:id', async (req, res) => {
   }
 });
 
-/**
- * ✅ Función para manejar `category` correctamente
- * - Si ya es un array, lo devuelve tal cual
- * - Si es un string JSON válido, lo parsea
- * - Si es un string separado por comas, lo divide en un array
- */
 function parseCategory(category) {
   try {
     if (!category) return []; // Si está vacío, retorna array vacío
@@ -1703,7 +1697,7 @@ router.delete('/products/:id', async (req, res) => {
 
 // Ruta para crear una nueva inspección
 router.post('/inspections', async (req, res) => {
-  const { date, time, service_id, inspection_type, inspection_sub_type } = req.body;
+  const { date, time, service_id, inspection_type, inspection_sub_type, createdBy } = req.body;
 
   // Validación de campos obligatorios
   if (!date || !time || !inspection_type || !service_id) {
@@ -1715,13 +1709,13 @@ router.post('/inspections', async (req, res) => {
 
   try {
     // Formatear la hora en formato HH:MM
-    const formattedTime = moment(time, "HH:mm:ss").format("HH:mm");
+    const formattedTime = time.slice(0, 5); // Suponiendo que el formato original es HH:MM:SS
     console.log("Hora formateada:", formattedTime);
 
     // Crear inspección en la tabla
     const query = `
-      INSERT INTO inspections (date, time, service_id, inspection_type, inspection_sub_type)
-      VALUES ($1, $2, $3, $4, $5) RETURNING *;
+      INSERT INTO inspections (date, time, service_id, inspection_type, inspection_sub_type, created_by)
+      VALUES ($1, $2, $3, $4, $5, $6) RETURNING *;
     `;
     const values = [
       date,
@@ -1729,6 +1723,7 @@ router.post('/inspections', async (req, res) => {
       service_id,
       Array.isArray(inspection_type) ? inspection_type.join(", ") : inspection_type,
       inspection_sub_type || null,
+      createdBy,
     ];
     const result = await pool.query(query, values);
 
@@ -2363,6 +2358,22 @@ router.get('/inspections/:id', async (req, res) => {
       return res.status(404).json({ success: false, message: "Inspección no encontrada" });
     }
     res.json(result.rows[0]);
+  } catch (error) {
+    console.error("Error al obtener inspección:", error);
+    res.status(500).json({ success: false, message: "Error en el servidor", error: error.message });
+  }
+});
+
+router.get('/inspections_service/:id', async (req, res) => {
+  const { id } = req.params;
+  console.log("Consultando inspecciones de servicio ", id);
+
+  try {
+    const result = await pool.query('SELECT * FROM inspections WHERE service_id = $1', [id]);
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, message: "Inspección no encontrada" });
+    }
+    res.json(result.rows); // ✅ SOLUCIÓN: Enviar un array de inspecciones
   } catch (error) {
     console.error("Error al obtener inspección:", error);
     res.status(500).json({ success: false, message: "Error en el servidor", error: error.message });
@@ -5203,15 +5214,27 @@ router.post('/save-configuration', async (req, res) => {
                 Object.entries(variables).forEach(([key, value]) => {
                   if (typeof value === 'string' && value.startsWith("Inspección-")) {
                     const [_, periodo, tipoInspeccion, campo] = value.split('-');
-
+                
                     console.log(\`Procesando variable para tipo: "\${tipoInspeccion}" y campo: "\${campo}"\`);
-
+                
                     if (campo.startsWith("findings_")) {
-                      const keyPath = campo.replace('findings_', ''); // Extraer jerarquía de claves
-                      const result = getValueFromJson(inspectionData.findings || {}, keyPath, tipoInspeccion);
-                      variables[key] = Array.isArray(result) ? result.join("* ") : result || "No encontrado";
+                        const keyPath = campo.replace('findings_', ''); // Extraer jerarquía de claves
+                        const result = getValueFromJson(inspectionData.findings || {}, keyPath, tipoInspeccion);
+                        variables[key] = Array.isArray(result) ? result.join("* ") : result || "No encontrado";
+                    } else if (campo === "date") {
+                        const rawDate = inspectionData[campo];
+                        if (rawDate) {
+                            const formattedDate = new Date(rawDate).toLocaleDateString('es-ES', {
+                                day: '2-digit',
+                                month: '2-digit',
+                                year: 'numeric'
+                            });
+                            variables[key] = formattedDate;
+                        } else {
+                            variables[key] = "No encontrado";
+                        }
                     } else {
-                      variables[key] = inspectionData[campo] || "No encontrado";
+                        variables[key] = inspectionData[campo] || "No encontrado";
                     }
                   } else if (typeof value === 'string' && value.startsWith("Servicio-")) {
                     const serviceField = value.split('-')[1];
@@ -5275,6 +5298,31 @@ router.post('/save-configuration', async (req, res) => {
                           } else {
                             filasGeneradas[0][colIndex] = findings || "No encontrado";
                           }
+                        } else if (campo === "date") {
+                            const rawDate = inspectionData[campo];
+                            if (rawDate) {
+                                const formattedDate = new Date(rawDate).toLocaleDateString('es-ES', {
+                                    day: '2-digit',
+                                    month: '2-digit',
+                                    year: 'numeric'
+                                });
+                                filasGeneradas[0][colIndex] = formattedDate;
+                            } else {
+                                filasGeneradas[0][colIndex] = "No encontrado";
+                            }
+                        } else if (campo === "time" || campo === "exit_time") {
+                            const rawTime = inspectionData[campo];
+                            if (rawTime) {
+                                const dateObj = new Date(\`1970-01-01T\${rawTime}\`); // Se usa una fecha base
+                                const formattedTime = dateObj.toLocaleTimeString('en-US', {
+                                    hour: '2-digit',
+                                    minute: '2-digit',
+                                    hour12: true
+                                });
+                                filasGeneradas[0][colIndex] = formattedTime;
+                            } else {
+                                filasGeneradas[0][colIndex] = "No encontrado";
+                            }
                         } else {
                           filasGeneradas[0][colIndex] = inspectionData[campo] || "No encontrado";
                         }
@@ -5633,20 +5681,121 @@ router.post('/save-configuration', async (req, res) => {
               };
 
               // Función para reemplazar variables en el documento XML
-              const replaceVariables = (nodes) => {
-                nodes.forEach((node) => {
-                  if (node.type === 'element' && node.name === 'w:t' && node.elements) {
+              const replaceVariables = (nodes, parent = null) => {
+                nodes.forEach((node, index) => {
+                  if (node.type === 'element' && node.name === 'w:t' && node.elements && node.elements.length > 0) {
                     let text = node.elements[0]?.text || '';
+              
                     Object.entries(variables).forEach(([key, value]) => {
-                      const regex = new RegExp(\`{{\s*\${key}\s*}}\`, 'g');
-                      text = text.replace(regex, value);
+                      if (text.includes(\`{{\${key}}}\`)) {
+                        console.log(\`Reemplazando variable: {{\${key}}} con:\\n\${value}\`);
+              
+                        // Reemplazar la variable en el texto con su valor
+                        let replacedText = text.replace(\`{{\${key}}}\`, value);
+              
+                        // Si el valor tiene saltos de línea, hay que dividirlo correctamente
+                        if (value.includes("\\r\\n")) {
+                          const parts = replacedText.includes('\\r\\n') ? replacedText.split(/\\r\\n/) : replacedText.split(/\\n/);
+                          let newElements = [];
+              
+                          parts.forEach((part, index) => {
+                            if (index > 0) {
+                              // Obtener el último elemento de la línea anterior para agregarle el TAB antes del salto de línea
+                              let lastElement = newElements[newElements.length - 1];
+                              
+                              if (lastElement && lastElement.name === 'w:r') {
+                                let lastText = lastElement.elements.find(e => e.name === 'w:t');
+                                
+                                if (lastText) {
+                                  lastText.elements[0].text += '\\t'; // Agregar el TAB al final de la línea
+                                }
+                              }
+                            
+                              newElements.push({ type: 'element', name: 'w:br', elements: [] });
+                            }  
+                            if (part.trim() !== '') {
+                              let formattedElements = processFormatting(part);
+                              newElements.push(...formattedElements);
+                            }
+                          });
+              
+                          // Si el nodo tiene un padre, lo reemplazamos correctamente
+                          if (parent && parent.elements) {
+                            console.log("Reemplazando nodo en el documento.");
+                            parent.elements.splice(parent.elements.indexOf(node), 1, ...newElements);
+                          }
+                        } else {
+                          // Si no tiene saltos de línea, simplemente aplicar formato sin dividir
+                          let formattedElements = processFormatting(replacedText);
+                          if (parent && parent.elements) {
+                            parent.elements.splice(parent.elements.indexOf(node), 1, ...formattedElements);
+                          }
+                        }
+                      }
                     });
-                    text = text.replace(/{{.*?}}/g, ''); // Eliminar llaves residuales no reemplazadas
-                    node.elements[0].text = text;
                   }
-                  if (node.elements) replaceVariables(node.elements);
+              
+                  if (node.elements && node.elements.length > 0) {
+                    replaceVariables(node.elements, node);
+                  }
                 });
-              };
+              };              
+                          
+              const processFormatting = (text) => {
+                let elements = [];
+                let regex = /(\\*\\*(.*?)\\*\\*|\\*(.*?)\\*|\\\`(.*?)\\\`)/g; // Detectar **negrita**, *cursiva* y \`código\`
+                let lastIndex = 0;
+                let match;
+              
+                while ((match = regex.exec(text)) !== null) {
+                  // Agregar el texto normal antes de la coincidencia
+                  if (match.index > lastIndex) {
+                    elements.push({
+                      type: 'element',
+                      name: 'w:r',
+                      elements: [
+                        { type: 'element', name: 'w:t', attributes: { 'xml:space': 'preserve' }, elements: [{ type: 'text', text: text.substring(lastIndex, match.index) }] }
+                      ]
+                    });
+                  }
+              
+                  // Identificar si es **negrita**, *cursiva* o \`código\`
+                  let isBold = match[1] && match[1].startsWith('**');
+                  let isItalic = match[1] && match[1].startsWith('*') && !isBold;
+                  let isCode = match[4] !== undefined;
+                  let formattedText = isBold ? match[2] : isItalic ? match[3] : match[4];
+              
+                  // Crear el nodo con formato
+                  let formatting = [];
+                  if (isBold) formatting.push({ type: 'element', name: 'w:b' });
+                  if (isItalic) formatting.push({ type: 'element', name: 'w:i' });
+                  if (isCode) formatting.push({ type: 'element', name: 'w:highlight', attributes: { 'w:val': 'lightGray' } });
+              
+                  elements.push({
+                    type: 'element',
+                    name: 'w:r',
+                    elements: [
+                      { type: 'element', name: 'w:rPr', elements: formatting },
+                      { type: 'element', name: 'w:t', attributes: { 'xml:space': 'preserve' }, elements: [{ type: 'text', text: formattedText }] }
+                    ]
+                  });
+              
+                  lastIndex = match.index + match[0].length;
+                }
+              
+                // Agregar el resto del texto después de la última coincidencia
+                if (lastIndex < text.length) {
+                  elements.push({
+                    type: 'element',
+                    name: 'w:r',
+                    elements: [
+                      { type: 'element', name: 'w:t', attributes: { 'xml:space': 'preserve' }, elements: [{ type: 'text', text: text.substring(lastIndex) }] }
+                    ]
+                  });
+                }
+              
+                return elements;
+              };      
 
               const extractCellAttributes = (cell) => {
                 const attributes = {
@@ -5987,11 +6136,7 @@ router.post('/save-configuration', async (req, res) => {
                                       : []),
                                   ],
                                 },
-                                {
-                                  type: 'element',
-                                  name: 'w:t',
-                                  elements: [{ type: 'text', text: value }],
-                                },
+                                ...processTableText(value),
                               ],
                             },
                           ],
@@ -6000,6 +6145,34 @@ router.post('/save-configuration', async (req, res) => {
                     };
                   }),
                 };
+              };
+
+              const processTableText = (text) => {
+                let newElements = [];
+                const parts = text.includes('\\r\\n') ? text.split(/\\r\\n/) : text.split(/\\n/);
+              
+                parts.forEach((part, index) => {
+                  if (index > 0) {
+                    // Obtener el último elemento de la línea anterior para agregarle el TAB antes del salto de línea
+                    let lastElement = newElements[newElements.length - 1];
+                    
+                    if (lastElement && lastElement.name === 'w:r') {
+                      let lastText = lastElement.elements.find(e => e.name === 'w:t');
+                      
+                      if (lastText) {
+                        lastText.elements[0].text += '\\t'; // Agregar el TAB al final de la línea
+                      }
+                    }
+                  
+                    newElements.push({ type: 'element', name: 'w:br', elements: [] });
+                  }   
+                  if (part.trim() !== '') {
+                    let formattedElements = processFormatting(part);
+                    newElements.push(...formattedElements);
+                  }
+                });
+              
+                return newElements;
               };
 
               // Función para agregar bordes a una fila (encabezado)
@@ -6698,6 +6871,20 @@ router.post('/create-document-inspeccion', async (req, res) => {
       success: false 
     });
   }
+});
+
+router.post('/emit-inspection-update', (req, res) => {
+  const { oldId, newId } = req.body;
+
+  if (!oldId || !newId) {
+    return res.status(400).json({ success: false, message: "Faltan parámetros oldId o newId" });
+  }
+
+  console.log(`📡 Backend emitiendo evento 'inspection_synced' con oldId: ${oldId}, newId: ${newId}`);
+
+  req.io.emit('inspection_synced', { oldId, newId });
+
+  res.json({ success: true, message: "Evento emitido con éxito" });
 });
 
 module.exports = router;
