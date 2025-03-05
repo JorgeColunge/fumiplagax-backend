@@ -3185,13 +3185,13 @@ const inspectionFileFilter = (req, file, cb) => {
 const uploadInspectionImages = multer({
   storage: storage, // Cambiado a almacenamiento en memoria
   fileFilter: inspectionFileFilter,
-  limits: { fileSize: 5 * 1024 * 1024 }, // Límite de 5 MB por archivo
+  limits: { fileSize: 15 * 1024 * 1024 }, // Límite de 5 MB por archivo
 }).fields([
   { name: "tech_signature", maxCount: 1 },
   { name: "client_signature", maxCount: 1 },
-  { name: "findingsImages", maxCount: 20 },
-  { name: "stationImages", maxCount: 20 },
-  { name: "images", maxCount: 20 },
+  { name: "findingsImages", maxCount: 60 },
+  { name: "stationImages", maxCount: 60 },
+  { name: "images", maxCount: 60 },
 ]);
 
 // Actualizar Inspecciones
