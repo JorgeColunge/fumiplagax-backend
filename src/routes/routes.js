@@ -3187,8 +3187,8 @@ const uploadInspectionImages = multer({
   fileFilter: inspectionFileFilter,
   limits: { fileSize: 15 * 1024 * 1024 }, // Límite de 15 MB por archivo
 }).fields([
-  { name: "tech_signature", maxCount: 60 },
-  { name: "client_signature", maxCount: 60 },
+  { name: "tech_signature", maxCount: 1 },
+  { name: "client_signature", maxCount: 1 },
   { name: "findingsImages", maxCount: 60 },
   { name: "stationImages", maxCount: 60 },
   { name: "images", maxCount: 60 },
@@ -4500,21 +4500,34 @@ router.post('/save-configuration', async (req, res) => {
 
                       return results.length > 0 ? results : "No encontrado";
                     } else if (type && key === 'productsByType') {
-                      // Manejar productsByType con el campo type
                       if (type === 'all') {
-                        const allProducts = Object.values(currentValue[key] || {});
-                        currentValue = allProducts;
+                          const allProducts = Object.values(currentValue[key] || {});
+                          currentValue = allProducts;
                       } else {
-                        currentValue = currentValue[key]?.[type] || {};
+                          currentValue = currentValue[key]?.[type] || {}; // Obtiene el objeto específico
                       }
-
+                  
+                      // Detectar si hay un campo adicional que se quiere obtener (ejemplo: "product", "dosage", etc.)
                       const remainingKeys = keys.slice(index + 1);
+                      
                       if (remainingKeys.length > 0) {
-                        return getValueFromJson(currentValue, remainingKeys.join('_'));
+                          const targetField = remainingKeys[0]; // Campo objetivo
+                  
+                          if (Array.isArray(currentValue)) {
+                              // Si currentValue es un array, aplicar map
+                              currentValue = currentValue.map(item => item[targetField] || "No encontrado");
+                          } else if (typeof currentValue === 'object' && currentValue !== null) {
+                              // Si es un objeto, obtener directamente el valor del campo
+                              currentValue = currentValue[targetField] || "No encontrado";
+                          } else {
+                              currentValue = "No encontrado";
+                          }
+                  
+                          return Array.isArray(currentValue) ? currentValue.join(" * ") : currentValue;
                       }
-
-                      return currentValue;
-                    } else if (currentValue && typeof currentValue === 'object' && key in currentValue) {
+                  
+                      return JSON.stringify(currentValue, null, 2);
+                  } else if (currentValue && typeof currentValue === 'object' && key in currentValue) {
                       // Navegar por las claves normalmente
                       currentValue = currentValue[key];
                     } else {
@@ -5287,7 +5300,14 @@ router.post('/save-configuration', async (req, res) => {
 
                         if (campo.startsWith("findings_")) {
                           const keyPath = campo.replace('findings_', ''); // Extraer jerarquía de claves
-                          const findings = getValueFromJson(inspectionData.findings || {}, keyPath, tipoInspeccion);
+                          let findings = getValueFromJson(inspectionData.findings || {}, keyPath, tipoInspeccion);
+
+                          // Si el valor es una cadena con "*", dividirlo y tratarlo como un array
+                          if (typeof findings === 'string' && findings.includes(" * ")) {
+                            findings = findings.split(" * ");
+                          } else if (!Array.isArray(findings)) {
+                            findings = [findings]; // Asegurar que sea un array si no lo es
+                          }
 
                           if (Array.isArray(findings)) {
                             // Expandir filasGeneradas para cada hallazgo
@@ -5694,7 +5714,7 @@ router.post('/save-configuration', async (req, res) => {
                         let replacedText = text.replace(\`{{\${key}}}\`, value);
               
                         // Si el valor tiene saltos de línea, hay que dividirlo correctamente
-                        if (value.includes("\\r\\n")) {
+                        if (value.includes("\\n")) {
                           const parts = replacedText.includes('\\r\\n') ? replacedText.split(/\\r\\n/) : replacedText.split(/\\n/);
                           let newElements = [];
               
