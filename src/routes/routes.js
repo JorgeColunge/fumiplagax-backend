@@ -5694,7 +5694,7 @@ router.post('/save-configuration', async (req, res) => {
                         let replacedText = text.replace(\`{{\${key}}}\`, value);
               
                         // Si el valor tiene saltos de línea, hay que dividirlo correctamente
-                        if (value.includes("\\r\\n")) {
+                        if (value.includes("\\n")) {
                           const parts = replacedText.includes('\\r\\n') ? replacedText.split(/\\r\\n/) : replacedText.split(/\\n/);
                           let newElements = [];
               
@@ -6149,6 +6149,8 @@ router.post('/save-configuration', async (req, res) => {
 
               const processTableText = (text) => {
                 let newElements = [];
+                // Limpiar la entrada eliminando llaves, comillas dobles y espacios innecesarios
+                text = text.replace(/\{/g, ' ').replace(/[}"]/g, '').trim();
                 const parts = text.includes('\\r\\n') ? text.split(/\\r\\n/) : text.split(/\\n/);
               
                 parts.forEach((part, index) => {
