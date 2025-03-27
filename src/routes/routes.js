@@ -676,7 +676,7 @@ router.post('/clients', async (req, res) => {
     contact_phone,
     rut,
     category,
-    password,
+    password
   } = req.body;
 
   // Concatenar dirección completa
@@ -864,6 +864,7 @@ router.put('/clients/:id', async (req, res) => {
     contact_name,
     contact_phone,
     rut,
+    category
   } = req.body;
 
   try {
@@ -909,6 +910,7 @@ router.put('/clients/:id', async (req, res) => {
       'contact_name = $10',
       'contact_phone = $11',
       'rut = $12',
+      'category = $13',
     ];
 
     const values = [
@@ -924,12 +926,16 @@ router.put('/clients/:id', async (req, res) => {
       contact_name,
       contact_phone,
       rut,
+      category,
     ];
 
     if (latitude !== null && longitude !== null) {
-      fields.push('latitude = $13', 'longitude = $14');
-      values.push(latitude, longitude);
-    }
+      fields.push(`latitude = $${fields.length + 1}`);
+      values.push(latitude);
+    
+      fields.push(`longitude = $${fields.length + 1}`);
+      values.push(longitude);
+    }    
 
     values.push(id);
 
@@ -5222,6 +5228,80 @@ router.post('/save-configuration', async (req, res) => {
                     clientRulesData = []; // Si falla, asignar un array vacío
                   }
                 }
+                  
+                // Procesar variables específicas para "procesos"
+                for (const [key, value] of Object.entries(variables)) {
+                  if (typeof value === 'string' && value.startsWith("Procedimientos-")) {
+                    const [_, categoria, campo] = value.split('-');
+
+                    try {
+                      const query = \`SELECT "\${campo}" FROM procedures WHERE category = \$1 LIMIT 1\`;
+                      console.log(\`Ejecutando consulta: \${query} con categoría: \${categoria}\`);
+                      const result = await pool.query(query, [categoria]);
+                      console.log(\`Resultado obtenido para "\${categoria}":\`, result.rows);
+
+                      if (result.rows.length > 0 && result.rows[0][campo] !== undefined) {
+                        const valorCrudo = result.rows[0][campo];
+                        let valorProcesado = valorCrudo;
+
+                        // Verifica si es un string con formato JSON de array (como '["Texto"]')
+                        if (typeof valorCrudo === 'string' && valorCrudo.trim().startsWith('[')) {
+                          try {
+                            const parsed = JSON.parse(valorCrudo);
+                            if (Array.isArray(parsed)) {
+                              valorProcesado = parsed.join(' * ');
+                            }
+                          } catch (e) {
+                            console.warn(\`No se pudo parsear el valor "\${valorCrudo}" como JSON\`);
+                          }
+                        }
+
+                        variables[key] = valorProcesado;
+                      } else {
+                        console.warn(\`No se encontró el campo "\${campo}" en la categoría "\${categoria}"\`);
+                        variables[key] = "No encontrado";
+                      }
+
+                      console.log(\`Variable "\${key}" actualizada a: \${variables[key]}\`);
+                    } catch (error) {
+                      console.error(\`❌ Error al consultar procedimientos para categoría "\${categoria}":\`, error.message);
+                      variables[key] = "Error al consultar procedimiento";
+                    }
+                  }
+                }
+
+              // Procesar variables específicas para "Normativa Cliente"
+              for (const [key, value] of Object.entries(variables)) {
+                if (typeof value === 'string' && value.startsWith("Normativa Cliente-")) {
+                const [_, campo] = value.split('-');
+
+                try {
+                  // Paso 1: Buscar todos los valores del campo solicitado en la tabla rules usando clientData.category
+                  const query = \`SELECT "\${campo}" FROM rules WHERE category = $1\`;
+                  console.log(\`Ejecutando consulta: \${query} con categoría: \${clientData.category}\`);
+                  const result = await pool.query(query, [clientData.category]);
+                  console.log(\`Resultado obtenido para categoría "\${clientData.category}":\`, result.rows);
+
+                  // Extraer los valores del campo y unirlos con "* "
+                  const values = result.rows
+                    .map(row => row[campo])
+                    .filter(val => val !== null && val !== undefined);
+                  
+                  if (values.length > 0) {
+                    variables[key] = values.join(" * ");
+                  } else {
+                    console.warn(\`No se encontraron valores para el campo "\${campo}" en la categoría "\${clientData.category}"\`);
+                    variables[key] = "No encontrado";
+                  }
+
+                  console.log(\`Variable "\${key}" actualizada a: \${variables[key]}\`);
+                } catch (error) {
+                  console.error(\`❌ Error al consultar normativa cliente para categoría "\${clientData.category}":\`, error.message);
+                  variables[key] = "Error al consultar normativa";
+                }
+              }
+
+              }
 
                 // Procesar variables específicas para "inspections"
                 Object.entries(variables).forEach(([key, value]) => {
@@ -5293,6 +5373,7 @@ router.post('/save-configuration', async (req, res) => {
                     const filasGeneradas = [[]]; // Comenzamos con una fila vacía para generar nuevas filas
 
                     row.forEach((field, colIndex) => {
+
                       if (typeof field === 'string' && field.startsWith("Inspección-")) {
                         const [_, periodo, tipoInspeccion, campo] = field.split('-');
 
@@ -5382,16 +5463,80 @@ router.post('/save-configuration', async (req, res) => {
                           filasGeneradas[index][colIndex] = value;
                         });
                       } else if (typeof field === 'string' && field.startsWith("Normativa Cliente-")) {
-                        const ruleField = field.split('-')[1];
-                        const ruleValues = clientRulesData
-                          .map((rule) => (rule && rule.hasOwnProperty(ruleField) ? rule[ruleField] : "No encontrado"));
+                        const [_, campo] = field.split('-'); // Desestructuración para obtener solo el campo
 
-                        // Añadir los valores de normativa como filas separadas
-                        ruleValues.forEach((value, index) => {
-                          if (!filasGeneradas[index]) filasGeneradas[index] = Array(row.length).fill("");
-                          filasGeneradas[index][colIndex] = value;
-                        });
-                      } else {
+                        console.log(\`Procesando campo de normativa cliente: "\${campo}", usando categoría del cliente: "\${clientData.category}"\`);
+
+                        const query = \`SELECT "\${campo}" FROM rules WHERE category = $1\`;
+                        console.log(\`Ejecutando consulta: \${query} con categoría: \${clientData.category}\`);
+
+                        pool.query(query, [clientData.category])
+                          .then(result => {
+                            const values = result.rows
+                              .map(row => row[campo])
+                              .filter(val => val !== null && val !== undefined);
+
+                            if (values.length > 0) {
+                              const valorUnido = values.join(' * ');
+                              filasGeneradas.forEach((fila) => {
+                                fila[colIndex] = valorUnido;
+                              });
+                            } else {
+                              console.warn(\`No se encontraron valores para campo "\${campo}" en categoría "\${clientData.category}"\`);
+                              filasGeneradas[0][colIndex] = "No encontrado";
+                            }
+                          })
+                          .catch(error => {
+                            console.error(\`❌ Error al consultar normativa cliente para categoría "\${clientData.category}":\`, error.message);
+                            filasGeneradas[0][colIndex] = "Error al consultar normativa";
+                          });
+                      }
+       
+                      else if (typeof field === 'string' && field.startsWith("Procedimientos-")) {
+                        const [_, categoria, campo] = field.split('-');
+                        console.log(\`Procesando campo de procedimiento para categoría: "\${categoria}", campo: "\${campo}"\`);
+                      
+                        const query = \`SELECT "\${campo}" FROM procedures WHERE category = \$1\`;
+                      
+                        pool.query(query, [categoria])
+                          .then(result => {
+                            console.log(\`Resultado obtenido para "\${categoria}":\`, result.rows);
+                      
+                            const values = result.rows
+                              .map(row => row[campo])
+                              .filter(val => val !== null && val !== undefined)
+                              .flatMap(val => {
+                                if (typeof val === 'string' && val.trim().startsWith('[')) {
+                                  try {
+                                    const parsed = JSON.parse(val);
+                                    if (Array.isArray(parsed)) {
+                                      return parsed.map(item => item.toString().trim());
+                                    }
+                                  } catch (e) {
+                                    console.warn(\`No se pudo parsear el valor "\${val}" como JSON\`);
+                                  }
+                                }
+                                return [val.toString().trim()];
+                              });
+                      
+                            if (values.length > 0) {
+                              const valorUnido = values.join(' * ');
+                              filasGeneradas.forEach((fila) => {
+                                fila[colIndex] = valorUnido;
+                              });
+                            } else {
+                              console.warn(\`No se encontraron valores para campo "\${campo}" en la categoría "\${categoria}"\`);
+                              filasGeneradas[0][colIndex] = "No encontrado";
+                            }
+                          })
+                          .catch(error => {
+                            console.error(\`❌ Error al consultar procedimientos para categoría "\${categoria}":\`, error.message);
+                            filasGeneradas.forEach((fila) => {
+                              fila[colIndex] = "Error al consultar procedimiento";
+                            });
+                          });
+                      }          
+                      else {
                         // Campo estático, lo mantenemos en todas las filas generadas
                         filasGeneradas.forEach((fila) => {
                           fila[colIndex] = field;
