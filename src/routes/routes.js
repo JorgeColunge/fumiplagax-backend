@@ -6314,6 +6314,8 @@ router.post('/save-configuration', async (req, res) => {
 
               const processTableText = (text) => {
                 let newElements = [];
+                // Limpiar la entrada eliminando llaves, comillas dobles y espacios innecesarios
+                text = text.replace(/\{/g, ' ').replace(/[}"]/g, '').trim();
                 const parts = text.includes('\\r\\n') ? text.split(/\\r\\n/) : text.split(/\\n/);
               
                 parts.forEach((part, index) => {
