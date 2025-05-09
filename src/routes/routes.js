@@ -269,7 +269,7 @@ router.post('/updateProfile', uploadImage, compressImage, async (req, res) => {
       const previousImage = result.rows[0]?.image;
 
       if (previousImage && previousImage.includes('.amazonaws.com/')) {
-        const bucketName = 'fumiplagax';
+        const bucketName = 'fumiplagax2';
         const previousKey = previousImage.split('.amazonaws.com/')[1];
         await deleteObject(bucketName, previousKey);
         console.log(`Imagen anterior eliminada: ${previousKey}`);
@@ -279,7 +279,7 @@ router.post('/updateProfile', uploadImage, compressImage, async (req, res) => {
 
       
 
-      const bucketName = 'fumiplagax';
+      const bucketName = 'fumiplagax2';
       const key = `profile_pictures/${Date.now()}-${req.file.originalname}`;
       const uploadResult = await uploadFile(bucketName, key, req.file.buffer);
       imageUrl = uploadResult.Location;
@@ -314,7 +314,7 @@ router.post('/updateProfile', uploadImage, compressImage, async (req, res) => {
   }  
 
     if (imageUrl) {
-      const bucketName = 'fumiplagax';
+      const bucketName = 'fumiplagax2';
       const key = imageUrl.split('.amazonaws.com/')[1];
       imageUrl = await getSignedUrl(bucketName, key);
     }
@@ -339,13 +339,13 @@ router.post('/updateProfileClient', uploadImage, compressImage, async (req, res)
       const previousImage = result.rows[0]?.image;
 
       if (previousImage && previousImage.includes('.amazonaws.com/')) {
-        const bucketName = 'fumiplagax';
+        const bucketName = 'fumiplagax2';
         const previousKey = previousImage.split('.amazonaws.com/')[1];
         await deleteObject(bucketName, previousKey); // Eliminar la imagen anterior
         console.log(`Imagen anterior eliminada: ${previousKey}`);
       }
 
-      const bucketName = 'fumiplagax';
+      const bucketName = 'fumiplagax2';
       const key = `profile_pictures/${Date.now()}-${req.file.originalname}`;
       const uploadResult = await uploadFile(bucketName, key, req.file.buffer);
       imageUrl = uploadResult.Location; // URL pública generada por S3
@@ -371,7 +371,7 @@ router.post('/updateProfileClient', uploadImage, compressImage, async (req, res)
 
     // Generar enlace prefirmado para la nueva imagen
     if (imageUrl) {
-      const bucketName = 'fumiplagax';
+      const bucketName = 'fumiplagax2';
       const key = imageUrl.split('.amazonaws.com/')[1];
       imageUrl = await getSignedUrl(bucketName, key); // Generar enlace prefirmado
     }
@@ -397,7 +397,7 @@ router.post('/upload', uploadImage, compressImage, async (req, res) => {
 
   try {
     // Subir archivo a S3
-    const bucketName = 'fumiplagax'; // Cambia esto por el nombre de tu bucket
+    const bucketName = 'fumiplagax2'; // Cambia esto por el nombre de tu bucket
     const key = `profile_pictures/${Date.now()}-${req.file.originalname}`; // Ruta única en S3
     const result = await uploadFile(bucketName, key, req.file.buffer);
 
@@ -503,7 +503,7 @@ router.post('/register', uploadImage, compressImage, async (req, res) => {
     // Subir la imagen al bucket S3 si se proporciona
     if (req.file) {
       try {
-        const bucketName = 'fumiplagax';
+        const bucketName = 'fumiplagax2';
         const key = `profile_pictures/${Date.now()}-${req.file.originalname}`;
         const uploadResult = await uploadFile(bucketName, key, req.file.buffer);
         imageUrl = uploadResult.Location; // URL pública generada por S3
@@ -537,7 +537,7 @@ router.post('/register', uploadImage, compressImage, async (req, res) => {
     let preSignedImageUrl = null;
     if (imageUrl) {
       try {
-        const bucketName = 'fumiplagax';
+        const bucketName = 'fumiplagax2';
         const key = imageUrl.includes('.amazonaws.com/')
           ? imageUrl.split('.amazonaws.com/')[1]
           : null;
@@ -575,7 +575,7 @@ router.get('/users', async (req, res) => {
     for (let user of users) {
       if (user.image) {
         try {
-          const bucketName = 'fumiplagax';
+          const bucketName = 'fumiplagax2';
 
           // Validar si la URL contiene el key esperado
           const key = user.image.includes('.amazonaws.com/')
@@ -632,7 +632,7 @@ router.get('/users/:id', async (req, res) => {
     // Generar URL prefirmada si el usuario tiene una imagen válida
     if (user.image) {
       try {
-        const bucketName = 'fumiplagax';
+        const bucketName = 'fumiplagax2';
 
         // Validar si la URL contiene el key esperado
         const key = user.image.includes('.amazonaws.com/')
@@ -772,7 +772,7 @@ router.get('/clients', async (req, res) => {
       console.log("prefirmando")
       if (client.photo) {
         try {
-          const bucketName = 'fumiplagax';
+          const bucketName = 'fumiplagax2';
 
           // Validar si la URL contiene el key esperado
           const key = client.photo.includes('.amazonaws.com/')
@@ -819,7 +819,7 @@ router.get('/clients/:id', async (req, res) => {
     // Generar URL prefirmada si el usuario tiene una imagen válida
     if (client.photo) {
       try {
-        const bucketName = 'fumiplagax';
+        const bucketName = 'fumiplagax2';
 
         // Validar si la URL contiene el key esperado
         const key = client.photo.includes('.amazonaws.com/')
@@ -1281,7 +1281,6 @@ router.delete('/services/:id', async (req, res) => {
     });
     console.log(`Notificación emitida al responsable ${service.responsible}: ${notificationMessage}`);
 
-    // Procesar y notificar a los acompañantes
 // Procesar y notificar a los acompañantes
 let parsedCompanion = [];
 try {
@@ -1701,6 +1700,20 @@ router.delete('/products/:id', async (req, res) => {
   }
 });
 
+router.get('/procedures', async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT *
+      FROM procedures
+    `);
+
+    res.json(result.rows);
+  } catch (error) {
+    console.error("Error al obtener procedimientos:", error);
+    res.status(500).json({ success: false, message: "Error del servidor" });
+  }
+});
+
 // Ruta para crear una nueva inspección
 router.post('/inspections', async (req, res) => {
   const { date, time, service_id, inspection_type, inspection_sub_type, createdBy } = req.body;
@@ -2081,7 +2094,7 @@ router.post("/replace-google-drive-url", async (req, res) => {
 
       // Eliminar el archivo anterior de S3
       if (oldDocumentUrl) {
-        const oldKey = oldDocumentUrl.split(`fumiplagax.s3.us-east-2.amazonaws.com/`)[1];
+        const oldKey = oldDocumentUrl.split(`fumiplagax2.s3.us-east-2.amazonaws.com/`)[1];
         if (!oldKey.startsWith('documents/')) {
             console.error('La clave del archivo no es válida:', oldKey);
             throw new Error('Clave del archivo no válida para eliminar.');
@@ -2165,7 +2178,7 @@ router.post("/replace-local-file", uploadDoc.single("file"), async (req, res) =>
 
     // Eliminar el archivo anterior de S3
     if (oldDocumentUrl) {
-      const oldKey = oldDocumentUrl.split(`fumiplagax.s3.us-east-2.amazonaws.com/`)[1];
+      const oldKey = oldDocumentUrl.split(`fumiplagax2.s3.us-east-2.amazonaws.com/`)[1];
       if (oldKey && oldKey.startsWith("documents/")) {
         await deleteObject(bucketName, oldKey);
         console.log(`Archivo anterior eliminado correctamente de S3: ${oldKey}`);
@@ -2243,7 +2256,7 @@ router.post("/convert-to-pdf", async (req, res) => {
 
     // Obtener la clave del documento desde la URL
     const documentKey = decodeURIComponent(
-      documentUrl.split("fumiplagax.s3.us-east-2.amazonaws.com/")[1]
+      documentUrl.split("fumiplagax2.s3.us-east-2.amazonaws.com/")[1]
     );
     console.log("Clave del documento extraída de la URL:", documentKey);
 
@@ -2919,7 +2932,6 @@ router.delete('/service-schedule/:id', async (req, res) => {
       notification: notificationResult.rows[0],
     });
 
-    // Notificaciones a acompañantes
 // Notificaciones a acompañantes
 let parsedCompanion = [];
 try {
@@ -2980,7 +2992,7 @@ router.get('/stations', async (req, res) => {
     // Generar URLs prefirmadas solo si qr_code es válido
     for (let station of stations) {
       if (station.qr_code && station.qr_code.includes('.amazonaws.com/')) {
-        const bucketName = 'fumiplagax';
+        const bucketName = 'fumiplagax2';
         const key = station.qr_code.split('.amazonaws.com/')[1];
 
         if (key) {
@@ -3018,7 +3030,7 @@ router.get('/stations/:id', async (req, res) => {
 
     // Generar URL prefirmada solo si qr_code es válido
     if (station.qr_code && station.qr_code.includes('.amazonaws.com/')) {
-      const bucketName = 'fumiplagax';
+      const bucketName = 'fumiplagax2';
       const key = station.qr_code.split('.amazonaws.com/')[1];
 
       if (key) {
@@ -3062,7 +3074,7 @@ router.post('/stations', async (req, res) => {
     const qrBuffer = await QRCode.toBuffer(qrData, { width: 300 });
 
     // Subir el archivo QR a S3
-    const bucketName = 'fumiplagax'; // Tu bucket S3
+    const bucketName = 'fumiplagax2'; // Tu bucket S3
     const key = `stations/${Date.now()}-${uuidv4()}.png`;
 
     const uploadResult = await uploadFile(bucketName, key, qrBuffer);
@@ -3107,7 +3119,7 @@ router.put('/stations/:id', async (req, res) => {
 
     const station = result.rows[0];
     if (station.qr_code) {
-      const bucketName = 'fumiplagax';
+      const bucketName = 'fumiplagax2';
       const key = station.qr_code.split('.amazonaws.com/')[1];
       station.qr_code = await getSignedUrl(bucketName, key);
     }
@@ -3153,7 +3165,7 @@ router.get('/stations/client/:client_id', async (req, res) => {
     // Generar URLs prefirmadas solo si hay una clave válida en qr_code
     for (let station of stations) {
       if (station.qr_code && station.qr_code.includes('.amazonaws.com/')) {
-        const bucketName = 'fumiplagax';
+        const bucketName = 'fumiplagax2';
         const keyParts = station.qr_code.split('.amazonaws.com/'); // Extraer clave
         const key = keyParts[1] || null;
 
@@ -3204,7 +3216,13 @@ const uploadInspectionImages = multer({
 router.post('/inspections/:inspectionId/save', uploadInspectionImages, async (req, res) => {
   try {
     const { inspectionId } = req.params;
-    const { generalObservations, findingsByType, productsByType, stationsFindings, signatures, userId, exitTime} = req.body;
+    // 🔍 Obtener fecha original de la inspección antes de modificar findings
+    const inspectionDateQuery = `SELECT date FROM inspections WHERE id = $1`;
+    const inspectionDateResult = await pool.query(inspectionDateQuery, [inspectionId]);
+
+    const inspectionDate = inspectionDateResult.rows[0]?.date || new Date().toISOString();
+
+    const { generalObservations, findingsByType, productsByType, stationsFindings, signatures, userId, exitTime } = req.body;
 
     console.log('Datos recibidos en el body:', {
       generalObservations,
@@ -3212,6 +3230,7 @@ router.post('/inspections/:inspectionId/save', uploadInspectionImages, async (re
       productsByType,
       stationsFindings,
       signatures,
+      exitTime
     });
 
     // Parsear datos de strings a objetos si es necesario
@@ -3222,11 +3241,11 @@ router.post('/inspections/:inspectionId/save', uploadInspectionImages, async (re
     const parsedSignatures =
       typeof signatures === 'string' ? JSON.parse(signatures) : signatures;
 
-      console.log('findingsByType parseado:', JSON.stringify(parsedFindingsByType, null, 2));
-      console.log('stationsFindings parseado:', JSON.stringify(parsedStationsFindings, null, 2));  
+    console.log('findingsByType parseado:', JSON.stringify(parsedFindingsByType, null, 2));
+    console.log('stationsFindings parseado:', JSON.stringify(parsedStationsFindings, null, 2));
 
     // Procesar imágenes recibidas (igual que antes)
-    const bucketName = 'fumiplagax'; // Define el bucket
+    const bucketName = 'fumiplagax2'; // Define el bucket
     // Procesar imágenes recibidas y subir a S3
     const uploadImagesToS3 = async (files, folder) => {
       if (!files) return [];
@@ -3234,76 +3253,76 @@ router.post('/inspections/:inspectionId/save', uploadInspectionImages, async (re
         files.map(async (file) => {
           // Log del nombre del archivo antes de procesar
           console.log(`Procesando archivo: ${file.originalname}`);
-    
+
           // Extraer el ID del nombre del archivo (ej: "1737653406745.jpg" o "1737653406745-nombre.jpg")
           const idMatch = file.originalname.match(/^(\d+)/); // Busca un número al inicio del nombre
           const id = idMatch ? idMatch[1] : null;
-    
+
           // Log para verificar el ID extraído
           console.log(`ID extraído del archivo ${file.originalname}: ${id}`);
-    
+
           const key = `${folder}/${Date.now()}-${file.originalname}`;
           const result = await uploadFile(bucketName, key, file.buffer);
-    
+
           // Log del resultado del upload
           console.log(`Archivo subido a S3: ${result.Location}, ID: ${id}`);
-    
+
           return {
             id, // ID extraído
             location: result.Location, // URL pública generada por S3
           };
         })
       );
-    };    
-    
-// Subir la firma del técnico a S3 o usar la existente
-const techSignature = req.files.tech_signature
-  ? (await uploadImagesToS3(req.files.tech_signature, 'signatures'))[0]
-  : parsedSignatures?.technician?.signature;
+    };
 
-// Subir la firma del cliente a S3 o usar la existente
-const clientSignature = req.files.client_signature
-  ? (await uploadImagesToS3(req.files.client_signature, 'signatures'))[0]
-  : parsedSignatures?.client?.signature;
+    // Subir la firma del técnico a S3 o usar la existente
+    const techSignature = req.files.tech_signature
+      ? (await uploadImagesToS3(req.files.tech_signature, 'signatures'))[0]
+      : parsedSignatures?.technician?.signature;
 
-  // Log para verificar el resultado de las firmas
-console.log('Firmas procesadas:', {
-  techSignature,
-  clientSignature,
-});
+    // Subir la firma del cliente a S3 o usar la existente
+    const clientSignature = req.files.client_signature
+      ? (await uploadImagesToS3(req.files.client_signature, 'signatures'))[0]
+      : parsedSignatures?.client?.signature;
 
-// Subir imágenes de hallazgos a S3
-const findingsImagePaths = req.files.findingsImages
-  ? await uploadImagesToS3(req.files.findingsImages, 'findings')
-  : [];
+    // Log para verificar el resultado de las firmas
+    console.log('Firmas procesadas:', {
+      techSignature,
+      clientSignature,
+    });
 
-// Crear un mapa de imágenes por ID
-const findingsImagesById = findingsImagePaths.reduce((map, { id, location }) => {
-  if (id) map[id] = location; // Asociar el ID con la URL pública
-  return map;
-}, {});
+    // Subir imágenes de hallazgos a S3
+    const findingsImagePaths = req.files.findingsImages
+      ? await uploadImagesToS3(req.files.findingsImages, 'findings')
+      : [];
 
-// Subir imágenes de estaciones a S3
-const stationImagePaths = req.files.stationImages
-  ? await uploadImagesToS3(req.files.stationImages, 'stations')
-  : [];
+    // Crear un mapa de imágenes por ID
+    const findingsImagesById = findingsImagePaths.reduce((map, { id, location }) => {
+      if (id) map[id] = location; // Asociar el ID con la URL pública
+      return map;
+    }, {});
 
-// Crear un mapa de imágenes por ID
-const stationImagesById = stationImagePaths.reduce((map, { id, location }) => {
-  if (id) map[id] = location; // Asociar el ID con la URL pública
-  return map;
-}, {});
+    // Subir imágenes de estaciones a S3
+    const stationImagePaths = req.files.stationImages
+      ? await uploadImagesToS3(req.files.stationImages, 'stations')
+      : [];
 
-// Subir imágenes genéricas a S3
-const genericImagePaths = req.files.images
-  ? await uploadImagesToS3(req.files.images, 'generic')
-  : [];
+    // Crear un mapa de imágenes por ID
+    const stationImagesById = stationImagePaths.reduce((map, { id, location }) => {
+      if (id) map[id] = location; // Asociar el ID con la URL pública
+      return map;
+    }, {});
 
-  console.log('Rutas de imágenes procesadas:', {
-    findingsImagePaths,
-    stationImagePaths,
-    genericImagePaths, // Mostrar las imágenes genéricas procesadas
-  });
+    // Subir imágenes genéricas a S3
+    const genericImagePaths = req.files.images
+      ? await uploadImagesToS3(req.files.images, 'generic')
+      : [];
+
+    console.log('Rutas de imágenes procesadas:', {
+      findingsImagePaths,
+      stationImagePaths,
+      genericImagePaths, // Mostrar las imágenes genéricas procesadas
+    });
 
     // Reconstruir el objeto signatures
     const updatedSignatures = {
@@ -3321,26 +3340,45 @@ const genericImagePaths = req.files.images
       },
     };
 
-        // Asociar imágenes a `findingsByType`
-        Object.keys(parsedFindingsByType).forEach((type) => {
-          parsedFindingsByType[type] = parsedFindingsByType[type].map((finding) => {
-            // Asocia la imagen correspondiente al ID del hallazgo
-            if (findingsImagesById[finding.id]) {
-              finding.photo = findingsImagesById[finding.id];
-            }
-            return finding;
-          });
-        });
+    // Asociar imágenes a `findingsByType` y agregar fecha y hora
+    Object.keys(parsedFindingsByType).forEach((type) => {
+      parsedFindingsByType[type] = parsedFindingsByType[type].map((finding) => {
+        // Asocia la imagen correspondiente al ID del hallazgo
+        const suffixMap = {
+          'antes': 'An',
+          'durante': 'Du',
+          'después': 'De',
+        };
         
-    
-        // Asociar imágenes a `stationsFindings`
-        parsedStationsFindings.forEach((finding) => {
-          // Asocia la imagen correspondiente al ID de la estación
-          if (stationImagesById[finding.stationId]) {
-            finding.photo = stationImagesById[finding.stationId];
+        if (findingsImagesById[finding.id]) {
+          if ((type.trim().toLowerCase() === "lavado de tanque") && finding.faseLavado) {
+            const suffix = suffixMap[finding.faseLavado.toLowerCase()];
+            if (suffix) {
+              finding[`photo${suffix}`] = findingsImagesById[finding.id];
+            }
+          } else {
+            finding.photo = findingsImagesById[finding.id];
           }
-        });
-            
+        }        
+
+        // ✅ Agregar o preservar la fecha y hora del hallazgo
+        const moment = require('moment'); // Asegúrate de tener esto al inicio del archivo
+        finding.date = finding.date || moment(inspectionDate).format("DD-MM-YYYY");
+
+        finding.time = finding.time || new Date().toTimeString().split(" ")[0].slice(0, 5); // formato HH:MM
+
+        return finding;
+      });
+    });
+
+    // Asociar imágenes a `stationsFindings`
+    parsedStationsFindings.forEach((finding) => {
+      // Asocia la imagen correspondiente al ID de la estación
+      if (stationImagesById[finding.stationId]) {
+        finding.photo = stationImagesById[finding.stationId];
+      }
+    });
+
 
     // Construir el objeto final de datos
     const findingsData = {
@@ -3391,9 +3429,9 @@ const genericImagePaths = req.files.images
     }
 
     const updatedInspection = result.rows[0];
-    
+
     console.log('Datos guardados en la base de datos:', updatedInspection);
-    
+
     // Obtener el nombre del responsable, ya sea usuario o cliente
     const getResponsibleName = async (userId) => {
       // Consultar en la tabla de usuarios
@@ -3437,7 +3475,7 @@ const genericImagePaths = req.files.images
     const { name: responsibleName, type: responsibleType } = responsibleNameResult;
 
     // Mensaje de notificación basado en firmas y tipo de responsable
-    if (updatedSignatures.client?.signature && updatedSignatures.technician?.signature) {
+    if (updatedSignatures.technician?.signature) {
       notificationMessage = `${responsibleName} ha finalizado el servicio con ID ${inspectionId} a las ${exitTime}.`;
     } else if (responsibleType === "user") {
       notificationMessage = `${responsibleName} ha actualizado la inspección con ID ${inspectionId} a las ${exitTime}.`;
@@ -3445,7 +3483,7 @@ const genericImagePaths = req.files.images
       notificationMessage = `El cliente ${responsibleName} ha realizado un hallazgo en la inspección ${inspectionId} a las ${exitTime}.`;
     }
 
-    console.log(`Mensaje de notificación: ${notificationMessage}`);    
+    console.log(`Mensaje de notificación: ${notificationMessage}`);
 
     // Notificar a usuarios con roles permitidos
     const allowedRoles = ['superadministrador', 'administrador', 'supervisor técnico'];
@@ -3503,7 +3541,7 @@ const genericImagePaths = req.files.images
 
     const signedFindingsImages = await generateSignedUrls(findingsImageUrls);
     const signedStationImages = await generateSignedUrls(stationImageUrls);
-    const signedGenericImages = await generateSignedUrls(genericImageUrls);  
+    const signedGenericImages = await generateSignedUrls(genericImageUrls);
 
     // Respuesta exitosa al cliente
     res.status(200).json({
@@ -3517,7 +3555,7 @@ const genericImagePaths = req.files.images
         stationImages: signedStationImages,
         genericImages: signedGenericImages,
       },
-    });    
+    });
   } catch (error) {
     console.error('Error al guardar la inspección:', error);
     res.status(500).json({ success: false, message: 'Error al guardar la inspección' });
@@ -3844,7 +3882,7 @@ router.post('/maps', uploadImage, compressImage, async (req, res) => {
 
   try {
     // Subir la imagen a S3
-    const bucketName = 'fumiplagax';
+    const bucketName = 'fumiplagax2';
     const key = `client_maps/${Date.now()}-${req.file.originalname}`; // Clave única para S3
     const s3Url = `https://${bucketName}.s3.${process.env.AWS_REGION}.amazonaws.com/${key}`; // Construir URL de S3
 
@@ -3892,7 +3930,7 @@ router.get('/maps/:client_id', async (req, res) => {
           map.image &&
           !map.image.includes('X-Amz-Algorithm') // Verifica si la URL ya está prefirmada
         ) {
-          const bucketName = 'fumiplagax';
+          const bucketName = 'fumiplagax2';
           const key = map.image.split('.amazonaws.com/')[1];
 
           try {
@@ -3922,7 +3960,7 @@ router.put('/maps/:id', uploadImage, compressImage, async (req, res) => {
   const { description } = req.body;
 
   try {
-    const bucketName = 'fumiplagax';
+    const bucketName = 'fumiplagax2';
     let s3Url = null;
     let signedUrl = null;
 
@@ -3992,7 +4030,7 @@ router.delete('/maps/:id', async (req, res) => {
 
     // Eliminar la imagen de S3
     if (imageUrl) {
-      const bucketName = 'fumiplagax';
+      const bucketName = 'fumiplagax2';
 
       // Extraer la clave del objeto S3 a partir de la URL pública
       const keyMatch = imageUrl.match(/client_maps\/.+$/); // Buscar "client_maps/" y todo lo que sigue
@@ -4135,7 +4173,7 @@ const uploadDocx = multer({
   limits: { fileSize: 10 * 1024 * 1024 }, // 10 MB límite
 }).single('file');
 
-const bucketName = 'fumiplagax';
+const bucketName = 'fumiplagax2';
 const templatesPath = 'documents/templates/';
 
 // Ruta para crear una nueva plantilla
@@ -4506,34 +4544,21 @@ router.post('/save-configuration', async (req, res) => {
 
                       return results.length > 0 ? results : "No encontrado";
                     } else if (type && key === 'productsByType') {
+                      // Manejar productsByType con el campo type
                       if (type === 'all') {
-                          const allProducts = Object.values(currentValue[key] || {});
-                          currentValue = allProducts;
+                        const allProducts = Object.values(currentValue[key] || {});
+                        currentValue = allProducts;
                       } else {
-                          currentValue = currentValue[key]?.[type] || {}; // Obtiene el objeto específico
+                        currentValue = currentValue[key]?.[type] || {};
                       }
-                  
-                      // Detectar si hay un campo adicional que se quiere obtener (ejemplo: "product", "dosage", etc.)
+
                       const remainingKeys = keys.slice(index + 1);
-                      
                       if (remainingKeys.length > 0) {
-                          const targetField = remainingKeys[0]; // Campo objetivo
-                  
-                          if (Array.isArray(currentValue)) {
-                              // Si currentValue es un array, aplicar map
-                              currentValue = currentValue.map(item => item[targetField] || "No encontrado");
-                          } else if (typeof currentValue === 'object' && currentValue !== null) {
-                              // Si es un objeto, obtener directamente el valor del campo
-                              currentValue = currentValue[targetField] || "No encontrado";
-                          } else {
-                              currentValue = "No encontrado";
-                          }
-                  
-                          return Array.isArray(currentValue) ? currentValue.join(" * ") : currentValue;
+                        return getValueFromJson(currentValue, remainingKeys.join('_'));
                       }
-                  
-                      return JSON.stringify(currentValue, null, 2);
-                  } else if (currentValue && typeof currentValue === 'object' && key in currentValue) {
+
+                      return currentValue;
+                    } else if (currentValue && typeof currentValue === 'object' && key in currentValue) {
                       // Navegar por las claves normalmente
                       currentValue = currentValue[key];
                     } else {
@@ -4605,9 +4630,9 @@ router.post('/save-configuration', async (req, res) => {
                         case "this_year":
                           return serviceDate.isSame(now, 'year');
                         case "last_3_months":
-                          return serviceDate.isAfter(now.clone().subtract(3, 'months'));
+                          return serviceDate.isAfter(now.clone().subtract(2, 'months'));
                         case "last_month":
-                          return serviceDate.isSame(now.clone().subtract(1, 'month'), 'month');
+                          return serviceDate.isSame(now.clone().subtract(0, 'month'), 'month');
                         case "this_week":
                           return serviceDate.isSame(now, 'week');
                         default:
@@ -4691,9 +4716,9 @@ router.post('/save-configuration', async (req, res) => {
                           case "this_year":
                             return inspectionDate.isSame(now, 'year');
                           case "last_3_months":
-                            return inspectionDate.isAfter(now.clone().subtract(3, 'months'));
+                            return inspectionDate.isAfter(now.clone().subtract(2, 'months'));
                           case "last_month":
-                            return inspectionDate.isSame(now.clone().subtract(1, 'month'), 'month');
+                            return inspectionDate.isSame(now.clone().subtract(0, 'month'), 'month');
                           case "this_week":
                             return inspectionDate.isSame(now, 'week');
                           default:
@@ -4791,9 +4816,9 @@ router.post('/save-configuration', async (req, res) => {
                             case "this_year":
                               return inspectionDate.isSame(now, 'year');
                             case "last_3_months":
-                              return inspectionDate.isAfter(now.clone().subtract(3, 'months'));
+                              return inspectionDate.isAfter(now.clone().subtract(2, 'months'));
                             case "last_month":
-                              return inspectionDate.isSame(now.clone().subtract(1, 'month'), 'month');
+                              return inspectionDate.isSame(now.clone().subtract(0, 'month'), 'month');
                             case "this_week":
                               return inspectionDate.isSame(now, 'week');
                             default:
@@ -4976,9 +5001,9 @@ router.post('/save-configuration', async (req, res) => {
                             case "this_year":
                               return inspectionDate.isSame(now, 'year');
                             case "last_3_months":
-                              return inspectionDate.isAfter(now.clone().subtract(3, 'months'));
+                              return inspectionDate.isAfter(now.clone().subtract(2, 'months'));
                             case "last_month":
-                              return inspectionDate.isSame(now.clone().subtract(1, 'month'), 'month');
+                              return inspectionDate.isSame(now.clone().subtract(0, 'month'), 'month');
                             case "this_week":
                               return inspectionDate.isSame(now, 'week');
                             default:
@@ -5002,23 +5027,56 @@ router.post('/save-configuration', async (req, res) => {
                       // Asignar valores según el campo especificado
                       if (filteredInspections.length > 0) {
                         if (campo.startsWith("findings_")) {
-                          const keyPath = campo.replace('findings_', ''); // Extraer jerarquía de claves
-                          variables[key] = getValueFromJson(filteredInspections[0].findings, keyPath, tipoInspeccion) || "No encontrado";
+                          const keyPath = campo.replace('findings_', '');
+                          const resultados = filteredInspections.map((inspection) => {
+                            return getValueFromJson(inspection.findings, keyPath, tipoInspeccion);
+                          });
+                        
+                          // Aplana y limpia los resultados
+                          const valores = resultados.flat().filter(v => v && v !== "No encontrado");
+                        
+                          variables[key] = valores.length > 0 ? valores.join("* ") : "No encontrado";
                         } else {
-                          variables[key] = filteredInspections[0][campo] || "No encontrado";
+                          const valores = filteredInspections
+                            .map((inspection) => inspection[campo])
+                            .filter((v) => v && v !== "No encontrado");
+                        
+                          if (campo === "date") {
+                            const fechasFormateadas = valores.map((rawDate) => {
+                              try {
+                                return new Date(rawDate).toLocaleDateString('es-ES', {
+                                  day: '2-digit',
+                                  month: '2-digit',
+                                  year: 'numeric'
+                                });
+                              } catch {
+                                return "Fecha inválida";
+                              }
+                            });
+                            variables[key] = fechasFormateadas.join("* ");
+                          } else if (campo === "time" || campo === "exit_time") {
+                            const horasFormateadas = valores.map((rawTime) => {
+                              try {
+                                const dateObj = new Date(\`1970-01-01T\${rawTime}\`);
+                                return dateObj.toLocaleTimeString('es-CO', {
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                  hour12: false
+                                });
+                              } catch {
+                                return "Hora inválida";
+                              }
+                            });
+                            variables[key] = horasFormateadas.join("* ");
+                          } else {
+                            variables[key] = valores.join("* ") || "No encontrado";
+                          }
                         }
                       } else {
                         console.warn(\`No se encontraron inspecciones para "\${periodo}" y tipo "\${tipoInspeccion}".\`);
                         variables[key] = "No encontrado";
                       }
-                    } else {
-                        if (filteredInspections.length > 0 && filteredInspections[0].hasOwnProperty(campo)) {
-                          variables[key] = filteredInspections[0][campo];
-                        } else {
-                          console.warn(\`No se encontraron inspecciones para el período "\${periodo}", tipo "\${tipoInspeccion}", o el campo "\${campo}".\`);
-                          variables[key] = "No encontrado";
-                        }
-                      }
+                    }
                   });
 
                   // Procesar tablas específicas para "services"
@@ -5065,9 +5123,9 @@ router.post('/save-configuration', async (req, res) => {
                                 case "this_year":
                                   return inspectionDate.isSame(now, 'year');
                                 case "last_3_months":
-                                  return inspectionDate.isAfter(now.clone().subtract(3, 'months'));
+                                  return inspectionDate.isAfter(now.clone().subtract(2, 'months'));
                                 case "last_month":
-                                  return inspectionDate.isSame(now.clone().subtract(1, 'month'), 'month');
+                                  return inspectionDate.isSame(now.clone().subtract(0, 'month'), 'month');
                                 case "this_week":
                                   return inspectionDate.isSame(now, 'week');
                                 default:
@@ -5228,80 +5286,6 @@ router.post('/save-configuration', async (req, res) => {
                     clientRulesData = []; // Si falla, asignar un array vacío
                   }
                 }
-                  
-                // Procesar variables específicas para "procesos"
-                for (const [key, value] of Object.entries(variables)) {
-                  if (typeof value === 'string' && value.startsWith("Procedimientos-")) {
-                    const [_, categoria, campo] = value.split('-');
-
-                    try {
-                      const query = \`SELECT "\${campo}" FROM procedures WHERE category = \$1 LIMIT 1\`;
-                      console.log(\`Ejecutando consulta: \${query} con categoría: \${categoria}\`);
-                      const result = await pool.query(query, [categoria]);
-                      console.log(\`Resultado obtenido para "\${categoria}":\`, result.rows);
-
-                      if (result.rows.length > 0 && result.rows[0][campo] !== undefined) {
-                        const valorCrudo = result.rows[0][campo];
-                        let valorProcesado = valorCrudo;
-
-                        // Verifica si es un string con formato JSON de array (como '["Texto"]')
-                        if (typeof valorCrudo === 'string' && valorCrudo.trim().startsWith('[')) {
-                          try {
-                            const parsed = JSON.parse(valorCrudo);
-                            if (Array.isArray(parsed)) {
-                              valorProcesado = parsed.join(' * ');
-                            }
-                          } catch (e) {
-                            console.warn(\`No se pudo parsear el valor "\${valorCrudo}" como JSON\`);
-                          }
-                        }
-
-                        variables[key] = valorProcesado;
-                      } else {
-                        console.warn(\`No se encontró el campo "\${campo}" en la categoría "\${categoria}"\`);
-                        variables[key] = "No encontrado";
-                      }
-
-                      console.log(\`Variable "\${key}" actualizada a: \${variables[key]}\`);
-                    } catch (error) {
-                      console.error(\`❌ Error al consultar procedimientos para categoría "\${categoria}":\`, error.message);
-                      variables[key] = "Error al consultar procedimiento";
-                    }
-                  }
-                }
-
-              // Procesar variables específicas para "Normativa Cliente"
-              for (const [key, value] of Object.entries(variables)) {
-                if (typeof value === 'string' && value.startsWith("Normativa Cliente-")) {
-                const [_, campo] = value.split('-');
-
-                try {
-                  // Paso 1: Buscar todos los valores del campo solicitado en la tabla rules usando clientData.category
-                  const query = \`SELECT "\${campo}" FROM rules WHERE category = $1\`;
-                  console.log(\`Ejecutando consulta: \${query} con categoría: \${clientData.category}\`);
-                  const result = await pool.query(query, [clientData.category]);
-                  console.log(\`Resultado obtenido para categoría "\${clientData.category}":\`, result.rows);
-
-                  // Extraer los valores del campo y unirlos con "* "
-                  const values = result.rows
-                    .map(row => row[campo])
-                    .filter(val => val !== null && val !== undefined);
-                  
-                  if (values.length > 0) {
-                    variables[key] = values.join(" * ");
-                  } else {
-                    console.warn(\`No se encontraron valores para el campo "\${campo}" en la categoría "\${clientData.category}"\`);
-                    variables[key] = "No encontrado";
-                  }
-
-                  console.log(\`Variable "\${key}" actualizada a: \${variables[key]}\`);
-                } catch (error) {
-                  console.error(\`❌ Error al consultar normativa cliente para categoría "\${clientData.category}":\`, error.message);
-                  variables[key] = "Error al consultar normativa";
-                }
-              }
-
-              }
 
                 // Procesar variables específicas para "inspections"
                 Object.entries(variables).forEach(([key, value]) => {
@@ -5373,7 +5357,6 @@ router.post('/save-configuration', async (req, res) => {
                     const filasGeneradas = [[]]; // Comenzamos con una fila vacía para generar nuevas filas
 
                     row.forEach((field, colIndex) => {
-
                       if (typeof field === 'string' && field.startsWith("Inspección-")) {
                         const [_, periodo, tipoInspeccion, campo] = field.split('-');
 
@@ -5381,14 +5364,7 @@ router.post('/save-configuration', async (req, res) => {
 
                         if (campo.startsWith("findings_")) {
                           const keyPath = campo.replace('findings_', ''); // Extraer jerarquía de claves
-                          let findings = getValueFromJson(inspectionData.findings || {}, keyPath, tipoInspeccion);
-
-                          // Si el valor es una cadena con "*", dividirlo y tratarlo como un array
-                          if (typeof findings === 'string' && findings.includes(" * ")) {
-                            findings = findings.split(" * ");
-                          } else if (!Array.isArray(findings)) {
-                            findings = [findings]; // Asegurar que sea un array si no lo es
-                          }
+                          const findings = getValueFromJson(inspectionData.findings || {}, keyPath, tipoInspeccion);
 
                           if (Array.isArray(findings)) {
                             // Expandir filasGeneradas para cada hallazgo
@@ -5463,80 +5439,16 @@ router.post('/save-configuration', async (req, res) => {
                           filasGeneradas[index][colIndex] = value;
                         });
                       } else if (typeof field === 'string' && field.startsWith("Normativa Cliente-")) {
-                        const [_, campo] = field.split('-'); // Desestructuración para obtener solo el campo
+                        const ruleField = field.split('-')[1];
+                        const ruleValues = clientRulesData
+                          .map((rule) => (rule && rule.hasOwnProperty(ruleField) ? rule[ruleField] : "No encontrado"));
 
-                        console.log(\`Procesando campo de normativa cliente: "\${campo}", usando categoría del cliente: "\${clientData.category}"\`);
-
-                        const query = \`SELECT "\${campo}" FROM rules WHERE category = $1\`;
-                        console.log(\`Ejecutando consulta: \${query} con categoría: \${clientData.category}\`);
-
-                        pool.query(query, [clientData.category])
-                          .then(result => {
-                            const values = result.rows
-                              .map(row => row[campo])
-                              .filter(val => val !== null && val !== undefined);
-
-                            if (values.length > 0) {
-                              const valorUnido = values.join(' * ');
-                              filasGeneradas.forEach((fila) => {
-                                fila[colIndex] = valorUnido;
-                              });
-                            } else {
-                              console.warn(\`No se encontraron valores para campo "\${campo}" en categoría "\${clientData.category}"\`);
-                              filasGeneradas[0][colIndex] = "No encontrado";
-                            }
-                          })
-                          .catch(error => {
-                            console.error(\`❌ Error al consultar normativa cliente para categoría "\${clientData.category}":\`, error.message);
-                            filasGeneradas[0][colIndex] = "Error al consultar normativa";
-                          });
-                      }
-       
-                      else if (typeof field === 'string' && field.startsWith("Procedimientos-")) {
-                        const [_, categoria, campo] = field.split('-');
-                        console.log(\`Procesando campo de procedimiento para categoría: "\${categoria}", campo: "\${campo}"\`);
-                      
-                        const query = \`SELECT "\${campo}" FROM procedures WHERE category = \$1\`;
-                      
-                        pool.query(query, [categoria])
-                          .then(result => {
-                            console.log(\`Resultado obtenido para "\${categoria}":\`, result.rows);
-                      
-                            const values = result.rows
-                              .map(row => row[campo])
-                              .filter(val => val !== null && val !== undefined)
-                              .flatMap(val => {
-                                if (typeof val === 'string' && val.trim().startsWith('[')) {
-                                  try {
-                                    const parsed = JSON.parse(val);
-                                    if (Array.isArray(parsed)) {
-                                      return parsed.map(item => item.toString().trim());
-                                    }
-                                  } catch (e) {
-                                    console.warn(\`No se pudo parsear el valor "\${val}" como JSON\`);
-                                  }
-                                }
-                                return [val.toString().trim()];
-                              });
-                      
-                            if (values.length > 0) {
-                              const valorUnido = values.join(' * ');
-                              filasGeneradas.forEach((fila) => {
-                                fila[colIndex] = valorUnido;
-                              });
-                            } else {
-                              console.warn(\`No se encontraron valores para campo "\${campo}" en la categoría "\${categoria}"\`);
-                              filasGeneradas[0][colIndex] = "No encontrado";
-                            }
-                          })
-                          .catch(error => {
-                            console.error(\`❌ Error al consultar procedimientos para categoría "\${categoria}":\`, error.message);
-                            filasGeneradas.forEach((fila) => {
-                              fila[colIndex] = "Error al consultar procedimiento";
-                            });
-                          });
-                      }          
-                      else {
+                        // Añadir los valores de normativa como filas separadas
+                        ruleValues.forEach((value, index) => {
+                          if (!filasGeneradas[index]) filasGeneradas[index] = Array(row.length).fill("");
+                          filasGeneradas[index][colIndex] = value;
+                        });
+                      } else {
                         // Campo estático, lo mantenemos en todas las filas generadas
                         filasGeneradas.forEach((fila) => {
                           fila[colIndex] = field;
@@ -5579,131 +5491,120 @@ router.post('/save-configuration', async (req, res) => {
               return promptProcesado;
             };
 
-            // Función para procesar las tablas con prompts "IA-"
-            const procesarTablasConIA = async () => {
-              for (const tabla of tablas) {
-                console.log(\`Procesando tabla "\${tabla.nombre}"...\`);
+              // Función para procesar las tablas con prompts "IA-"
+              const procesarTablasConIA = async () => {
+                console.log("=== 🔁 Iniciando procesamiento de tablas con IA ===");
 
-                const columnasIA = []; // Guardar columnas que contienen prompts con "IA-"
-                const promptsBase = []; // Guardar los prompts base para cada columna
-
-                // Buscar columnas que contienen prompts "IA-"
-                for (let colIndex = 0; colIndex < (tabla.cuerpo[0]?.length || 0); colIndex++) {
-                  for (const row of tabla.cuerpo) {
-                    if (typeof row[colIndex] === 'string' && row[colIndex].startsWith("IA-")) {
-                      columnasIA.push(colIndex);
-                      promptsBase[colIndex] = row[colIndex];
-                      console.log(\`Prompt base encontrado en columna \${colIndex}: "\${promptsBase[colIndex]}"\`);
-                      break;
-                    }
-                  }
-                }
-
-                // Si no hay columnas con prompts "IA-", continuar con la siguiente tabla
-                if (columnasIA.length === 0) {
-                  console.warn(\`No se encontró ningún campo "IA-" en la tabla "\${tabla.nombre}".\`);
-                  continue;
-                }
-
-                // Extraer y dividir las variables de todos los prompts en las columnas IA
-                const valoresVariablesPorColumna = {};
-
-                for (const colIndex of columnasIA) {
-                  const regex = /{{(.*?)}}/g;
-                  const variablesEncontradas = [];
-                  let match;
-
-                  // Extraer variables del prompt base
-                  while ((match = regex.exec(promptsBase[colIndex])) !== null) {
-                    variablesEncontradas.push(match[1]);
-                  }
-
-                  console.log(\`Variables encontradas en el prompt de la columna \${colIndex}: \${variablesEncontradas}\`);
-
-                  // Dividir las variables por "*"
-                  const valoresVariables = {};
-                  variablesEncontradas.forEach((variable) => {
-                    const valorCompleto = variables[variable] || "";
-                    const partes = valorCompleto.split("*");
-                    valoresVariables[variable] = partes;
-                    console.log(\`Variable "\${variable}" dividida en partes:\`, partes);
+                for (const tabla of tablas) {
+                  console.log(\`\n📋 Procesando tabla: "\${tabla.nombre}"\`);
+                  
+                  // 🔍 Log inicial del estado de la tabla
+                  console.log("🧾 Estado inicial de la tabla.cuerpo:");
+                  tabla.cuerpo.forEach((fila, index) => {
+                    console.log(\`Fila \${index}:\`, fila);
                   });
 
-                  valoresVariablesPorColumna[colIndex] = valoresVariables;
-                }
+                  const columnasIA = [];
 
-                // Determinar el número máximo de filas requerido
-                const maxFilas = Math.max(
-                  tabla.cuerpo.length,
-                  ...Object.values(valoresVariablesPorColumna).flatMap((valoresVariables) =>
-                    Object.values(valoresVariables).map((partes) => partes.length)
-                  )
-                );
+                  // 🚨 Buscar prompts IA duplicados por columna
+                  const promptsVistosPorColumna = {};
 
-                // Agregar filas necesarias si faltan
-                while (tabla.cuerpo.length < maxFilas) {
-                  const nuevaFila = Array(tabla.cuerpo[0]?.length || 0).fill("");
-                  tabla.cuerpo.push(nuevaFila);
-                }
+                  for (let colIndex = 0; colIndex < (tabla.cuerpo[0]?.length || 0); colIndex++) {
+                    for (let rowIndex = 0; rowIndex < tabla.cuerpo.length; rowIndex++) {
+                      const celda = tabla.cuerpo[rowIndex][colIndex];
+                      if (typeof celda === 'string' && celda.startsWith("IA-")) {
+                        const key = \`\${colIndex}:\${celda}\`;
 
-                console.log(\`Tabla "\${tabla.nombre}" después de agregar filas necesarias:\`, tabla.cuerpo);
-
-                // Replicar los prompts base en todas las filas de las columnas correspondientes
-                for (const colIndex of columnasIA) {
-                  for (let rowIndex = 0; rowIndex < maxFilas; rowIndex++) {
-                    tabla.cuerpo[rowIndex][colIndex] = promptsBase[colIndex];
+                        if (promptsVistosPorColumna[key]) {
+                          console.warn(\`⚠️ Prompt duplicado en columna \${colIndex}, fila \${rowIndex}. Se limpiará.\`);
+                          tabla.cuerpo[rowIndex][colIndex] = ""; // limpiar prompt duplicado
+                        } else {
+                          promptsVistosPorColumna[key] = true;
+                          columnasIA.push({ colIndex, rowIndex, rawPromptCompleto: celda });
+                          console.log(\`🔍 Detectado campo IA en fila \${rowIndex}, columna \${colIndex}: "\${celda}"\`);
+                        }
+                      }
+                    }
                   }
-                }
 
-                console.log(\`Tabla "\${tabla.nombre}" después de replicar los prompts base:\`, tabla.cuerpo);
+                  if (columnasIA.length === 0) {
+                    console.warn(\`⚠️ No se encontró ningún campo "IA-" en la tabla "\${tabla.nombre}".\`);
+                    continue;
+                  }
 
-                // Procesar cada fila individualmente para todas las columnas IA
-                for (let rowIndex = 0; rowIndex < tabla.cuerpo.length; rowIndex++) {
-                  const row = tabla.cuerpo[rowIndex];
+                  for (const { colIndex, rowIndex: filaInicial, rawPromptCompleto: rawPromptCompletoOriginal } of columnasIA) {
+                    const rawPromptCompleto = rawPromptCompletoOriginal;
+                    const partesPrompt = rawPromptCompleto.split("-");
+                    const modeloIA = partesPrompt[1];
+                    const condicion = partesPrompt.length > 3 ? partesPrompt.pop() : "S";
+                    const promptSinModelo = partesPrompt.slice(2).join("-");
 
-                  for (const colIndex of columnasIA) {
-                    const value = row[colIndex];
-                    console.log(\`Procesando valor en fila \${rowIndex}, columna \${colIndex}. Tipo: \${typeof value}, Valor:\`, value);
+                    console.log(\`\n🤖 Modelo IA: \${modeloIA}, Condición: \${condicion}\`);
+                    console.log(\`📄 Prompt base: "\${promptSinModelo}"\`);
 
-                    if (typeof value === 'string' && value.startsWith("IA-")) {
-                      console.log(\`Campo identificado como IA. Valor: \${value}\`);
-                      const [_, modeloIA, rawPrompt] = value.split('-');
+                    const regex = /{{(.*?)}}/g;
+                    const variablesEncontradas = [];
+                    let match;
 
-                      // Construir variables específicas para esta fila
+                    while ((match = regex.exec(promptSinModelo)) !== null) {
+                      variablesEncontradas.push(match[1]);
+                    }
+
+                    const valoresVariables = {};
+                    variablesEncontradas.forEach((variable) => {
+                      const valorCompleto = variables[variable] || "";
+                      const partes = condicion === "S"
+                        ? valorCompleto.split("*").map(p => p.trim()).filter(p => p)
+                        : [valorCompleto];
+                      valoresVariables[variable] = partes;
+                      console.log(\`📌 Variable "\${variable}" dividida en partes (\${partes.length}):\`, partes);
+                    });
+
+                    const cantidadFilas = condicion === "S"
+                      ? Math.max(...Object.values(valoresVariables).map(arr => arr.length))
+                      : 1;
+
+                    console.log(\`📊 Se generarán \${cantidadFilas} fila(s) para columna \${colIndex}\`);
+
+                    while (tabla.cuerpo.length < filaInicial + cantidadFilas) {
+                      tabla.cuerpo.push(Array(tabla.cuerpo[0]?.length || 0).fill(""));
+                    }
+
+                    for (let i = 0; i < cantidadFilas; i++) {
+                      const filaActual = filaInicial + i;
                       const filaVariables = {};
-                      const valoresVariables = valoresVariablesPorColumna[colIndex];
+
                       for (const variable in valoresVariables) {
-                        filaVariables[variable] = valoresVariables[variable]?.[rowIndex] || "Variable no encontrada";
+                        filaVariables[variable] = valoresVariables[variable][i] || "Variable no encontrada";
                       }
 
-                      // Procesar el prompt con las variables específicas de esta fila
-                      const prompt = procesarPromptConInputs(rawPrompt, filaVariables);
-
+                      const promptProcesado = procesarPromptConInputs(promptSinModelo, filaVariables);
                       const modeloEncontrado = aiModels.find((ai) => ai.name === modeloIA);
+
                       if (!modeloEncontrado) {
-                        console.warn(\`Modelo IA no encontrado para el campo en la tabla "\${tabla.nombre}".\`);
-                        row[colIndex] = "Modelo no encontrado";
+                        console.warn(\`⚠️ Modelo IA "\${modeloIA}" no encontrado.\`);
+                        tabla.cuerpo[filaActual][colIndex] = "Modelo no encontrado";
                         continue;
                       }
 
-                      const { model, personality } = modeloEncontrado;
                       try {
-                        console.log(\`Consultando GPT con modelo: "\${model}", personalidad: "\${personality}"\`);
-                        // Usar await para resolver la Promesa
-                        const resultadoIA = await consultarGPT(model, personality, prompt);
-                        row[colIndex] = resultadoIA;
-                        console.log(\`Valor generado por la IA para fila \${rowIndex}, columna \${colIndex}: \${resultadoIA}\`);
+                        console.log(\`➡️ Consultando GPT para fila \${filaActual}, con prompt:\`, promptProcesado);
+                        const { model, personality } = modeloEncontrado;
+                        const resultadoIA = await consultarGPT(model, personality, promptProcesado);
+                        tabla.cuerpo[filaActual][colIndex] = resultadoIA;
+                        console.log(\`✅ Resultado GPT fila \${filaActual}, columna \${colIndex}:\`, resultadoIA);
                       } catch (error) {
-                        console.error(\`Error al consultar IA para fila \${rowIndex}, columna \${colIndex}:\`, error);
-                        row[colIndex] = "Error al generar valor con IA";
+                        console.error(\`❌ Error al consultar GPT:\`, error);
+                        tabla.cuerpo[filaActual][colIndex] = "Error al generar valor con IA";
                       }
                     }
                   }
+
+                  console.log(\`✅ Tabla "\${tabla.nombre}" actualizada:\`, tabla.cuerpo);
                 }
 
-                console.log(\`Tabla "\${tabla.nombre}" actualizada:\`, tabla.cuerpo);
-              }
-            };
+                console.log("=== ✅ Finalizado procesamiento de tablas con IA ===");
+              };
 
             // Llamar a la función para procesar las tablas IA
             await procesarTablasConIA();
@@ -5859,7 +5760,7 @@ router.post('/save-configuration', async (req, res) => {
                         let replacedText = text.replace(\`{{\${key}}}\`, value);
               
                         // Si el valor tiene saltos de línea, hay que dividirlo correctamente
-                        if (value.includes("\\n")) {
+                        if (value.includes("\\r\\n")) {
                           const parts = replacedText.includes('\\r\\n') ? replacedText.split(/\\r\\n/) : replacedText.split(/\\n/);
                           let newElements = [];
               
@@ -6160,162 +6061,166 @@ router.post('/save-configuration', async (req, res) => {
                 }));
               };                                                       
               
-              // Función para crear una fila de tabla con bordes opcionales
-              const createRow = (values, cellStyles = [], withBorders = true) => {
-                console.log("=== Creando nueva fila ===");
-                return {
-                  type: 'element',
-                  name: 'w:tr',
-                  elements: values.map((value, index) => {
-                    const {
-                      widthAttributes,
-                      gridSpan,
-                      textColor,
-                      bgColor,
-                      fontStyle,
-                      fontSize,
-                      textAlign,
-                      verticalAlign,
-                    } = cellStyles[index] || { widthAttributes: { 'w:w': '2000', 'w:type': 'dxa' }, gridSpan: 1 };
-              
-                    console.log(
-                      \`Celda \${index + 1}: Aplicando atributos\`,
-                      widthAttributes,
-                      \`GridSpan: \${gridSpan}, TextColor: \${textColor}, BgColor: \${bgColor}, FontStyle: \${fontStyle}, FontSize: \${fontSize}, TextAlign: \${textAlign}, VerticalAlign: \${verticalAlign}\`
-                    );
-              
-                    const gridSpanElement =
-                      gridSpan > 1
-                        ? {
+            // Función para crear una fila de tabla con bordes opcionales
+            const createRow = (values, cellStyles = [], withBorders = true) => {
+              console.log("=== Creando nueva fila ===");
+              return {
+                type: 'element',
+                name: 'w:tr',
+                elements: values.map((value, index) => {
+                  const {
+                    widthAttributes,
+                    gridSpan,
+                    textColor,
+                    bgColor,
+                    fontStyle,
+                    fontSize,
+                    textAlign,
+                    verticalAlign,
+                  } = cellStyles[index] || { widthAttributes: { 'w:w': '2000', 'w:type': 'dxa' }, gridSpan: 1 };
+            
+                  console.log(
+                    \`Celda \${index + 1}: Aplicando atributos\`,
+                    widthAttributes,
+                    \`GridSpan: \${gridSpan}, TextColor: \${textColor}, BgColor: \${bgColor}, FontStyle: \${fontStyle}, FontSize: \${fontSize}, TextAlign: \${textAlign}, VerticalAlign: \${verticalAlign}\`
+                  );
+            
+                  const gridSpanElement =
+                    gridSpan > 1
+                      ? {
+                          type: 'element',
+                          name: 'w:gridSpan',
+                          attributes: { 'w:val': gridSpan.toString() },
+                        }
+                      : null;
+            
+                  const bgColorElement = bgColor
+                    ? {
+                        type: 'element',
+                        name: 'w:shd',
+                        attributes: { 'w:fill': bgColor },
+                      }
+                    : null;
+            
+                  const textAlignElement = textAlign
+                    ? {
+                        type: 'element',
+                        name: 'w:jc',
+                        attributes: { 'w:val': textAlign },
+                      }
+                    : null;
+            
+                  const verticalAlignElement = verticalAlign
+                    ? {
+                        type: 'element',
+                        name: 'w:vAlign',
+                        attributes: { 'w:val': verticalAlign },
+                      }
+                    : null;
+            
+                  return {
+                    type: 'element',
+                    name: 'w:tc',
+                    elements: [
+                      {
+                        type: 'element',
+                        name: 'w:tcPr',
+                        elements: [
+                          {
                             type: 'element',
-                            name: 'w:gridSpan',
-                            attributes: { 'w:val': gridSpan.toString() },
-                          }
-                        : null;
-              
-                    const bgColorElement = bgColor
-                      ? {
-                          type: 'element',
-                          name: 'w:shd',
-                          attributes: { 'w:fill': bgColor },
-                        }
-                      : null;
-              
-                    const textAlignElement = textAlign
-                      ? {
-                          type: 'element',
-                          name: 'w:jc',
-                          attributes: { 'w:val': textAlign },
-                        }
-                      : null;
-              
-                    const verticalAlignElement = verticalAlign
-                      ? {
-                          type: 'element',
-                          name: 'w:vAlign',
-                          attributes: { 'w:val': verticalAlign },
-                        }
-                      : null;
-              
-                    return {
-                      type: 'element',
-                      name: 'w:tc',
-                      elements: [
+                            name: 'w:tcW',
+                            attributes: widthAttributes, // Aplicar ancho original o combinado
+                          },
+                          ...(gridSpanElement ? [gridSpanElement] : []), // Añadir gridSpan si aplica
+                          ...(bgColorElement ? [bgColorElement] : []), // Añadir bgColor si aplica
+                          ...(verticalAlignElement ? [verticalAlignElement] : []), // Añadir alineación vertical si aplica
+                          ...(withBorders
+                            ? [
+                                {
+                                  type: 'element',
+                                  name: 'w:tcBorders',
+                                  elements: [
+                                    { name: 'w:top', type: 'element', attributes: { 'w:val': 'single', 'w:sz': '4', 'w:space': '0', 'w:color': 'auto' } },
+                                    { name: 'w:bottom', type: 'element', attributes: { 'w:val': 'single', 'w:sz': '4', 'w:space': '0', 'w:color': 'auto' } },
+                                    { name: 'w:left', type: 'element', attributes: { 'w:val': 'single', 'w:sz': '4', 'w:space': '0', 'w:color': 'auto' } },
+                                    { name: 'w:right', type: 'element', attributes: { 'w:val': 'single', 'w:sz': '4', 'w:space': '0', 'w:color': 'auto' } },
+                                  ],
+                                },
+                              ]
+                            : []),
+                        ],
+                      },
+                      {
+                        type: 'element',
+                        name: 'w:p',
+                        elements: [
                         {
                           type: 'element',
-                          name: 'w:tcPr',
+                          name: 'w:pPr',
                           elements: [
-                            {
-                              type: 'element',
-                              name: 'w:tcW',
-                              attributes: widthAttributes, // Aplicar ancho original o combinado
-                            },
-                            ...(gridSpanElement ? [gridSpanElement] : []), // Añadir gridSpan si aplica
-                            ...(bgColorElement ? [bgColorElement] : []), // Añadir bgColor si aplica
-                            ...(verticalAlignElement ? [verticalAlignElement] : []), // Añadir alineación vertical si aplica
-                            ...(withBorders
-                              ? [
-                                  {
-                                    type: 'element',
-                                    name: 'w:tcBorders',
-                                    elements: [
-                                      { name: 'w:top', type: 'element', attributes: { 'w:val': 'single', 'w:sz': '4', 'w:space': '0', 'w:color': 'auto' } },
-                                      { name: 'w:bottom', type: 'element', attributes: { 'w:val': 'single', 'w:sz': '4', 'w:space': '0', 'w:color': 'auto' } },
-                                      { name: 'w:left', type: 'element', attributes: { 'w:val': 'single', 'w:sz': '4', 'w:space': '0', 'w:color': 'auto' } },
-                                      { name: 'w:right', type: 'element', attributes: { 'w:val': 'single', 'w:sz': '4', 'w:space': '0', 'w:color': 'auto' } },
-                                    ],
-                                  },
-                                ]
-                              : []),
+                            ...(textAlignElement ? [textAlignElement] : []),
+                            // Espaciado eliminado
                           ],
                         },
-                        {
-                          type: 'element',
-                          name: 'w:p',
-                          elements: [
-                            {
-                              type: 'element',
-                              name: 'w:pPr', // Propiedades del párrafo
-                              elements: [
-                                ...(textAlignElement ? [textAlignElement] : []), // Añadir alineación horizontal si aplica
+
+                          {
+                            type: 'element',
+                            name: 'w:r',
+                            elements: [
                                 {
-                                  type: 'element',
-                                  name: 'w:spacing',
-                                  attributes: {
-                                    'w:before': '150', // Margen superior
-                                  },
-                                },
-                              ],
-                            },
-                            {
-                              type: 'element',
-                              name: 'w:r',
-                              elements: [
-                                {
-                                  type: 'element',
-                                  name: 'w:rPr',
-                                  elements: [
-                                    ...(textColor
-                                      ? [
-                                          {
+                                    type: 'element',
+                                    name: 'w:rPr',
+                                    elements: [
+                                      {
+                                        type: 'element',
+                                        name: 'w:rFonts',
+                                        attributes: {
+                                          'w:ascii': 'Arial',
+                                          'w:hAnsi': 'Arial',
+                                          'w:eastAsia': 'Arial',
+                                          'w:cs': 'Arial',
+                                        },
+                                      },
+                                      {
+                                        type: 'element',
+                                        name: 'w:sz',
+                                        attributes: { 'w:val': '20' }, // Tamaño 10pt
+                                      },
+                                      ...(textColor
+                                        ? [{
                                             type: 'element',
                                             name: 'w:color',
                                             attributes: { 'w:val': textColor },
-                                          },
-                                        ]
-                                      : []),
-                                    ...(fontStyle
-                                      ? fontStyle.split(' ').map((style) => ({
-                                          type: 'element',
-                                          name: \`w:\${style}\`,
-                                        }))
-                                      : []),
-                                    ...(fontSize
-                                      ? [
-                                          {
+                                          }]
+                                        : []),
+                                      ...(fontStyle
+                                        ? fontStyle.split(' ').map((style) => ({
+                                            type: 'element',
+                                            name: \`w:\${style}\`,
+                                          }))
+                                        : []),
+                                      ...(fontSize
+                                        ? [{
                                             type: 'element',
                                             name: 'w:sz',
                                             attributes: { 'w:val': fontSize.toString() },
-                                          },
-                                        ]
-                                      : []),
-                                  ],
-                                },
-                                ...processTableText(value),
-                              ],
-                            },
-                          ],
-                        },
-                      ],
-                    };
-                  }),
-                };
+                                          }]
+                                        : []),
+                                    ],
+                                  },                          
+                              ...processTableText(value),
+                            ],
+                          },
+                        ],
+                      },
+                    ],
+                  };
+                }),
               };
+            };
 
               const processTableText = (text) => {
                 let newElements = [];
-                // Limpiar la entrada eliminando llaves, comillas dobles y espacios innecesarios
-                text = text.replace(/\{/g, ' ').replace(/[}"]/g, '').trim();
                 const parts = text.includes('\\r\\n') ? text.split(/\\r\\n/) : text.split(/\\n/);
               
                 parts.forEach((part, index) => {
@@ -6562,134 +6467,134 @@ router.post('/save-configuration', async (req, res) => {
                 // Procesar nodos recursivamente para buscar y reemplazar URLs con imágenes
                 const processNodesForImages = async (nodes, parentNode = null) => {
                   for (const node of nodes) {
-                      if (node && typeof node === "object") {
-                          node.parent = parentNode; // Asignar referencia al nodo padre
-                      }
-                      if (parentNode) {
-                      }
-              
-                      if (node.type === "element" && node.name === "w:t" && node.elements) {
-                          const text = node.elements[0]?.text || "";
-              
-                          // Verificar si el nodo está dentro de una celda de tabla
-                          const isInTableCell = findAncestorNode(node, "w:tc");
-                          console.log(\`¿Está dentro de una celda de tabla?: \${isInTableCell}\`);
-              
-                          // Si el texto es una URL de imagen, realizar el reemplazo
-                          if (isImageUrl(text)) {
-                              console.log(\`Se detectó una URL de imagen: \${text}\`);
-                              const imageKey = decodeURIComponent(text.split('.amazonaws.com/')[1]);
-                              console.log("Clave decodificada de la imagen en S3:", imageKey);
-              
-                              // Obtener URL firmada de la imagen
-                              const imageUrl = await getSignedUrl(bucketName, imageKey);
-                              console.log(\`URL firmada para la imagen: \${imageUrl}\`);
-              
-                              // Descargar imagen y obtener sus dimensiones
-                              const response = await fetch(imageUrl);
-                              if (!response.ok) throw new Error(\`Error al descargar la imagen: \${imageUrl}\`);
-                              const imageBuffer = await response.arrayBuffer();
-                              const { width, height } = await sharp(Buffer.from(imageBuffer)).metadata();
-              
-                              // Agregar la imagen al documento
-                              const imageName = \`\${Date.now()}.png\`;
-                              await addImageToDocx(zip, imageUrl, imageName);
-                              console.log(\`Imagen agregada a "word/media/\${imageName}"\`);
-              
-                              // Obtener ancho de la celda si está en tabla, de lo contrario usar default
-                              const aspectRatio = height / width;
-                              const newHeightEMU = Math.round(cellWidthEMU * aspectRatio);
-              
-                              console.log(\`Ajuste de imagen - Ancho: \${cellWidthEMU} EMU, Altura: \${newHeightEMU} EMU\`);
-              
-                              // Generar el ID de la relación para la imagen
-                              const imageId = addImageRelationship(zip, imageName);
-                              console.log("ID de relación generado:", imageId);
-              
-                              // Reemplazar el nodo con la imagen ajustada
-                              node.name = "w:drawing";
-                              node.elements = [
-                                  {
+                    if (node && typeof node === "object") {
+                      node.parent = parentNode;
+                    }
+
+                    if (node.type === "element" && node.name === "w:t" && node.elements) {
+                      const fullText = node.elements
+                        .filter(el => el.type === "text")
+                        .map(el => el.text)
+                        .join("") || "";
+
+                      console.log("Texto encontrado:", fullText);
+
+                      const isInTableCell = findAncestorNode(node, "w:tc");
+                      console.log("¿Está dentro de una celda de tabla?", isInTableCell);
+
+                      if (isImageUrl(fullText)) {
+                        console.log(">> Se detectó una URL de imagen:", fullText);
+                      
+                        try {
+                          // Extraer la clave del archivo en S3 desde la URL
+                          const rawPath = decodeURIComponent(fullText.split(".amazonaws.com/")[1]);
+                          const imageKey = rawPath.split("?")[0]; // eliminar query string
+                          const imageName = imageKey.split("/").pop();
+                      
+                          console.log("Clave decodificada de la imagen:", imageKey);
+                          console.log("Nombre de la imagen:", imageName);
+                      
+                          // Obtener la URL firmada desde la clave
+                          const imageUrl = await getSignedUrl(bucketName, imageKey);
+                          console.log("URL firmada generada:", imageUrl);
+                      
+                          // Descargar la imagen usando la URL firmada
+                          const response = await fetch(imageUrl);
+                          if (!response.ok) throw new Error(\`Error al descargar la imagen: \${imageUrl}\`);
+                          const imageBuffer = await response.arrayBuffer();
+                      
+                          const { width, height } = await sharp(Buffer.from(imageBuffer)).metadata();
+                          console.log("Dimensiones obtenidas:", { width, height });
+                      
+                          await addImageToDocx(zip, imageUrl, imageName);
+                          console.log(\`Imagen agregada a "word/media/\${imageName}"\`);
+                      
+                          const aspectRatio = height / width;
+                          const newHeightEMU = Math.round(cellWidthEMU * aspectRatio);
+                      
+                          const imageId = addImageRelationship(zip, imageName);
+                          console.log("ID de relación generado:", imageId);
+                      
+                          node.name = "w:drawing";
+                          node.elements = [
+                            {
+                              type: "element",
+                              name: "wp:inline",
+                              elements: [
+                                { type: "element", name: "wp:extent", attributes: { cx: cellWidthEMU, cy: newHeightEMU } },
+                                { type: "element", name: "wp:docPr", attributes: { id: imageId.replace("rId", ""), name: \`Picture \${imageName}\` } },
+                                {
+                                  type: "element",
+                                  name: "a:graphic",
+                                  elements: [
+                                    {
                                       type: "element",
-                                      name: "wp:inline",
+                                      name: "a:graphicData",
+                                      attributes: { uri: "http://schemas.openxmlformats.org/drawingml/2006/picture" },
                                       elements: [
-                                          {
+                                        {
+                                          type: "element",
+                                          name: "pic:pic",
+                                          elements: [
+                                            {
                                               type: "element",
-                                              name: "wp:extent",
-                                              attributes: { cx: cellWidthEMU, cy: newHeightEMU },
-                                          },
-                                          {
-                                              type: "element",
-                                              name: "wp:docPr",
-                                              attributes: { id: imageId.replace("rId", ""), name: \`Picture \${imageName}\` },
-                                          },
-                                          {
-                                              type: "element",
-                                              name: "a:graphic",
+                                              name: "pic:nvPicPr",
                                               elements: [
-                                                  {
-                                                      type: "element",
-                                                      name: "a:graphicData",
-                                                      attributes: { uri: "http://schemas.openxmlformats.org/drawingml/2006/picture" },
-                                                      elements: [
-                                                          {
-                                                              type: "element",
-                                                              name: "pic:pic",
-                                                              elements: [
-                                                                  {
-                                                                      type: "element",
-                                                                      name: "pic:nvPicPr",
-                                                                      elements: [
-                                                                          { type: "element", name: "pic:cNvPr", attributes: { id: "0", name: \`Picture \${imageName}\` } },
-                                                                          { type: "element", name: "pic:cNvPicPr" },
-                                                                      ],
-                                                                  },
-                                                                  {
-                                                                      type: "element",
-                                                                      name: "pic:blipFill",
-                                                                      elements: [
-                                                                          { type: "element", name: "a:blip", attributes: { "r:embed": imageId } },
-                                                                          { type: "element", name: "a:stretch", elements: [{ type: "element", name: "a:fillRect" }] },
-                                                                      ],
-                                                                  },
-                                                                  {
-                                                                      type: "element",
-                                                                      name: "pic:spPr",
-                                                                      elements: [
-                                                                          {
-                                                                              type: "element",
-                                                                              name: "a:xfrm",
-                                                                              elements: [
-                                                                                  { type: "element", name: "a:off", attributes: { x: "0", y: "0" } },
-                                                                                  { type: "element", name: "a:ext", attributes: { cx: cellWidthEMU, cy: newHeightEMU } },
-                                                                              ],
-                                                                          },
-                                                                          { type: "element", name: "a:prstGeom", attributes: { prst: "rect" }, elements: [{ type: "element", name: "a:avLst" }] },
-                                                                      ],
-                                                                  },
-                                                              ],
-                                                          },
-                                                      ],
-                                                  },
+                                                { type: "element", name: "pic:cNvPr", attributes: { id: "0", name: \`Picture \${imageName}\` } },
+                                                { type: "element", name: "pic:cNvPicPr" },
                                               ],
-                                          },
+                                            },
+                                            {
+                                              type: "element",
+                                              name: "pic:blipFill",
+                                              elements: [
+                                                { type: "element", name: "a:blip", attributes: { "r:embed": imageId } },
+                                                { type: "element", name: "a:stretch", elements: [{ type: "element", name: "a:fillRect" }] },
+                                              ],
+                                            },
+                                            {
+                                              type: "element",
+                                              name: "pic:spPr",
+                                              elements: [
+                                                {
+                                                  type: "element",
+                                                  name: "a:xfrm",
+                                                  elements: [
+                                                    { type: "element", name: "a:off", attributes: { x: "0", y: "0" } },
+                                                    { type: "element", name: "a:ext", attributes: { cx: cellWidthEMU, cy: newHeightEMU } },
+                                                  ],
+                                                },
+                                                { type: "element", name: "a:prstGeom", attributes: { prst: "rect" }, elements: [{ type: "element", name: "a:avLst" }] },
+                                              ],
+                                            },
+                                          ],
+                                        },
                                       ],
-                                  },
-                              ];
-                              console.log(
-                                  isInTableCell
-                                      ? "La imagen está dentro de una celda de tabla y se ha ajustado."
-                                      : "La imagen está fuera de una tabla y tiene el tamaño por defecto."
-                              );
-                          }
+                                    },
+                                  ],
+                                },
+                              ],
+                            },
+                          ];
+                        } catch (err) {
+                          console.error("Error procesando la imagen:", err.message);
+                        }
                       }
-              
-                      // Procesar nodos hijos de forma recursiva
-                      if (node.elements) {
-                          await processNodesForImages(node.elements, node);
+                      else {
+                        console.log(">> No es una URL de imagen válida o no detectada");
                       }
+                    }
+
+                    if (node.elements) {
+                      await processNodesForImages(node.elements, node);
+                    }
                   }
-              };
+                };
+
+
+                function isImageUrl(url) {
+                  return typeof url === "string" && /amazonaws\.com/.test(url);
+                }
 
                 console.log("=== Iniciando proceso de reemplazo de URLs por imágenes ===");
                 // Agregar namespaces necesarios
@@ -6713,11 +6618,97 @@ router.post('/save-configuration', async (req, res) => {
                 zip.file(documentPath, updatedXml);
             };
             
+            const applyArial10ToDocument = (nodes) => {
+              nodes.forEach((node) => {
+                if (node.name === "w:r") {
+                  let rPr = node.elements?.find((el) => el.name === "w:rPr");
+            
+                  if (!rPr) {
+                    rPr = {
+                      type: "element",
+                      name: "w:rPr",
+                      elements: [],
+                    };
+                    node.elements.unshift(rPr); // Insertar al principio
+                  }
+            
+                  // Eliminar fuentes existentes si las hay
+                  rPr.elements = rPr.elements?.filter(
+                    (el) => el.name !== "w:rFonts" && el.name !== "w:sz"
+                  ) || [];
+            
+                  // Agregar fuente Arial y tamaño 10
+                  rPr.elements.unshift(
+                    {
+                      type: "element",
+                      name: "w:rFonts",
+                      attributes: {
+                        "w:ascii": "Arial",
+                        "w:hAnsi": "Arial",
+                        "w:eastAsia": "Arial",
+                        "w:cs": "Arial",
+                      },
+                    },
+                    {
+                      type: "element",
+                      name: "w:sz",
+                      attributes: { "w:val": "20" },
+                    }
+                  );
+                }
+            
+                // Procesar hijos recursivamente
+                if (node.elements && node.elements.length > 0) {
+                  applyArial10ToDocument(node.elements);
+                }
+              });
+            };
+
+            const aplicarInterlineadoSencillo = (nodes) => {
+              nodes.forEach((node) => {
+                if (node.type === 'element' && node.name === 'w:p') {
+                  // Buscar o crear nodo <w:pPr>
+                  let pPr = node.elements?.find((el) => el.name === 'w:pPr');
+                  if (!pPr) {
+                    pPr = { type: 'element', name: 'w:pPr', elements: [] };
+                    node.elements.unshift(pPr); // Insertar al inicio
+                  }
+            
+                  // Buscar si ya existe un nodo de espaciado
+                  let spacing = pPr.elements.find((el) => el.name === 'w:spacing');
+                  if (!spacing) {
+                    spacing = {
+                      type: 'element',
+                      name: 'w:spacing',
+                      attributes: {
+                        'w:line': '240',          // Interlineado sencillo
+                        'w:lineRule': 'auto',
+                      },
+                    };
+                    pPr.elements.push(spacing);
+                  } else {
+                    spacing.attributes['w:line'] = '240';
+                    spacing.attributes['w:lineRule'] = 'auto';
+                  }
+                }
+            
+                // Aplicar recursivamente a hijos
+                if (node.elements && node.elements.length > 0) {
+                  aplicarInterlineadoSencillo(node.elements);
+                }
+              });
+            };  
+            
               // Procesar y reemplazar variables y tablas
               console.log("Procesando documento XML...");
               normalizeTextNodes(parsedXml.elements);
               replaceVariables(parsedXml.elements); // Reemplaza variables
               replaceTableValues(parsedXml.elements, tablas); // Reemplaza valores en tablas
+
+              // Aplicar Arial 10 a todo el contenido
+              applyArial10ToDocument(parsedXml.elements); // 👈 Aquí se aplica la fuente y tamaño
+
+              aplicarInterlineadoSencillo(parsedXml.elements);
 
               // Guardar el documento con las variables y tablas reemplazadas
               let updatedXml = js2xml(parsedXml, { compact: false, spaces: 4 });
@@ -6862,7 +6853,7 @@ router.post('/create-document-client', async (req, res) => {
       js2xml: require('xml-js').js2xml, // Convertir JSON a XML
       getSignedUrl: getSignedUrl, // Función para obtener URLs firmadas de S3
       uploadFile: uploadFile, // Función para subir archivos a S3
-      bucketName: "fumiplagax", // Nombre del bucket S3
+      bucketName: "fumiplagax2", // Nombre del bucket S3
       Buffer: Buffer, // Agregar Buffer al sandbox
       sharp,
       moment,
@@ -6927,7 +6918,7 @@ router.post('/create-document-service', async (req, res) => {
       js2xml: require('xml-js').js2xml, // Convertir JSON a XML
       getSignedUrl: getSignedUrl, // Función para obtener URLs firmadas de S3
       uploadFile: uploadFile, // Función para subir archivos a S3
-      bucketName: "fumiplagax", // Nombre del bucket S3
+      bucketName: "fumiplagax2", // Nombre del bucket S3
       Buffer: Buffer, // Agregar Buffer al sandbox
       sharp,
       moment,
@@ -6994,7 +6985,7 @@ router.post('/create-document-inspeccion', async (req, res) => {
       js2xml: require('xml-js').js2xml, // Convertir JSON a XML
       getSignedUrl: getSignedUrl, // Función para obtener URLs firmadas de S3
       uploadFile: uploadFile, // Función para subir archivos a S3
-      bucketName: "fumiplagax", // Nombre del bucket S3
+      bucketName: "fumiplagax2", // Nombre del bucket S3
       Buffer: Buffer, // Agregar Buffer al sandbox
       sharp,
       moment,
