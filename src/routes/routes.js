@@ -3212,6 +3212,7 @@ router.post('/inspections/:inspectionId/save', uploadInspectionImages, async (re
       productsByType,
       stationsFindings,
       signatures,
+      exitTime
     });
 
     // Parsear datos de strings a objetos si es necesario
