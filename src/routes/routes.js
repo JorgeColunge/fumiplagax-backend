@@ -16,7 +16,7 @@ const Docxtemplater = require('docxtemplater');
 const mammoth = require('mammoth');
 const vm = require('vm');
 const QRCode = require('qrcode');
-const { uploadFile, getSignedUrl, deleteObject  } = require('../config/s3Service');
+const { uploadFile, getSignedUrl, deleteObject } = require('../config/s3Service');
 const dotenv = require('dotenv');
 const { convertToPDF } = require("../config/convertToPDF");
 
@@ -147,7 +147,7 @@ async function generateSignedUrl(url) {
     const key = decodeURIComponent(
       urlParts.pathname.startsWith('/') ? urlParts.pathname.substring(1) : urlParts.pathname
     );
-    
+
     const params = {
       Bucket: bucketName,
       Key: key,
@@ -260,9 +260,9 @@ router.post('/updateProfile', uploadImage, compressImage, async (req, res) => {
   let imageUrl = null;
   let hashedPassword = null;
   if (password && password.trim() !== '') {
-      hashedPassword = await bcrypt.hash(password, 10);
+    hashedPassword = await bcrypt.hash(password, 10);
   }
-  
+
   try {
     if (req.file) {
       const result = await pool.query('SELECT image FROM users WHERE id = $1', [userId]);
@@ -275,9 +275,9 @@ router.post('/updateProfile', uploadImage, compressImage, async (req, res) => {
         console.log(`Imagen anterior eliminada: ${previousKey}`);
       }
 
-      
 
-      
+
+
 
       const bucketName = 'fumiplagax2';
       const key = `profile_pictures/${Date.now()}-${req.file.originalname}`;
@@ -302,16 +302,16 @@ router.post('/updateProfile', uploadImage, compressImage, async (req, res) => {
     if (hashedPassword) {
       fields.push(`password = $${index++}`);
       values.push(hashedPassword);
-  }  
+    }
     if (imageUrl) fields.push(`image = $${index++}`) && values.push(imageUrl);
     values.push(userId);
 
     if (fields.length > 0) {
       const query = `UPDATE users SET ${fields.join(', ')} WHERE id = $${index}`;
       await pool.query(query, values);
-  } else {
+    } else {
       return res.status(400).json({ message: 'No se enviaron datos para actualizar' });
-  }  
+    }
 
     if (imageUrl) {
       const bucketName = 'fumiplagax2';
@@ -446,13 +446,13 @@ router.post('/login', async (req, res) => {
         return res.json({
           success: true,
           message: "Login successful",
-          user: { 
-            id_usuario: client.id, 
-            name: client.name, 
-            email: client.email, 
-            phone: client.phone, 
-            category: client.category ,
-            rol: client.rol, 
+          user: {
+            id_usuario: client.id,
+            name: client.name,
+            email: client.email,
+            phone: client.phone,
+            category: client.category,
+            rol: client.rol,
             image: client.photo
           },
         });
@@ -460,10 +460,10 @@ router.post('/login', async (req, res) => {
         return res.status(401).json({ success: false, message: "Invalid credentials" });
       }
     }
-    
+
     const user = result.rows[0];
     const isMatch = await bcrypt.compare(password, user.password);
-    
+
     if (isMatch) {
       res.json({
         success: true,
@@ -711,9 +711,9 @@ router.post('/clients', async (req, res) => {
 
     let hashedPassword = '';
 
-    if(password){
+    if (password) {
       hashedPassword = await bcrypt.hash(password, 10);
-    } else{
+    } else {
       hashedPassword = await bcrypt.hash('123456', 10);
     }
 
@@ -814,7 +814,7 @@ router.get('/clients/:id', async (req, res) => {
     }
     const client = result.rows[0];
 
-    console.log("foto cliente: ",client.photo);
+    console.log("foto cliente: ", client.photo);
 
     // Generar URL prefirmada si el usuario tiene una imagen válida
     if (client.photo) {
@@ -932,10 +932,10 @@ router.put('/clients/:id', async (req, res) => {
     if (latitude !== null && longitude !== null) {
       fields.push(`latitude = $${fields.length + 1}`);
       values.push(latitude);
-    
+
       fields.push(`longitude = $${fields.length + 1}`);
       values.push(longitude);
-    }    
+    }
 
     values.push(id);
 
@@ -1046,7 +1046,7 @@ router.post('/services', async (req, res) => {
       });
     }
 
-    if(client_id===created_by){
+    if (client_id === created_by) {
       const notificationMessage = `El servicio solicitado fue aprobado por nuestro equipo, puedes revisar la información y proceder con el agendamiento.`;
       // Notificar al cliente aceptación del servicio
       const notificationQueryClient = `
@@ -1281,49 +1281,49 @@ router.delete('/services/:id', async (req, res) => {
     });
     console.log(`Notificación emitida al responsable ${service.responsible}: ${notificationMessage}`);
 
-// Procesar y notificar a los acompañantes
-let parsedCompanion = [];
-try {
-  if (typeof service.companion === 'string') {
-    if (service.companion.startsWith('{') && service.companion.endsWith('}')) {
-      // Intenta interpretar el string como JSON y extraer los valores
-      const fixedCompanion = service.companion
-        .replace(/'/g, '"') // Reemplaza comillas simples por dobles
-        .replace(/^{|}$/g, '') // Elimina las llaves inicial y final
-        .split(',') // Divide por comas si hay múltiples valores
-        .map(id => id.trim().replace(/"/g, '')); // Limpia comillas alrededor de los valores
-      parsedCompanion = fixedCompanion;
-    } else if (service.companion.includes(',')) {
-      // Es una lista separada por comas
-      parsedCompanion = service.companion.split(',').map(id => id.trim());
-    } else {
-      // Es un único ID en formato string
-      parsedCompanion = [service.companion];
+    // Procesar y notificar a los acompañantes
+    let parsedCompanion = [];
+    try {
+      if (typeof service.companion === 'string') {
+        if (service.companion.startsWith('{') && service.companion.endsWith('}')) {
+          // Intenta interpretar el string como JSON y extraer los valores
+          const fixedCompanion = service.companion
+            .replace(/'/g, '"') // Reemplaza comillas simples por dobles
+            .replace(/^{|}$/g, '') // Elimina las llaves inicial y final
+            .split(',') // Divide por comas si hay múltiples valores
+            .map(id => id.trim().replace(/"/g, '')); // Limpia comillas alrededor de los valores
+          parsedCompanion = fixedCompanion;
+        } else if (service.companion.includes(',')) {
+          // Es una lista separada por comas
+          parsedCompanion = service.companion.split(',').map(id => id.trim());
+        } else {
+          // Es un único ID en formato string
+          parsedCompanion = [service.companion];
+        }
+      } else if (Array.isArray(service.companion)) {
+        // Es un array directamente
+        parsedCompanion = service.companion.map(id => id.toString());
+      }
+    } catch (parseError) {
+      console.error(`Error procesando acompañantes: ${parseError.message}`);
     }
-  } else if (Array.isArray(service.companion)) {
-    // Es un array directamente
-    parsedCompanion = service.companion.map(id => id.toString());
-  }
-} catch (parseError) {
-  console.error(`Error procesando acompañantes: ${parseError.message}`);
-}
 
-console.log(`Acompañantes procesados: ${JSON.stringify(parsedCompanion)}`);
+    console.log(`Acompañantes procesados: ${JSON.stringify(parsedCompanion)}`);
 
-for (let companionId of parsedCompanion) {
-  try {
-    const companionNotificationValues = [companionId, notificationMessage, 'pending'];
-    const companionNotificationResult = await pool.query(notificationQuery, companionNotificationValues);
+    for (let companionId of parsedCompanion) {
+      try {
+        const companionNotificationValues = [companionId, notificationMessage, 'pending'];
+        const companionNotificationResult = await pool.query(notificationQuery, companionNotificationValues);
 
-    req.io.to(companionId.toString()).emit('notification', {
-      user_id: companionId,
-      notification: companionNotificationResult.rows[0],
-    });
-    console.log(`Notificación emitida al acompañante ${companionId}: ${notificationMessage}`);
-  } catch (companionError) {
-    console.error(`Error notificando al acompañante ${companionId}: ${companionError.message}`);
-  }
-}
+        req.io.to(companionId.toString()).emit('notification', {
+          user_id: companionId,
+          notification: companionNotificationResult.rows[0],
+        });
+        console.log(`Notificación emitida al acompañante ${companionId}: ${notificationMessage}`);
+      } catch (companionError) {
+        console.error(`Error notificando al acompañante ${companionId}: ${companionError.message}`);
+      }
+    }
 
     res.json({ success: true, message: "Service, related inspections, and service schedule entries deleted successfully" });
   } catch (error) {
@@ -1335,12 +1335,12 @@ for (let companionId of parsedCompanion) {
 const productsStorage = multer.diskStorage({
   destination: function (req, file, cb) {
     const uploadPath = path.join(__dirname, '..', 'uploads');
-    
+
     // Verificar si la carpeta existe, si no, crearla
     if (!fs.existsSync(uploadPath)) {
       fs.mkdirSync(uploadPath, { recursive: true });
     }
-    
+
     cb(null, uploadPath);
   },
   filename: function (req, file, cb) {
@@ -1390,7 +1390,7 @@ router.post('/products', uploadProductFiles, async (req, res) => {
     active_ingredient,
     category,
     health_record // ✅ Agregado aquí
-  } = req.body;  
+  } = req.body;
 
   console.log('Categorías recibidas:', category);
 
@@ -1449,8 +1449,8 @@ router.post('/products', uploadProductFiles, async (req, res) => {
       health_registration,
       emergency_card
     ) VALUES ($1, $2, $3, $4, $5, TO_DATE($6, 'YYYY-MM-DD'), $7, $8, $9, $10, $11, $12, $13, $14) RETURNING *
-    `;    
-    
+    `;
+
     const values = [
       name,
       description_type,
@@ -1466,7 +1466,7 @@ router.post('/products', uploadProductFiles, async (req, res) => {
       fileUrls.technical_sheet || null,
       fileUrls.health_registration || null,
       fileUrls.emergency_card || null
-    ];            
+    ];
 
     const result = await pool.query(query, values);
 
@@ -1563,8 +1563,8 @@ router.put('/products/:id', uploadProductFiles, async (req, res) => {
     active_ingredient,
     category,
     health_record // ✅ Agregado aquí
-  } = req.body;  
-  
+  } = req.body;
+
   console.log("Datos recibidos en la actualización:", req.body); // Debug para verificar datos  
 
   console.log('Categorías recibidas:', category);
@@ -1628,7 +1628,7 @@ router.put('/products/:id', uploadProductFiles, async (req, res) => {
         health_registration = COALESCE($13, health_registration),
         emergency_card = COALESCE($14, emergency_card)
     WHERE id = $15 RETURNING *
-    `;    
+    `;
 
     const values = [
       name,
@@ -1646,7 +1646,7 @@ router.put('/products/:id', uploadProductFiles, async (req, res) => {
       fileUrls.health_registration || null,
       fileUrls.emergency_card || null,
       id
-    ];       
+    ];
 
     const result = await pool.query(query, values);
 
@@ -1842,11 +1842,11 @@ router.post('/request-services', async (req, res) => {
       FROM clients
       WHERE id = $1;
     `;
-    const clientResult = await pool.query(nameClientQuery, [client_id]);
+  const clientResult = await pool.query(nameClientQuery, [client_id]);
 
-    const clientName = clientResult.rows[0]?.name;
+  const clientName = clientResult.rows[0]?.name;
 
-    console.log(clientResult.rows[0])
+  console.log(clientResult.rows[0])
 
   try {
     // Crear el mensaje de notificación
@@ -1919,17 +1919,17 @@ router.post('/request-schedule', async (req, res) => {
       FROM clients
       WHERE id = $1;
     `;
-    const clientResult = await pool.query(nameClientQuery, [clientId]);
+  const clientResult = await pool.query(nameClientQuery, [clientId]);
 
-    const clientName = clientResult.rows[0]?.name;
+  const clientName = clientResult.rows[0]?.name;
 
-    console.log(clientResult.rows[0])
+  console.log(clientResult.rows[0])
 
   try {
     // Crear el mensaje de notificación
     const notificationMessage = `El cliente ${clientName} solicitó agendamiento para el servicio ${serviceId}.`;
     const route = `/services-calendar?serviceId=${serviceId}`;
-    
+
     // Obtener usuarios con roles permitidos (Superadministrador, Administrador, Supervisor Técnico)
     const allowedRoles = ['Superadministrador', 'Administrador', 'Supervisor Técnico'];
     const roleQuery = `
@@ -2050,92 +2050,92 @@ router.post("/replace-google-drive-url", async (req, res) => {
   const { googleDriveId, generatedDocumentId } = req.body;
 
   try {
-      // Validar parámetros
-      if (!googleDriveId || !generatedDocumentId) {
-          return res.status(400).json({
-              success: false,
-              message: "Los parámetros 'googleDriveId' y 'generatedDocumentId' son obligatorios.",
-          });
-      }
+    // Validar parámetros
+    if (!googleDriveId || !generatedDocumentId) {
+      return res.status(400).json({
+        success: false,
+        message: "Los parámetros 'googleDriveId' y 'generatedDocumentId' son obligatorios.",
+      });
+    }
 
-      // Obtener la URL actual del documento desde la base de datos
-      const fetchQuery = `
+    // Obtener la URL actual del documento desde la base de datos
+    const fetchQuery = `
           SELECT document_url FROM generated_documents WHERE id = $1;
       `;
-      const fetchResult = await pool.query(fetchQuery, [generatedDocumentId]);
+    const fetchResult = await pool.query(fetchQuery, [generatedDocumentId]);
 
-      if (fetchResult.rowCount === 0) {
-          return res.status(404).json({
-              success: false,
-              message: "No se encontró el documento en la base de datos.",
-          });
+    if (fetchResult.rowCount === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "No se encontró el documento en la base de datos.",
+      });
+    }
+
+    const oldDocumentUrl = fetchResult.rows[0].document_url;
+
+    // Llamar a la Web App de Apps Script para obtener el archivo de Google Drive
+    const appsScriptUrl =
+      "https://script.google.com/macros/s/AKfycbyHZvRQT03xTD1tL-LM2YGXY72c-funS0wAkuiD4hZqD-foAAyuCQacImL_SbPlKFvH/exec";
+    const response = await axios.post(appsScriptUrl, { fileId: googleDriveId });
+
+    if (!response.data.success) {
+      throw new Error(response.data.message || "Error al obtener el archivo de Google Drive.");
+    }
+
+    const { fileData, fileName, mimeType } = response.data;
+
+    // Decodificar el archivo desde Base64
+    const fileBuffer = Buffer.from(fileData, "base64");
+    const newKey = `documents/generated/${Date.now()}-generated.docx`;
+    const uploadResult = await uploadFile(bucketName, newKey, fileBuffer);
+
+    console.log("Archivo subido con éxito a S3:", uploadResult.Location);
+    const documentUrl = uploadResult.Location;
+
+    // Eliminar el archivo anterior de S3
+    if (oldDocumentUrl) {
+      const oldKey = oldDocumentUrl.split(`fumiplagax2.s3.us-east-2.amazonaws.com/`)[1];
+      if (!oldKey.startsWith('documents/')) {
+        console.error('La clave del archivo no es válida:', oldKey);
+        throw new Error('Clave del archivo no válida para eliminar.');
       }
 
-      const oldDocumentUrl = fetchResult.rows[0].document_url;
 
-      // Llamar a la Web App de Apps Script para obtener el archivo de Google Drive
-      const appsScriptUrl =
-          "https://script.google.com/macros/s/AKfycbyHZvRQT03xTD1tL-LM2YGXY72c-funS0wAkuiD4hZqD-foAAyuCQacImL_SbPlKFvH/exec";
-      const response = await axios.post(appsScriptUrl, { fileId: googleDriveId });
-
-      if (!response.data.success) {
-          throw new Error(response.data.message || "Error al obtener el archivo de Google Drive.");
+      if (oldKey) {
+        await deleteObject(bucketName, oldKey);
+        console.log(`Archivo anterior eliminado correctamente de S3: ${oldKey}`);
+      } else {
+        console.warn("No se pudo generar la clave del archivo anterior.");
       }
+    }
 
-      const { fileData, fileName, mimeType } = response.data;
-
-      // Decodificar el archivo desde Base64
-      const fileBuffer = Buffer.from(fileData, "base64");
-      const newKey = `documents/generated/${Date.now()}-generated.docx`;
-      const uploadResult = await uploadFile(bucketName, newKey, fileBuffer);
-
-      console.log("Archivo subido con éxito a S3:", uploadResult.Location);
-      const documentUrl = uploadResult.Location;
-
-      // Eliminar el archivo anterior de S3
-      if (oldDocumentUrl) {
-        const oldKey = oldDocumentUrl.split(`fumiplagax2.s3.us-east-2.amazonaws.com/`)[1];
-        if (!oldKey.startsWith('documents/')) {
-            console.error('La clave del archivo no es válida:', oldKey);
-            throw new Error('Clave del archivo no válida para eliminar.');
-        }
-        
-
-          if (oldKey) {
-              await deleteObject(bucketName, oldKey);
-              console.log(`Archivo anterior eliminado correctamente de S3: ${oldKey}`);
-          } else {
-              console.warn("No se pudo generar la clave del archivo anterior.");
-          }
-      }
-
-      // Actualizar la URL en la base de datos
-      const updateQuery = `
+    // Actualizar la URL en la base de datos
+    const updateQuery = `
           UPDATE generated_documents
           SET document_url = $1
           WHERE id = $2
           RETURNING *;
       `;
-      const updateValues = [documentUrl, generatedDocumentId];
-      const result = await pool.query(updateQuery, updateValues);
+    const updateValues = [documentUrl, generatedDocumentId];
+    const result = await pool.query(updateQuery, updateValues);
 
-      if (result.rowCount === 0) {
-          throw new Error("No se encontró el registro en la base de datos para actualizar.");
-      }
+    if (result.rowCount === 0) {
+      throw new Error("No se encontró el registro en la base de datos para actualizar.");
+    }
 
-      res.json({
-          success: true,
-          message: "El archivo fue procesado exitosamente.",
-          documentUrl,
-          updatedDocument: result.rows[0],
-      });
+    res.json({
+      success: true,
+      message: "El archivo fue procesado exitosamente.",
+      documentUrl,
+      updatedDocument: result.rows[0],
+    });
   } catch (error) {
-      console.error("Error al procesar el archivo:", error.message);
-      res.status(500).json({
-          success: false,
-          message: "Error en el servidor.",
-          error: error.message,
-      });
+    console.error("Error al procesar el archivo:", error.message);
+    res.status(500).json({
+      success: false,
+      message: "Error en el servidor.",
+      error: error.message,
+    });
   }
 });
 
@@ -2337,6 +2337,58 @@ router.get('/actions-inspections', async (req, res) => {
     const result = await pool.query(
       'SELECT * FROM document_actions WHERE entity_type = $1',
       ['inspections']
+    );
+
+    const actions = result.rows;
+
+    res.json({
+      success: true,
+      actions: actions // Devuelve la lista de acciones
+    });
+  } catch (error) {
+    console.error("Error al obtener acciones:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error en el servidor",
+      error: error.message
+    });
+  }
+});
+
+// Ruta para obtener acciones relacionadas con servicios
+router.get('/actions-services', async (req, res) => {
+  try {
+
+    // Consultar en la tabla `document_actions` filtrando por `entity_type`
+    const result = await pool.query(
+      'SELECT * FROM document_actions WHERE entity_type = $1',
+      ['services']
+    );
+
+    const actions = result.rows;
+
+    res.json({
+      success: true,
+      actions: actions // Devuelve la lista de acciones
+    });
+  } catch (error) {
+    console.error("Error al obtener acciones:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error en el servidor",
+      error: error.message
+    });
+  }
+});
+
+// Ruta para obtener acciones relacionadas con clientes
+router.get('/actions-clients', async (req, res) => {
+  try {
+
+    // Consultar en la tabla `document_actions` filtrando por `entity_type`
+    const result = await pool.query(
+      'SELECT * FROM document_actions WHERE entity_type = $1',
+      ['clients']
     );
 
     const actions = result.rows;
@@ -2589,7 +2641,7 @@ router.get('/service-schedule', async (req, res) => {
     `;
 
     const result = await pool.query(query, [mm, yyyy]);
-    
+
     res.json(result.rows);
   } catch (error) {
     console.error("Error al obtener los registros:", error);
@@ -2805,7 +2857,7 @@ router.put('/service-schedule/:id', async (req, res) => {
     if (companion) {
       console.log("Procesando acompañantes:", companion);
 
-       // Aseguramos la inicialización
+      // Aseguramos la inicialización
       try {
         // Validar y procesar la lista de acompañantes
         if (Array.isArray(companion)) {
@@ -2863,14 +2915,14 @@ router.put('/service-schedule/:id', async (req, res) => {
 
     const uniqueUserIds = new Set([...roleUsers, responsible, ...parsedCompanion]);
     console.log("Usuarios únicos para notificación:", Array.from(uniqueUserIds));
-    
+
     for (let userId of uniqueUserIds) {
       try {
         const roleNotificationValues = [userId, notificationMessage, 'pending'];
         const roleNotificationResult = await pool.query(notificationQuery, roleNotificationValues);
-    
+
         console.log(`Notificación guardada para el usuario ${userId}:`, roleNotificationResult.rows[0]);
-    
+
         req.io.to(userId.toString()).emit('notification', {
           user_id: userId,
           notification: roleNotificationResult.rows[0],
@@ -2880,11 +2932,11 @@ router.put('/service-schedule/:id', async (req, res) => {
           } else {
             console.warn(`El evento no fue recibido por el usuario ${userId}`);
           }
-        });        
+        });
       } catch (error) {
         console.error(`Error al notificar al usuario ${userId}:`, error.message);
       }
-    }    
+    }
 
     res.json({ success: true, message: "Registro actualizado con éxito", data: result.rows[0] });
   } catch (error) {
@@ -2932,49 +2984,49 @@ router.delete('/service-schedule/:id', async (req, res) => {
       notification: notificationResult.rows[0],
     });
 
-// Notificaciones a acompañantes
-let parsedCompanion = [];
-try {
-  if (typeof companion === 'string') {
-    // Intenta analizar como JSON o procesar cadenas separadas por comas
+    // Notificaciones a acompañantes
+    let parsedCompanion = [];
     try {
-      parsedCompanion = JSON.parse(companion);
-    } catch (jsonError) {
-      // Si no es JSON, trata como una cadena separada por comas
-      parsedCompanion = companion.replace(/{|}/g, '').split(',').map(id => id.trim().replace(/"/g, ''));
+      if (typeof companion === 'string') {
+        // Intenta analizar como JSON o procesar cadenas separadas por comas
+        try {
+          parsedCompanion = JSON.parse(companion);
+        } catch (jsonError) {
+          // Si no es JSON, trata como una cadena separada por comas
+          parsedCompanion = companion.replace(/{|}/g, '').split(',').map(id => id.trim().replace(/"/g, ''));
+        }
+      } else if (Array.isArray(companion)) {
+        // Si ya es un arreglo, úsalo directamente
+        parsedCompanion = companion;
+      } else if (typeof companion === 'object' && companion !== null) {
+        // Si es un objeto, convierte sus valores en un arreglo
+        parsedCompanion = Object.values(companion);
+      } else if (companion) {
+        // Manejo adicional si es un formato inesperado
+        parsedCompanion = companion.toString().replace(/{|}/g, '').split(',').map(id => id.trim().replace(/"/g, ''));
+      }
+
+      // Validar que el resultado sea un arreglo
+      if (!Array.isArray(parsedCompanion)) {
+        throw new TypeError('El valor procesado no es un arreglo válido');
+      }
+    } catch (error) {
+      console.error("Error al procesar companion:", error.message);
+      parsedCompanion = []; // Asegurar un valor predeterminado
     }
-  } else if (Array.isArray(companion)) {
-    // Si ya es un arreglo, úsalo directamente
-    parsedCompanion = companion;
-  } else if (typeof companion === 'object' && companion !== null) {
-    // Si es un objeto, convierte sus valores en un arreglo
-    parsedCompanion = Object.values(companion);
-  } else if (companion) {
-    // Manejo adicional si es un formato inesperado
-    parsedCompanion = companion.toString().replace(/{|}/g, '').split(',').map(id => id.trim().replace(/"/g, ''));
-  }
 
-  // Validar que el resultado sea un arreglo
-  if (!Array.isArray(parsedCompanion)) {
-    throw new TypeError('El valor procesado no es un arreglo válido');
-  }
-} catch (error) {
-  console.error("Error al procesar companion:", error.message);
-  parsedCompanion = []; // Asegurar un valor predeterminado
-}
+    // Iterar y notificar a los acompañantes
+    for (let companionId of parsedCompanion) {
+      companionId = companionId.trim().replace(/"/g, '');
 
-// Iterar y notificar a los acompañantes
-for (let companionId of parsedCompanion) {
-  companionId = companionId.trim().replace(/"/g, '');
+      const companionNotificationValues = [companionId, notificationMessage, 'pending'];
+      const companionNotificationResult = await pool.query(notificationQuery, companionNotificationValues);
 
-  const companionNotificationValues = [companionId, notificationMessage, 'pending'];
-  const companionNotificationResult = await pool.query(notificationQuery, companionNotificationValues);
-
-  req.io.to(companionId.toString()).emit('notification', {
-    user_id: companionId,
-    notification: companionNotificationResult.rows[0],
-  });
-}
+      req.io.to(companionId.toString()).emit('notification', {
+        user_id: companionId,
+        notification: companionNotificationResult.rows[0],
+      });
+    }
 
     res.json({ success: true, message: "Registro eliminado con éxito", data: result.rows[0] });
   } catch (error) {
@@ -3349,7 +3401,7 @@ router.post('/inspections/:inspectionId/save', uploadInspectionImages, async (re
           'durante': 'Du',
           'después': 'De',
         };
-        
+
         if (findingsImagesById[finding.id]) {
           if ((type.trim().toLowerCase() === "lavado de tanque") && finding.faseLavado) {
             const suffix = suffixMap[finding.faseLavado.toLowerCase()];
@@ -3359,7 +3411,7 @@ router.post('/inspections/:inspectionId/save', uploadInspectionImages, async (re
           } else {
             finding.photo = findingsImagesById[finding.id];
           }
-        }        
+        }
 
         // ✅ Agregar o preservar la fecha y hora del hallazgo
         const moment = require('moment'); // Asegúrate de tener esto al inicio del archivo
@@ -6859,10 +6911,10 @@ router.post('/create-document-client', async (req, res) => {
       moment,
       axios,
       process: { env: process.env },
-    };    
+    };
 
-     // Crear un script envolviendo el código generado en una función `async`
-     const script = new vm.Script(`
+    // Crear un script envolviendo el código generado en una función `async`
+    const script = new vm.Script(`
       (async () => {
         ${generated_code}
         return await createDocument_clients(idEntity);
@@ -6881,11 +6933,14 @@ router.post('/create-document-client', async (req, res) => {
   }
 });
 
-// Ruta para ejecutar código dinámico almacenado
+// Ruta para ejecutar código dinámico almacenado (para servicios)
 router.post('/create-document-service', async (req, res) => {
   const { idEntity, id } = req.body; // Recibir ID de la entidad e ID de configuración
+
+  console.log("Identificador único de solicitud:", req.body.uniqueId);
+
   try {
-    console.log("=== Iniciando ejecución de configuración almacenada ===");
+    console.log("=== Iniciando ejecución de configuración almacenada (SERVICIO) ===");
 
     // Validar entradas requeridas
     if (!idEntity || !id) {
@@ -6908,26 +6963,25 @@ router.post('/create-document-service', async (req, res) => {
 
     // Preparar el sandbox
     const sandbox = {
-      console: console, // Permite console.log
-      require: require, // Permite require
-      idEntity: idEntity, // ID de la entidad
-      pool: pool, // Conexión a la base de datos
-      fetch: fetch, // Para descargar archivos desde S3
-      PizZip: require('pizzip'), // Librería para manejar archivos .docx
-      xml2js: require('xml-js').xml2js, // Parsear XML a JSON
-      js2xml: require('xml-js').js2xml, // Convertir JSON a XML
-      getSignedUrl: getSignedUrl, // Función para obtener URLs firmadas de S3
-      uploadFile: uploadFile, // Función para subir archivos a S3
-      bucketName: "fumiplagax2", // Nombre del bucket S3
-      Buffer: Buffer, // Agregar Buffer al sandbox
+      console: console,
+      require: require,
+      idEntity: idEntity,
+      pool: pool,
+      fetch: fetch,
+      PizZip: require('pizzip'),
+      xml2js: require('xml-js').xml2js,
+      js2xml: require('xml-js').js2xml,
+      getSignedUrl: getSignedUrl,
+      uploadFile: uploadFile,
+      bucketName: "impecol",
+      Buffer: Buffer,
       sharp,
       moment,
       axios,
       process: { env: process.env },
-    };    
+    };
 
-     // Crear un script envolviendo el código generado en una función `async`
-     const script = new vm.Script(`
+    const script = new vm.Script(`
       (async () => {
         ${generated_code}
         return await createDocument_services(idEntity);
@@ -6935,14 +6989,34 @@ router.post('/create-document-service', async (req, res) => {
     `);
 
     const context = vm.createContext(sandbox);
-    script.runInContext(context);
 
-    console.log("Código ejecutado exitosamente.");
+    // Esperar resultado del script
+    const documentUrl = await script.runInContext(context);
 
-    res.status(200).json({ message: "Código ejecutado correctamente.", executed: true });
+    console.log("Código ejecutado exitosamente. URL del documento:", documentUrl);
+
+    // Prefirmar el documento
+    const response = await axios.post(`${process.env.BACKEND_URL}/api/PrefirmarArchivos`, {
+      url: documentUrl,
+    });
+
+    const signedUrl = response.data.signedUrl;
+    console.log("URL prefirmada obtenida:", signedUrl);
+
+    return res.status(200).json({
+      message: "Código ejecutado correctamente.",
+      executed: true,
+      success: true,
+      documentUrl,
+      signedUrl,
+    });
   } catch (error) {
-    console.error("Error al ejecutar el código generado:", error.message);
-    res.status(500).json({ message: "Error interno del servidor", error: error.message });
+    console.error("❌ Error al ejecutar el código generado:", error.message);
+    return res.status(500).json({
+      message: "Error interno del servidor",
+      error: error.message,
+      success: false,
+    });
   }
 });
 
@@ -6991,18 +7065,18 @@ router.post('/create-document-inspeccion', async (req, res) => {
       moment,
       axios,
       process: { env: process.env },
-    };    
+    };
 
-     // Crear un script envolviendo el código generado en una función `async`
-     const script = new vm.Script(`
+    // Crear un script envolviendo el código generado en una función `async`
+    const script = new vm.Script(`
       (async () => {
         ${generated_code}
         return await createDocument_inspections(idEntity);
       })();
     `);
-    
+
     const context = vm.createContext(sandbox);
-    
+
     // Ejecutar el script una sola vez
     const documentUrl = await script.runInContext(context);
 
@@ -7014,19 +7088,19 @@ router.post('/create-document-inspeccion', async (req, res) => {
 
     console.log("URL prefirmada obtenida:", signedUrl);
 
-    res.status(200).json({ 
-      message: "Código ejecutado correctamente.", 
-      executed: true, 
+    res.status(200).json({
+      message: "Código ejecutado correctamente.",
+      executed: true,
       success: true,
       documentUrl,
       signedUrl
     });
   } catch (error) {
     console.error("Error al ejecutar el código generado:", error.message);
-    res.status(500).json({ 
-      message: "Error interno del servidor", 
-      error: error.message, 
-      success: false 
+    res.status(500).json({
+      message: "Error interno del servidor",
+      error: error.message,
+      success: false
     });
   }
 });
