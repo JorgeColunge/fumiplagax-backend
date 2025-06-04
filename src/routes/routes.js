@@ -1128,11 +1128,25 @@ router.get('/services/:id', async (req, res) => {
   const { id } = req.params;
 
   try {
-    const result = await pool.query('SELECT * FROM services WHERE id = $1', [id]);
-    if (result.rows.length === 0) {
-      return res.status(404).json({ success: false, message: "Service not found" });
+  const serviceResult = await pool.query('SELECT * FROM services WHERE id = $1', [id]);
+  if (serviceResult.rows.length === 0) {
+    return res.status(404).json({ success: false, message: "Service not found" });
+  }
+  const service = serviceResult.rows[0];
+
+  // Obtener información del cliente
+  let clientInfo = null;
+  if (service.client_id) {
+    const clientResult = await pool.query(
+      'SELECT id, name, address, phone FROM clients WHERE id = $1',
+      [service.client_id]
+    );
+    if (clientResult.rows.length > 0) {
+      clientInfo = clientResult.rows[0];
     }
-    res.json(result.rows[0]);
+  }
+
+  res.json({ ...service, client: clientInfo });
   } catch (error) {
     console.error("Error fetching service:", error);
     res.status(500).json({ success: false, message: "Server error" });
