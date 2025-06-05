@@ -683,13 +683,13 @@ router.post('/clients', async (req, res) => {
   const fullAddress = `${address}, ${city}, ${department}`;
 
   // Verificar si el correo ya existe
-  const emailCheck = await pool.query('SELECT * FROM clients WHERE email = $1', [email]);
+  /*const emailCheck = await pool.query('SELECT * FROM clients WHERE email = $1', [email]);
   if (emailCheck.rows.length > 0) {
     return res.status(400).json({
       success: false,
       message: 'Ya existe un cliente con el correo proporcionado.',
     });
-  }
+  }*/
 
   try {
     // Obtener geolocalización
@@ -1128,25 +1128,25 @@ router.get('/services/:id', async (req, res) => {
   const { id } = req.params;
 
   try {
-  const serviceResult = await pool.query('SELECT * FROM services WHERE id = $1', [id]);
-  if (serviceResult.rows.length === 0) {
-    return res.status(404).json({ success: false, message: "Service not found" });
-  }
-  const service = serviceResult.rows[0];
-
-  // Obtener información del cliente
-  let clientInfo = null;
-  if (service.client_id) {
-    const clientResult = await pool.query(
-      'SELECT id, name, address, phone FROM clients WHERE id = $1',
-      [service.client_id]
-    );
-    if (clientResult.rows.length > 0) {
-      clientInfo = clientResult.rows[0];
+    const serviceResult = await pool.query('SELECT * FROM services WHERE id = $1', [id]);
+    if (serviceResult.rows.length === 0) {
+      return res.status(404).json({ success: false, message: "Service not found" });
     }
-  }
+    const service = serviceResult.rows[0];
 
-  res.json({ ...service, client: clientInfo });
+    // Obtener información del cliente
+    let clientInfo = null;
+    if (service.client_id) {
+      const clientResult = await pool.query(
+        'SELECT id, name, address, phone FROM clients WHERE id = $1',
+        [service.client_id]
+      );
+      if (clientResult.rows.length > 0) {
+        clientInfo = clientResult.rows[0];
+      }
+    }
+
+    res.json({ ...service, client: clientInfo });
   } catch (error) {
     console.error("Error fetching service:", error);
     res.status(500).json({ success: false, message: "Server error" });
@@ -4410,7 +4410,7 @@ const transformEntity = (entity) => {
 
 // Ruta principal para almacenar configuración y código generado
 router.post('/save-configuration', async (req, res) => {
-  const { templateId, variables, tablas, entity, aiModels, document_name, document_type } = req.body;
+  const { configId, templateId, variables, tablas, entity, aiModels, document_name, document_type } = req.body;
 
   try {
     console.log("=== Iniciando almacenamiento de configuración ===");
@@ -4438,21 +4438,72 @@ router.post('/save-configuration', async (req, res) => {
               let tablas = ${JSON.stringify(tablas, null, 2)};
               let aiModels = ${JSON.stringify(aiModels, null, 2)};
 
-              // Función para realizar consultas a GPT
-              const consultarGPT = async (modelo, personalidad, prompt) => {
+              // Función para realizar consultas a GPT y registrar el consumo en backend con logs detallados
+              async function consultarGPT(modelo, personalidad, prompt, descripcion = 'generación de documento') {
                 const apiKey = process.env.OPENAI_API_KEY;
-                const url = "https://api.openai.com/v1/chat/completions";
+                const openaiUrl = 'https://api.openai.com/v1/chat/completions';
+                const backendUrl = 'https://fumiplagax.axiomarobotics.com/:10000/api/consumptions'; // cambiar en producción
+
                 const headers = {
                   Authorization: \`Bearer \${apiKey}\`,
-                  "Content-Type": "application/json",
+                  'Content-Type': 'application/json',
                 };
+
                 const payload = {
                   model: modelo,
                   messages: [
-                    { role: "system", content: personalidad },
-                    { role: "user", content: prompt },
+                    { role: 'system', content: personalidad },
+                    { role: 'user', content: prompt },
                   ],
                 };
+
+                try {
+                  const response = await axios.post(openaiUrl, payload, { headers });
+
+                  //console.log('📦 Respuesta completa de OpenAI:', JSON.stringify(response.data, null, 2));
+
+                  const result = response.data.choices[0]?.message?.content?.trim() || '';
+                  const usage = response.data.usage;
+
+                  if (!usage) throw new Error('La respuesta de OpenAI no contiene uso de tokens');
+
+                  const inputTokens = usage.prompt_tokens;
+                  const outputTokens = usage.completion_tokens;
+
+                  const registros = [
+                    {
+                      api_name: 'GPT',
+                      model: modelo,
+                      unit_type: 'input_token',
+                      unit_count: inputTokens,
+                      query_details: descripcion,
+                    },
+                    {
+                      api_name: 'GPT',
+                      model: modelo,
+                      unit_type: 'output_token',
+                      unit_count: outputTokens,
+                      query_details: descripcion,
+                    }
+                  ];
+
+                  // Enviar registros y loguear cada uno
+                  await Promise.all(
+                    registros.map(async (registro) => {
+                      try {
+                        const r = await axios.post(backendUrl, registro);
+                      } catch (err) {
+                        throw err;
+                      }
+                    })
+                  );
+
+                  return result;
+                } catch (error) {
+                  console.error('❌ Error en consulta o registro GPT:', error.message);
+                  throw error;
+                }
+              }
 
                 try {
                   const responseGpt = await axios.post(url, payload, { headers });
@@ -6834,51 +6885,113 @@ router.post('/save-configuration', async (req, res) => {
           `;
 
     console.log("=== Código generado ===");
-    console.log(generatedCode);
+    //console.log(generatedCode);
 
-    // Guardar la configuración y el código generado en la base de datos
-    const insertQuery = `
+    const configuration = { ...req.body };
+
+    let configurationId;
+
+    if (configId) {
+      /* ---- UPDATE ----  (sólo tocamos los campos que deben cambiar) */
+      const updateQuery = `
+        UPDATE document_configuration
+        SET configuration   = $1,
+            generated_code  = $2
+        WHERE id = $3
+        RETURNING id
+      `;
+
+      const { rows } = await pool.query(updateQuery, [
+        JSON.stringify(configuration),
+        generatedCode,
+        configId
+      ]);
+
+      if (!rows.length) {
+        return res.status(404).json({ message: 'Configuración no encontrada.' });
+      }
+
+      configurationId = rows[0].id;
+
+      console.log(`Configuración ${configurationId} actualizada.`);
+      return res.status(200).json({ message: 'Configuración actualizada correctamente.' });
+
+    } else {
+      // Guardar la configuración y el código generado en la base de datos
+      const insertQuery = `
       INSERT INTO document_configuration (template_id, configuration, generated_code, created_at, entity)
       VALUES ($1, $2, $3, NOW(), $4)
       RETURNING id
     `;
 
-    const configuration = {
-      aiModels,
-      variables,
-      tablas,
-    };
+      const result = await pool.query(insertQuery, [
+        templateId,
+        JSON.stringify(configuration),
+        generatedCode,
+        transformedEntity,
+      ]);
 
-    const result = await pool.query(insertQuery, [
-      templateId,
-      JSON.stringify(configuration),
-      generatedCode,
-      transformedEntity,
-    ]);
+      const configurationId = result.rows[0].id;
 
-    const configurationId = result.rows[0].id;
-
-    // Registrar la acción en la tabla document_actions
-    const insertActionQuery = `
+      // Registrar la acción en la tabla document_actions
+      const insertActionQuery = `
       INSERT INTO document_actions (configuration_id, entity_type, action_type, action_name, created_at)
       VALUES ($1, $2, $3, $4, NOW())
     `;
 
-    const actionType = `generate_${document_type}`;
-    const actionName = `Generar ${document_name}`;
+      const actionType = `generate_${document_type}`;
+      const actionName = `Generar ${document_name}`;
 
-    await pool.query(insertActionQuery, [
-      configurationId,
-      transformedEntity,
-      actionType,
-      actionName,
-    ]);
+      await pool.query(insertActionQuery, [
+        configurationId,
+        transformedEntity,
+        actionType,
+        actionName,
+      ]);
 
-    console.log("Configuración y código almacenados correctamente en la base de datos.");
-    res.status(201).json({ message: 'Configuración guardada correctamente.' });
+      console.log("Configuración y código almacenados correctamente en la base de datos.");
+      res.status(201).json({ message: 'Configuración guardada correctamente.' });
+    }
   } catch (error) {
     console.error("Error al almacenar la configuración:", error.message);
     res.status(500).json({ message: 'Error interno del servidor', error: error.message });
+  }
+});
+
+// GET /api/get-configuration/:configId
+router.get('/get-configuration/:id', async (req, res) => {
+  const { id } = req.params;
+  console.log(`consultando para el id ${id}`)
+  try {
+    const q = `
+      SELECT id,
+             template_id,
+             entity,
+             configuration
+      FROM   document_configuration
+      WHERE  id = $1
+    `;
+    const { rows } = await pool.query(q, [id]);
+
+    if (rows.length === 0)
+      return res.status(404).json({ message: 'Configuración no encontrada' });
+
+    // pg devuelve JSONB como objeto JS si la conexión tiene parseJson habilitado;
+    // si no, parseamos:
+    const row = rows[0];
+    const configuration = typeof row.configuration === 'string'
+      ? JSON.parse(row.configuration)
+      : row.configuration;
+
+    res.json({
+      id: row.id,
+      templateId: row.template_id,
+      entity: row.entity,
+      ...configuration            // ←   inyecta todo el JSON que necesita el front
+    });
+  } catch (err) {
+    console.error('[get-configuration]', err);
+    res.status(500).json({ message: 'Error interno', error: err.message });
   }
 });
 
@@ -7131,6 +7244,392 @@ router.post('/emit-inspection-update', (req, res) => {
   req.io.emit('inspection_synced', { oldId, newId });
 
   res.json({ success: true, message: "Evento emitido con éxito" });
+});
+
+// Ruta para obtener todas las acciones
+router.get('/actions', async (req, res) => {
+  try {
+    // Consultar todas las acciones de la tabla `document_actions`
+    const result = await pool.query('SELECT * FROM document_actions');
+
+    const actions = result.rows;
+
+    res.json({
+      success: true,
+      actions: actions // Devuelve la lista completa de acciones
+    });
+  } catch (error) {
+    console.error("Error al obtener todas las acciones:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error en el servidor",
+      error: error.message
+    });
+  }
+});
+
+// Ruta para eliminar una acción por ID
+router.delete('/actions/:id', async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const result = await pool.query('DELETE FROM document_actions WHERE id = $1 RETURNING *', [id]);
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Acción no encontrada',
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Acción eliminada exitosamente',
+      deletedAction: result.rows[0],
+    });
+  } catch (error) {
+    console.error('Error al eliminar la acción:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error en el servidor',
+      error: error.message,
+    });
+  }
+});
+
+router.post('/actions', async (req, res) => {
+  const { configuration_id, entity_type, action_name, action_type, code } = req.body;
+
+  try {
+    const result = await pool.query(
+      `INSERT INTO document_actions (configuration_id, entity_type, action_name, action_type, code, created_at)
+       VALUES ($1, $2, $3, $4, $5, NOW())
+       RETURNING *`,
+      [configuration_id, entity_type, action_name, action_type || '', code || {}]
+    );
+
+    res.json({
+      success: true,
+      message: 'Acción creada correctamente',
+      action: result.rows[0]
+    });
+  } catch (error) {
+    console.error('Error al crear la acción:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error al crear la acción',
+      error: error.message
+    });
+  }
+});
+
+// routes/actions.js  (o donde tengas tu router)
+router.put('/actions/:id', async (req, res) => {
+  const { id } = req.params;
+  const {
+    configuration_id,
+    entity_type,
+    action_name,
+    action_type,
+    code,
+  } = req.body;
+
+  try {
+    const result = await pool.query(
+      `UPDATE document_actions
+       SET configuration_id = $1,
+           entity_type      = $2,
+           action_name      = $3,
+           action_type      = $4,
+           code             = $5,
+           updated_at       = NOW()
+       WHERE id = $6
+       RETURNING *`,
+      [
+        configuration_id,
+        entity_type,
+        action_name,
+        action_type || '',
+        code || {},          // Asegúrate de que la columna sea JSON/JSONB
+        id,
+      ]
+    );
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Acción no encontrada',
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Acción actualizada correctamente',
+      action: result.rows[0],
+    });
+  } catch (error) {
+    console.error('Error al actualizar la acción:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error al actualizar la acción',
+      error: error.message,
+    });
+  }
+});
+
+router.post('/consumptions', async (req, res) => {
+  console.log("Registrando consumo...");
+
+  const { api_name, model, unit_type, unit_count, query_details } = req.body;
+
+  if (!api_name || !model || !unit_type || !unit_count || !query_details) {
+    return res.status(400).json({ error: 'Faltan campos obligatorios' });
+  }
+
+  try {
+    // 1. Obtener costo unitario
+    const pricingQuery = `
+      SELECT cost_per_unit 
+      FROM api_pricing_models 
+      WHERE api_name = $1 AND model = $2 AND unit_type = $3
+    `;
+    const pricingResult = await pool.query(pricingQuery, [api_name, model, unit_type]);
+
+    if (pricingResult.rows.length === 0) {
+      return res.status(404).json({ error: 'No se encontró el precio para esta combinación de API, modelo y tipo de unidad' });
+    }
+
+    const cost_per_unit = pricingResult.rows[0].cost_per_unit;
+
+    // 2. Calcular costos
+    const query_cost = cost_per_unit * unit_count;
+    const sales_value = query_cost * 7;
+
+    // 3. Insertar registro
+    const insertQuery = `
+      INSERT INTO api_consumptions 
+        (api_name, query_details, query_cost, sales_value, model, unit_count, query_date, query_time)
+      VALUES ($1, $2, $3, $4, $5, $6, CURRENT_DATE, CURRENT_TIME)
+      RETURNING *;
+    `;
+
+    const insertResult = await pool.query(insertQuery, [
+      api_name,
+      query_details,
+      query_cost,
+      sales_value,
+      model,
+      unit_count
+    ]);
+
+    res.status(201).json({
+      message: 'Consumo registrado exitosamente',
+      consumption: insertResult.rows[0]
+    });
+
+  } catch (error) {
+    console.error('Error al insertar consumo:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
+
+router.get('/consumptions', async (req, res) => {
+  const { month, year } = req.query;
+
+  if (!month || !year) {
+    return res.status(400).json({ error: 'month y year son requeridos' });
+  }
+
+  try {
+    const startDate = new Date(year, month - 1, 1); // Día 1 del mes
+    const endDate = new Date(year, month, 0, 23, 59, 59, 999); // Último día del mes
+
+    const query = `
+      SELECT 
+        query_date AS query_day,
+        model,
+        SUM(sales_value) AS total_sales_value
+      FROM public.api_consumptions
+      WHERE query_date BETWEEN $1 AND $2
+      GROUP BY query_day, model
+      ORDER BY query_day;
+    `;
+
+    const result = await pool.query(query, [startDate, endDate]);
+
+    return res.status(200).json(result.rows);
+  } catch (error) {
+    console.error('Error al obtener los consumos:', error);
+    return res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
+
+router.post('/enviar-acta-por-correo', async (req, res) => {
+  try {
+    const { nombre, telefono, correo, documento, nombreDocumento } = req.body;
+    console.log("📞 Teléfono:", telefono);
+    console.log("📧 Correo:", correo);
+    console.log("📄 Documento:", documento);
+    console.log("📎 Nombre del documento:", nombreDocumento);
+
+    let downloadUrl = documento;
+
+    // 1. Firmar la URL si no está firmada
+    if (!documento.includes('X-Amz-Signature')) {
+      console.log('🔐 Generando URL firmada...');
+      const prefirm = await axios.post(`${process.env.BACKEND_URL}/api/PrefirmarArchivos`, { url: documento });
+      downloadUrl = prefirm.data.signedUrl;
+      console.log("✅ URL firmada:", downloadUrl);
+    }
+
+    // 2. Descargar archivo y guardar temporalmente
+    const extension = getExtensionFromUrl(downloadUrl);
+    const safeName = nombreDocumento.replace(/\s+/g, '_');
+    const fileName = `${uuidv4()}-${safeName}${extension}`;
+    const localPath = path.join(__dirname, '../temp', fileName);
+    const writer = fs.createWriteStream(localPath);
+
+    const responseStream = await axios.get(downloadUrl, { responseType: 'stream' });
+    responseStream.data.pipe(writer);
+
+    await new Promise((resolve, reject) => {
+      writer.on('finish', resolve);
+      writer.on('error', reject);
+    });
+
+    console.log("📁 Archivo guardado:", localPath);
+
+    // 3. Enviar por correo
+    const subject = `Documento "${nombreDocumento}" - Impecol SAS`;
+    const html = `
+      <div style="background-color: #f0f0f0; padding: 40px 0; font-family: Arial, sans-serif; text-align: center;">
+        <div style="max-width: 587px; width: 100%; margin: 0 auto;
+                    background-image: url('https://drive.google.com/uc?id=14OFGD16mPopx9q7EhMdR3Mf-oPtk39Go');
+                    background-size: cover; background-position: top center; border-radius: 12px;
+                    padding: 60px 30px; background-repeat: no-repeat;
+                    box-shadow: 0 0 10px rgba(0,0,0,0.1); background-color: white; text-align: left;">
+
+          <div style="padding: 35px; border-radius: 12px;">
+            <h2 style="color: #28a745;">Estimado(a) ${nombre},</h2>
+
+            <p style="color: rgb(28, 28, 28);">Esperamos que se encuentre muy bien.</p>
+
+            <p style="color: rgb(28, 28, 28);">
+              Le compartimos en este correo el documento <strong>"${nombreDocumento}"</strong>, el cual ha sido generado como parte del proceso de atención de <strong>Impecol SAS</strong>.
+            </p>
+
+            <p style="color: rgb(28, 28, 28);">
+              Le agradecemos sinceramente la confianza depositada en nosotros. Estamos comprometidos con ofrecerle siempre un servicio de calidad.
+            </p>
+
+            <p style="color: rgb(28, 28, 28);">
+              Si tiene alguna inquietud o desea más información, no dude en comunicarse con nuestro equipo de atención.
+            </p>
+          </div>
+        </div>
+
+        <div style="margin-top: 30px;">
+          <small style="display: block; margin-bottom: 5px; color: #777;">
+            Powered by Axioma Robotics
+          </small>
+          <a href="https://wa.me/573177381752" target="_blank" rel="noopener noreferrer">
+            <img src="https://drive.google.com/uc?id=1NqsmffR3cY6zvtJ1U3SuB67NP_JyQ8Mh" alt="Axioma Robotics"
+                style="height: 40px; padding: 2px 6px; border-radius: 6px; box-shadow: 0 0 5px rgba(0,0,0,0.1);" />
+          </a>
+        </div>
+      </div>
+    `;
+
+    const result = await enviarCorreo({
+      to: correo,
+      subject,
+      html,
+      attachments: [{
+        filename: nombreDocumento + extension,
+        path: localPath
+      }]
+    });
+
+    console.log('✅ Correo enviado:', result.messageId);
+
+    // 4. Eliminar archivo temporal después de 3 minutos
+    setTimeout(() => {
+      try {
+        fs.unlinkSync(localPath);
+        console.log("🗑 Archivo eliminado tras 3 minutos:", localPath);
+      } catch (err) {
+        console.warn("⚠️ No se pudo eliminar el archivo:", err.message);
+      }
+    }, 180000);
+
+    res.json({ success: true, messageId: result.messageId });
+
+  } catch (error) {
+    console.error("❌ Error general:", error.message);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+
+router.get('/tutorials', async (_req, res) => {
+  try {
+    const result = await pool.query(
+      'SELECT * FROM tutorials ORDER BY created_at DESC'
+    );
+    res.json({ success: true, tutorials: result.rows });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ success: false, message: 'Error al obtener tutoriales' });
+  }
+});
+
+router.post('/tutorials', async (req, res) => {
+  const { title, youtube_url, description } = req.body;
+  try {
+    const result = await pool.query(
+      `INSERT INTO tutorials (title, youtube_url, description)
+       VALUES ($1, $2, $3) RETURNING *`,
+      [title, youtube_url, description]
+    );
+    res.json({ success: true, tutorial: result.rows[0] });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ success: false, message: 'Error al crear tutorial' });
+  }
+});
+
+/* ========== PUT editar tutorial ========== */
+router.put('/tutorials/:id', async (req, res) => {
+  const { id } = req.params;
+  const { title, youtube_url, description } = req.body;
+  try {
+    const result = await pool.query(
+      `UPDATE tutorials
+         SET title = $1,
+             youtube_url = $2,
+             description = $3,
+             created_at = created_at          -- no cambies orden cronológico
+       WHERE id = $4
+       RETURNING *`,
+      [title, youtube_url, description, id]
+    );
+    res.json({ success: true, tutorial: result.rows[0] });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ success: false, message: 'Error al editar tutorial' });
+  }
+});
+
+/* ========== DELETE eliminar tutorial ========== */
+router.delete('/tutorials/:id', async (req, res) => {
+  const { id } = req.params;
+  try {
+    await pool.query('DELETE FROM tutorials WHERE id = $1', [id]);
+    res.json({ success: true });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ success: false, message: 'Error al eliminar tutorial' });
+  }
 });
 
 module.exports = router;
