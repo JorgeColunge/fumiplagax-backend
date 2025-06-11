@@ -4442,7 +4442,7 @@ router.post('/save-configuration', async (req, res) => {
               async function consultarGPT(modelo, personalidad, prompt, descripcion = 'generación de documento') {
                 const apiKey = process.env.OPENAI_API_KEY;
                 const openaiUrl = 'https://api.openai.com/v1/chat/completions';
-                const backendUrl = 'https://fumiplagax.axiomarobotics.com/:10000/api/consumptions'; // cambiar en producción
+                const backendUrl = 'https://services.impecol.com:10000/api/consumptions'; // cambiar en producción
 
                 const headers = {
                   Authorization: \`Bearer \${apiKey}\`,
@@ -4504,50 +4504,6 @@ router.post('/save-configuration', async (req, res) => {
                   throw error;
                 }
               }
-
-                try {
-                  const responseGpt = await axios.post(url, payload, { headers });
-                  const resultado = responseGpt.data.choices[0].message.content.trim();
-
-                  // Cálculo del uso de tokens
-                  const usage = responseGpt.data.usage;
-                  const inputTokens = usage.prompt_tokens;
-                  const outputTokens = usage.completion_tokens;
-
-                  // Deja la sección de envío comentada por ahora
-                  /*
-                  const backendUrl = "https://botix.axiomarobotics.com:10000/api/consumptions";
-                  const backendPayloadInput = {
-                    api_name: "GPT",
-                    model: modelo,
-                    unit_type: "input_token",
-                    unit_count: inputTokens,
-                    query_details: "consulta personalizada",
-                    company_id: integrationDetails.company_id,
-                    user_id: responsibleUserId,
-                    conversationId: conversationId,
-                  };
-                  await axios.post(backendUrl, backendPayloadInput);
-
-                  const backendPayloadOutput = {
-                    api_name: "GPT",
-                    model: modelo,
-                    unit_type: "output_token",
-                    unit_count: outputTokens,
-                    query_details: "consulta personalizada",
-                    company_id: integrationDetails.company_id,
-                    user_id: responsibleUserId,
-                    conversationId: conversationId,
-                  };
-                  await axios.post(backendUrl, backendPayloadOutput);
-                  */
-
-                  return resultado;
-                } catch (error) {
-                  console.error("Error al obtener respuesta de GPT:", error);
-                  return "Error al obtener la respuesta";
-                }
-              };
 
               let defaultWidthEMU = 990000; // Ancho en EMU
               let cellWidthEMU = defaultWidthEMU; // Variable global para el ancho de celda
@@ -6967,7 +6923,8 @@ router.get('/get-configuration/:id', async (req, res) => {
       SELECT id,
              template_id,
              entity,
-             configuration
+             configuration,
+             generated_code
       FROM   document_configuration
       WHERE  id = $1
     `;
@@ -6987,6 +6944,7 @@ router.get('/get-configuration/:id', async (req, res) => {
       id: row.id,
       templateId: row.template_id,
       entity: row.entity,
+      generated_code: row.generated_code || '',
       ...configuration            // ←   inyecta todo el JSON que necesita el front
     });
   } catch (err) {
@@ -6994,6 +6952,34 @@ router.get('/get-configuration/:id', async (req, res) => {
     res.status(500).json({ message: 'Error interno', error: err.message });
   }
 });
+
+// routes/documentAutomation.js (o el archivo donde tengas los endpoints)
+router.put("/update-code/:id", async (req, res) => {
+  const { id } = req.params;
+  const { generated_code } = req.body;
+
+  if (typeof generated_code !== "string")
+    return res.status(400).json({ message: "generated_code debe ser texto" });
+
+  try {
+    const q = `
+      UPDATE document_configuration
+      SET    generated_code = $1
+      WHERE  id = $2
+      RETURNING id, generated_code
+    `;
+    const { rows } = await pool.query(q, [generated_code, id]);
+
+    if (rows.length === 0)
+      return res.status(404).json({ message: "Configuración no encontrada" });
+
+    res.json({ message: "Código actualizado", data: rows[0] });
+  } catch (err) {
+    console.error("[update-code]", err);
+    res.status(500).json({ message: "Error interno", error: err.message });
+  }
+});
+
 
 // Ruta para ejecutar código dinámico almacenado
 router.post('/create-document-client', async (req, res) => {
