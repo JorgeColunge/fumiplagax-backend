@@ -163,6 +163,33 @@ async function generateSignedUrl(url) {
   }
 }
 
+// Función para generar URL prefirmada
+async function generateSignedUrlPDF(url) {
+  try {
+    // Extraer el bucket y el key desde la URL
+    const urlParts = new URL(url);
+
+    const bucketName = urlParts.hostname.split('.')[0]; // Extraer el nombre del bucket
+    const key = decodeURIComponent(
+      urlParts.pathname.startsWith('/') ? urlParts.pathname.substring(1) : urlParts.pathname
+    );
+
+    const params = {
+      Bucket: bucketName,
+      Key: key,
+      Expires: 60, // Tiempo en segundos (ejemplo: 60 segundos)
+      ResponseContentDisposition: 'inline', // 👈 ¡Esto permite verlo en el navegador!
+      ResponseContentType: 'application/pdf' // 👈 Asegura que sea tratado como PDF
+    };
+
+    // Generar URL prefirmada
+    return await s3.getSignedUrlPromise('getObject', params);
+  } catch (error) {
+    console.error('Error al generar URL prefirmada:', error);
+    throw new Error('No se pudo generar la URL prefirmada.');
+  }
+}
+
 // Ruta para prefirmar documentos de S3
 router.post('/PrefirmarArchivos', async (req, res) => {
   const { url } = req.body;
@@ -176,6 +203,29 @@ router.post('/PrefirmarArchivos', async (req, res) => {
 
   try {
     const signedUrl = await generateSignedUrl(url);
+    console.log('Archivo encontrado y URL prefirmada generada con éxito.');
+    console.log(`URL prefirmada: ${signedUrl}`);
+
+    res.json({ signedUrl });
+  } catch (error) {
+    console.error('Error al generar la URL prefirmada:', error.message);
+    res.status(500).json({ message: 'Error al generar la URL prefirmada.', error: error.message });
+  }
+});
+
+// Ruta para prefirmar documentos de S3
+router.post('/PrefirmarArchivosPDF', async (req, res) => {
+  const { url } = req.body;
+
+  if (!url) {
+    console.error('URL no proporcionada en la solicitud.');
+    return res.status(400).json({ message: 'La URL es requerida.' });
+  }
+
+  console.log(`Recibida solicitud para prefirmar archivo con URL: ${url}`);
+
+  try {
+    const signedUrl = await generateSignedUrlPDF(url);
     console.log('Archivo encontrado y URL prefirmada generada con éxito.');
     console.log(`URL prefirmada: ${signedUrl}`);
 
