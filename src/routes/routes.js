@@ -19,6 +19,7 @@ const QRCode = require('qrcode');
 const { uploadFile, getSignedUrl, deleteObject } = require('../config/s3Service');
 const dotenv = require('dotenv');
 const { convertToPDF } = require("../config/convertToPDF");
+const jwt = require("jsonwebtoken");
 
 const { exec } = require('child_process');
 
