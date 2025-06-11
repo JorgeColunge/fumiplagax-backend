@@ -2232,8 +2232,61 @@ router.post("/replace-local-file", uploadDoc.single("file"), async (req, res) =>
 });
 
 // Ruta relativa para los archivos temporales
-const tempDirectory = path.resolve(__dirname, "../../public/media/documents");
+const tempDirectory = path.resolve(__dirname, "../temp");
+const ONLYOFFICE_SECRET = "UXwdLmf9mMi0W6G2cYRhz32DVqISMSzD";
 
+const convertWithOnlyOffice = async (sourcePath, outputExtension = "pdf") => {
+  const fileName = path.basename(sourcePath);
+  const outputFile = fileName.replace(/\.[^/.]+$/, `.${outputExtension}`);
+  const outputPath = path.join(tempDirectory, outputFile);
+
+  // Verifica que el archivo está realmente en la carpeta servida
+  const servedFilePath = path.resolve(tempDirectory, fileName);
+  if (!fs.existsSync(servedFilePath)) {
+    throw new Error(`El archivo ${servedFilePath} no existe o no fue guardado correctamente.`);
+  }
+
+  // 🌐 URL accesible desde el contenedor OnlyOffice
+  //const fileUrl = `http://tempserver/temp/${fileName}`;
+  const fileUrl = `https://fumiplagax.axiomarobotics.com/temp/${fileName}`;
+
+  console.log("📤 Iniciando conversión con OnlyOffice...");
+  console.log("📄 Archivo local:", servedFilePath);
+  console.log("🌐 URL para descarga desde el contenedor:", fileUrl);
+
+  const payload = {
+    async: false,
+    filetype: "docx",
+    outputtype: outputExtension,
+    title: fileName,
+    key: `${Date.now()}-${fileName}`,
+    url: fileUrl,
+  };
+
+  const token = jwt.sign(payload, ONLYOFFICE_SECRET);
+  console.log("🔐 JWT generado:", token);
+
+  //const response = await axios.post("http://localhost/ConvertService.ashx", payload, {
+  const response = await axios.post("http://localhost:8082/ConvertService.ashx", payload, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!response.data || response.data.error) {
+    console.error("❌ Error en conversión OnlyOffice:", response.data);
+    throw new Error(`Error en conversión OnlyOffice: ${response.data?.error || "desconocido"}`);
+  }
+
+  const convertedUrl = response.data.fileUrl;
+  console.log("✅ PDF generado en:", convertedUrl);
+
+  const convertedPdf = await axios.get(convertedUrl, { responseType: "arraybuffer" });
+  fs.writeFileSync(outputPath, convertedPdf.data);
+  console.log("💾 PDF guardado en:", outputPath);
+
+  return outputPath;
+};
 router.post("/convert-to-pdf", async (req, res) => {
   const { generatedDocumentId } = req.body;
 
@@ -2270,7 +2323,7 @@ router.post("/convert-to-pdf", async (req, res) => {
 
     // Obtener la clave del documento desde la URL
     const documentKey = decodeURIComponent(
-      documentUrl.split("fumiplagax2.s3.us-east-2.amazonaws.com/")[1]
+      documentUrl.split("impecol.s3.us-east-2.amazonaws.com/")[1]
     );
     console.log("Clave del documento extraída de la URL:", documentKey);
 
@@ -2287,14 +2340,22 @@ router.post("/convert-to-pdf", async (req, res) => {
     const docxPath = path.join(tempDirectory, `${Date.now()}-document.docx`);
     console.log("Ruta temporal para el archivo DOCX:", docxPath);
 
+    // 🟢 Asegurar carpeta aquí
+    const tempDir = path.dirname(docxPath);
+    if (!fs.existsSync(tempDir)) {
+      fs.mkdirSync(tempDir, { recursive: true });
+      console.log(`Carpeta creada: ${tempDir}`);
+    }
+
     // Guardar el archivo DOCX temporalmente
     fs.writeFileSync(docxPath, response.data);
     console.log("Archivo DOCX descargado y guardado temporalmente.");
 
     // Convertir el archivo DOCX a PDF usando `convertToPDF`
-    console.log("Iniciando conversión a PDF...");
-    const pdfBuffer = await convertToPDF(fs.readFileSync(docxPath));
-    console.log("Archivo convertido a PDF exitosamente.");
+    console.log("Iniciando conversión a PDF con OnlyOffice...");
+    const pdfPath = await convertWithOnlyOffice(docxPath); // función que crearemos
+    const pdfBuffer = fs.readFileSync(pdfPath);
+    console.log("Archivo convertido a PDF exitosamente:", pdfPath);
 
     // Subir el PDF a S3
     const newKey = `documents/generated/${Date.now()}-generated.pdf`;
@@ -2332,6 +2393,7 @@ router.post("/convert-to-pdf", async (req, res) => {
     // Limpiar archivo temporal
     console.log("Eliminando archivo temporal...");
     fs.unlinkSync(docxPath);
+    fs.unlinkSync(pdfPath); // Limpia también el PDF temporal
   } catch (error) {
     console.error("Error al procesar el archivo:", error.message);
     res.status(500).json({
@@ -2341,7 +2403,6 @@ router.post("/convert-to-pdf", async (req, res) => {
     });
   }
 });
-
 
 // Ruta para obtener acciones relacionadas con inspecciones
 router.get('/actions-inspections', async (req, res) => {
