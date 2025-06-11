@@ -2323,7 +2323,7 @@ router.post("/convert-to-pdf", async (req, res) => {
 
     // Obtener la clave del documento desde la URL
     const documentKey = decodeURIComponent(
-      documentUrl.split("impecol.s3.us-east-2.amazonaws.com/")[1]
+      documentUrl.split("fumiplagax2.s3.us-east-2.amazonaws.com/")[1]
     );
     console.log("Clave del documento extraída de la URL:", documentKey);
 
@@ -4503,7 +4503,7 @@ router.post('/save-configuration', async (req, res) => {
               async function consultarGPT(modelo, personalidad, prompt, descripcion = 'generación de documento') {
                 const apiKey = process.env.OPENAI_API_KEY;
                 const openaiUrl = 'https://api.openai.com/v1/chat/completions';
-                const backendUrl = 'https://services.impecol.com:10000/api/consumptions'; // cambiar en producción
+                const backendUrl = 'https://fumiplagax.axiomarobotics.com:10000/api/consumptions'; // cambiar en producción
 
                 const headers = {
                   Authorization: \`Bearer \${apiKey}\`,
@@ -7147,7 +7147,7 @@ router.post('/create-document-service', async (req, res) => {
       js2xml: require('xml-js').js2xml,
       getSignedUrl: getSignedUrl,
       uploadFile: uploadFile,
-      bucketName: "impecol",
+      bucketName: "fumiplagax2",
       Buffer: Buffer,
       sharp,
       moment,
