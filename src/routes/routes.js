@@ -2,6 +2,7 @@ const axios = require('axios');
 const express = require('express');
 const bcrypt = require('bcrypt');
 const multer = require('multer');
+const nodemailer = require('nodemailer');
 const sharp = require('sharp');
 const moment = require('moment');
 const fs = require('fs');
@@ -20,6 +21,7 @@ const { uploadFile, getSignedUrl, deleteObject } = require('../config/s3Service'
 const dotenv = require('dotenv');
 const { convertToPDF } = require("../config/convertToPDF");
 const jwt = require("jsonwebtoken");
+const url = require('url');
 
 const { exec } = require('child_process');
 
@@ -1207,16 +1209,16 @@ router.get('/services/:id', async (req, res) => {
 // Editar servicio
 router.put('/services/:id', async (req, res) => {
   const { id } = req.params;
-  const { service_type, description, pest_to_control, intervention_areas, category, quantity_per_month, client_id, value, created_by, responsible, companion } = req.body;
+  const { service_type, description, pest_to_control, intervention_areas, category, quantity_per_month, client_id, value, created_by, responsible, companion, company } = req.body;
 
   try {
     const query = `
       UPDATE services
       SET service_type = $1, description = $2, pest_to_control = $3, intervention_areas = $4, category = $5,
-          quantity_per_month = $6, client_id = $7, value = $8, created_by = $9, responsible = $10, companion = $11
-      WHERE id = $12 RETURNING *
+          quantity_per_month = $6, client_id = $7, value = $8, created_by = $9, responsible = $10, companion = $11, company = $12
+      WHERE id = $13 RETURNING *
     `;
-    const values = [service_type, description, pest_to_control, intervention_areas, category, quantity_per_month, client_id, value, created_by, responsible, companion, id];
+    const values = [service_type, description, pest_to_control, intervention_areas, category, quantity_per_month, client_id, value, created_by, responsible, companion, company, id];
     const result = await pool.query(query, values);
 
     if (result.rows.length === 0) {
@@ -7562,6 +7564,48 @@ router.get('/consumptions', async (req, res) => {
   }
 });
 
+// 🔧 Extrae extensión de la URL sin query params
+const getExtensionFromUrl = (s3Url) => {
+  const pathname = url.parse(s3Url).pathname;
+  return path.extname(pathname) || '.docx'; // fallback .docx
+};
+
+const enviarCorreo = async ({ to, subject, html, attachments }) => {
+  const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+      user: process.env.MAIL_USER,
+      pass: process.env.MAIL_PASS
+    }
+  });
+
+  return transporter.sendMail({
+    from: `"Fumiplagax SAS" <${process.env.MAIL_USER}>`,
+    to,
+    subject,
+    html,
+    attachments
+  });
+};
+
+const enviarCorreoControl = async ({ to, subject, html, attachments }) => {
+  const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+      user: process.env.MAIL_USER2,
+      pass: process.env.MAIL_PASS2
+    }
+  });
+
+  return transporter.sendMail({
+    from: `"Control PMIP" <${process.env.MAIL_USER}>`,
+    to,
+    subject,
+    html,
+    attachments
+  });
+};
+
 router.post('/enviar-acta-por-correo', async (req, res) => {
   try {
     const { nombre, telefono, correo, documento, nombreDocumento } = req.body;
@@ -7598,22 +7642,22 @@ router.post('/enviar-acta-por-correo', async (req, res) => {
     console.log("📁 Archivo guardado:", localPath);
 
     // 3. Enviar por correo
-    const subject = `Documento "${nombreDocumento}" - Impecol SAS`;
+    const subject = `Documento "${nombreDocumento}" - Fumiplagax SAS`;
     const html = `
       <div style="background-color: #f0f0f0; padding: 40px 0; font-family: Arial, sans-serif; text-align: center;">
-        <div style="max-width: 587px; width: 100%; margin: 0 auto;
-                    background-image: url('https://drive.google.com/uc?id=14OFGD16mPopx9q7EhMdR3Mf-oPtk39Go');
+        <div style="max-width: 730px; width: 100%; margin: 0 auto;
+                    background-image: url('https://drive.google.com/uc?id=17g1ETAWTxurqPwqYxRoqECvRPzc7Jvmp');
                     background-size: cover; background-position: top center; border-radius: 12px;
                     padding: 60px 30px; background-repeat: no-repeat;
                     box-shadow: 0 0 10px rgba(0,0,0,0.1); background-color: white; text-align: left;">
 
-          <div style="padding: 35px; border-radius: 12px;">
-            <h2 style="color: #28a745;">Estimado(a) ${nombre},</h2>
+          <div style="padding: 55px; border-radius: 12px;">
+            <h2 style="color:rgb(23, 167, 56);">Estimado(a) ${nombre},</h2>
 
             <p style="color: rgb(28, 28, 28);">Esperamos que se encuentre muy bien.</p>
 
             <p style="color: rgb(28, 28, 28);">
-              Le compartimos en este correo el documento <strong>"${nombreDocumento}"</strong>, el cual ha sido generado como parte del proceso de atención de <strong>Impecol SAS</strong>.
+              Le compartimos en este correo el documento <strong>"${nombreDocumento}"</strong>, el cual ha sido generado como parte del proceso de atención de <strong>Fumiplagax SAS</strong>.
             </p>
 
             <p style="color: rgb(28, 28, 28);">
@@ -7639,6 +7683,112 @@ router.post('/enviar-acta-por-correo', async (req, res) => {
     `;
 
     const result = await enviarCorreo({
+      to: correo,
+      subject,
+      html,
+      attachments: [{
+        filename: nombreDocumento + extension,
+        path: localPath
+      }]
+    });
+
+    console.log('✅ Correo enviado:', result.messageId);
+
+    // 4. Eliminar archivo temporal después de 3 minutos
+    setTimeout(() => {
+      try {
+        fs.unlinkSync(localPath);
+        console.log("🗑 Archivo eliminado tras 3 minutos:", localPath);
+      } catch (err) {
+        console.warn("⚠️ No se pudo eliminar el archivo:", err.message);
+      }
+    }, 180000);
+
+    res.json({ success: true, messageId: result.messageId });
+
+  } catch (error) {
+    console.error("❌ Error general:", error.message);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+router.post('/enviar-acta-por-correo-control', async (req, res) => {
+  try {
+    const { nombre, telefono, correo, documento, nombreDocumento } = req.body;
+    console.log("📞 Teléfono:", telefono);
+    console.log("📧 Correo:", correo);
+    console.log("📄 Documento:", documento);
+    console.log("📎 Nombre del documento:", nombreDocumento);
+
+    let downloadUrl = documento;
+
+    // 1. Firmar la URL si no está firmada
+    if (!documento.includes('X-Amz-Signature')) {
+      console.log('🔐 Generando URL firmada...');
+      const prefirm = await axios.post(`${process.env.BACKEND_URL}/api/PrefirmarArchivos`, { url: documento });
+      downloadUrl = prefirm.data.signedUrl;
+      console.log("✅ URL firmada:", downloadUrl);
+    }
+
+    // 2. Descargar archivo y guardar temporalmente
+    const extension = getExtensionFromUrl(downloadUrl);
+    const safeName = nombreDocumento.replace(/\s+/g, '_');
+    const fileName = `${uuidv4()}-${safeName}${extension}`;
+    const localPath = path.join(__dirname, '../temp', fileName);
+    const writer = fs.createWriteStream(localPath);
+
+    const responseStream = await axios.get(downloadUrl, { responseType: 'stream' });
+    responseStream.data.pipe(writer);
+
+    await new Promise((resolve, reject) => {
+      writer.on('finish', resolve);
+      writer.on('error', reject);
+    });
+
+    console.log("📁 Archivo guardado:", localPath);
+
+    // 3. Enviar por correo
+    const subject = `Documento "${nombreDocumento}" - Control PMIP`;
+    const html = `
+      <div style="background-color: #f0f0f0; padding: 40px 0; font-family: Arial, sans-serif; text-align: center;">
+        <div style="max-width: 730px; width: 100%; margin: 0 auto;
+                    background-image: url('https://drive.google.com/uc?id=1hjseYiamGF7Fs8W4p27ua-zPP4yZzjBz');
+                    background-size: cover; background-position: top center; border-radius: 12px;
+                    padding: 60px 30px; background-repeat: no-repeat;
+                    box-shadow: 0 0 10px rgba(0,0,0,0.1); background-color: white; text-align: left;">
+
+          <div style="padding: 55px; border-radius: 12px;">
+            <h2 style="color:rgb(23, 167, 56);">Estimado(a) ${nombre},</h2>
+
+            <p style="color: rgb(28, 28, 28);">Esperamos que se encuentre muy bien.</p>
+
+            <p style="color: rgb(28, 28, 28);">
+              Le compartimos en este correo el documento <strong>"${nombreDocumento}"</strong>, el cual ha sido generado como parte del proceso de atención de <strong>Control PMIP</strong>.
+            </p>
+
+            <p style="color: rgb(28, 28, 28);">
+              Le agradecemos sinceramente la confianza depositada en nosotros. Estamos comprometidos con ofrecerle siempre un servicio de calidad.
+            </p>
+
+            <p style="color: rgb(28, 28, 28);">
+              Si tiene alguna inquietud o desea más información, no dude en comunicarse con nuestro equipo de atención.
+            </p>
+          </div>
+        </div>
+
+        <div style="margin-top: 30px;">
+          <small style="display: block; margin-bottom: 5px; color: #777;">
+            Powered by Axioma Robotics
+          </small>
+          <a href="https://wa.me/573177381752" target="_blank" rel="noopener noreferrer">
+            <img src="https://drive.google.com/uc?id=1NqsmffR3cY6zvtJ1U3SuB67NP_JyQ8Mh" alt="Axioma Robotics"
+                style="height: 40px; padding: 2px 6px; border-radius: 6px; box-shadow: 0 0 5px rgba(0,0,0,0.1);" />
+          </a>
+        </div>
+      </div>
+    `;
+
+    const result = await enviarCorreoControl({
       to: correo,
       subject,
       html,

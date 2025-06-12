@@ -7,5 +7,7 @@ node_modules/
 # Ignorar la carpeta node_modules
 public/
 
+src/temp
+
 # Ignorar archivo document_debug.xml
 document_debug.xml
