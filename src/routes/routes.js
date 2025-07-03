@@ -3236,14 +3236,14 @@ router.get('/stations/:id', async (req, res) => {
 
 // Crear una nueva estación
 router.post('/stations', async (req, res) => {
-  const { description, category, type, control_method, client_id, qr_code } = req.body;
+  const { description, category, type, control_method, client_id, qr_code, location } = req.body;
 
   try {
     const query = `
-      INSERT INTO stations (description, category, type, control_method, client_id)
-      VALUES ($1, $2, $3, $4, $5) RETURNING *
+      INSERT INTO stations (description, category, type, control_method, client_id, location)
+      VALUES ($1, $2, $3, $4, $5, $6 ) RETURNING *
     `;
-    const values = [description, category, type, control_method, client_id];
+    const values = [description, category, type, control_method, client_id, location];
     const result = await pool.query(query, values);
 
     const station = result.rows[0]; // Obtener la estación creada
@@ -3282,15 +3282,15 @@ router.post('/stations', async (req, res) => {
 // Actualizar una estación existente
 router.put('/stations/:id', async (req, res) => {
   const { id } = req.params;
-  const { description, category, type, control_method, client_id } = req.body;
+  const { description, category, type, control_method, client_id, location } = req.body;
 
   try {
     const query = `
       UPDATE stations
-      SET description = $1, category = $2, type = $3, control_method = $4, client_id = $5
-      WHERE id = $6 RETURNING *
+      SET description = $1, category = $2, type = $3, control_method = $4, client_id = $5, location= $6
+      WHERE id = $7 RETURNING *
     `;
-    const values = [description, category, type, control_method, client_id, id];
+    const values = [description, category, type, control_method, client_id, location, id];
     const result = await pool.query(query, values);
 
     if (result.rows.length === 0) {
@@ -4685,77 +4685,76 @@ router.post('/save-configuration', async (req, res) => {
               };    
 
               const getValueFromJson = (json, keyPath, type = null) => {
-                  const keys = keyPath.split('_');
-                  let currentValue = json;
+                /* 1. si piden todo el objeto -------------------------------------- */
+                if (keyPath === "all") return JSON.stringify(json, null, 2);
 
-                  for (const [index, key] of keys.entries()) {
-                    if (type && key === 'findingsByType') {
-                      // Manejar findingsByType con el campo type
-                      if (type === 'all') {
-                        // Combinar todos los tipos
-                        const allFindings = Object.values(currentValue[key] || {}).flat();
-                        currentValue = allFindings; // Continuar navegando con todos los hallazgos
-                      } else {
-                        // Filtrar por tipo específico
-                        currentValue = currentValue[key]?.[type] || [];
-                      }
+                const keys = keyPath.split("_");
+                let currentValue = json;
 
-                      // Continuar con las claves restantes
-                      const remainingKeys = keys.slice(index + 1);
-                      if (remainingKeys.length > 0) {
-                        return currentValue
-                          .map((finding) => getValueFromJson(finding, remainingKeys.join('_')))
-                          .flat();
-                      }
+                for (let i = 0; i < keys.length; i++) {
+                  const key = keys[i];
 
-                      return currentValue;
-                    } else if (key === 'stationsFindings') {
-                      // Manejar findings_stationsFindings_<Category>_<Field>
-                      const category = keys[index + 1]; // La categoría está en la siguiente clave
-                      const field = keys[index + 2]; // El campo específico está dos niveles más abajo
+                  /* 2. findingsByType --------------------------------------------- */
+                  if (type && key === "findingsByType") {
+                    currentValue =
+                      type === "all"
+                        ? Object.values(currentValue[key] || {}).flat()
+                        : currentValue[key]?.[type] || [];
 
-                      if (!category || !field) {
-                        console.warn(\`No se encontró una categoría o campo válido en la ruta: \${keyPath}\`);
-                        return "No encontrado";
-                      }
-
-                      // Filtrar stationsFindings por categoría, o incluir todas si la categoría es "all"
-                      const filteredStations = category === "all"
-                        ? currentValue[key] || [] // Incluir todas las estaciones si la categoría es "all"
-                        : currentValue[key]?.filter((station) => station.category === category) || [];
-
-                      // Retornar los valores del campo específico
-                      const results = filteredStations.map((station) =>
-                        station.hasOwnProperty(field) ? station[field] : "No encontrado"
-                      );
-
-                      return results.length > 0 ? results : "No encontrado";
-                    } else if (type && key === 'productsByType') {
-                      // Manejar productsByType con el campo type
-                      if (type === 'all') {
-                        const allProducts = Object.values(currentValue[key] || {});
-                        currentValue = allProducts;
-                      } else {
-                        currentValue = currentValue[key]?.[type] || {};
-                      }
-
-                      const remainingKeys = keys.slice(index + 1);
-                      if (remainingKeys.length > 0) {
-                        return getValueFromJson(currentValue, remainingKeys.join('_'));
-                      }
-
-                      return currentValue;
-                    } else if (currentValue && typeof currentValue === 'object' && key in currentValue) {
-                      // Navegar por las claves normalmente
-                      currentValue = currentValue[key];
-                    } else {
-                      console.warn(\`No se encontró la clave "\${key}" en el JSON.\`);
-                      return "No encontrado";
-                    }
+                    const restKeys = keys.slice(i + 1).join("_");
+                    return restKeys
+                      ? currentValue.map(f => getValueFromJson(f, restKeys, type)).flat()
+                      : currentValue;
                   }
 
-                  return currentValue;
-                };
+                  /* 3. stationsFindings_<Category>_<Field> ------------------------- */
+                  if (key === "stationsFindings") {
+                    const category = keys[i + 1];
+                    const field    = keys[i + 2];
+                    if (!category || !field) return "No encontrado";
+
+                    const list = category === "all"
+                      ? currentValue[key] || []
+                      : (currentValue[key] || []).filter(s => s.category === category);
+
+                    const result = list.map(s => (field in s ? s[field] : "No encontrado"));
+                    return result.length ? result : "No encontrado";
+                  }
+
+                  /* 4. productsByType --------------------------------------------- */
+                  if (key === "productsByType") {
+                    // a) convertir siempre a array
+                    let products = Object.values(currentValue[key] || {});
+
+                    // b) filtrar por tipo si procede
+                    if (type && type !== "all") {
+                      products = products.filter(p => (p.tipo || p.type) === type);
+                    }
+
+                    // c) procesar el resto de la ruta
+                    const restKeys = keys.slice(i + 1).join("_");
+                    return restKeys
+                      ? products.map(p => getValueFromJson(p, restKeys, type)).flat()
+                      : products;
+                  }
+
+                  /* 5. soporte genérico para arrays ------------------------------- */
+                  if (Array.isArray(currentValue)) {
+                    const restKeys = keys.slice(i).join("_");
+                    return currentValue.map(el => getValueFromJson(el, restKeys, type)).flat();
+                  }
+
+                  /* 6. navegación “normal” por objetos ---------------------------- */
+                  if (currentValue && typeof currentValue === "object" && key in currentValue) {
+                    currentValue = currentValue[key];
+                  } else {
+                    console.warn(\`No se encontró la clave "\${key}" en la ruta "\${keyPath}".\`);
+                    return "No encontrado";
+                  }
+                }
+
+                return currentValue;
+              };
 
               // Consultar campos dinámicos de las entidades "clients", "stations" y "client_maps"
               if (entity === "clients") {
@@ -5074,6 +5073,17 @@ router.post('/save-configuration', async (req, res) => {
                 const queryUserData = 'SELECT * FROM users WHERE id = $1';
                 const queryInspections = 'SELECT * FROM inspections WHERE service_id = $1';
 
+                // Función auxiliar para actualizar valores según tipo de datos
+                const updateValue = (data, field, type) => {
+                  if (data && data.hasOwnProperty(field)) {
+                    console.log(\`Valor encontrado para "\${field}" en "\${type}": \${data[field]}\`);
+                    return data[field];
+                  } else {
+                    console.warn(\`El campo "\${field}" no existe en la entidad "\${type}".\`);
+                    return "No encontrado";
+                  }
+                };
+
                 try {
                   // Consultar datos del servicio
                   const resultServiceData = await pool.query(queryServiceData, [idEntity]);
@@ -5094,6 +5104,10 @@ router.post('/save-configuration', async (req, res) => {
 
                   const clientData = resultClientData.rows[0];
                   console.log('Datos de la entidad "clients" obtenidos:', clientData);
+
+                  const queryClientMapsData = 'SELECT * FROM client_maps WHERE client_id = $1';
+                  const resultClientMapsData = await pool.query(queryClientMapsData, [clientData.id]);
+                  const clientMapsData = resultClientMapsData.rows.length > 0 ? resultClientMapsData.rows : [];
 
                   // Consultar datos del responsable relacionado con el servicio
                   const resultUserData = await pool.query(queryUserData, [serviceData.responsible]);
@@ -5263,6 +5277,9 @@ router.post('/save-configuration', async (req, res) => {
                         console.warn(\`No se encontraron inspecciones para "\${periodo}" y tipo "\${tipoInspeccion}".\`);
                         variables[key] = "No encontrado";
                       }
+                    } else if (typeof value === 'string' && value.startsWith("Mapas-")) {
+                      const field = value.split('-')[1];
+                      variables[key] = clientMapsData[0] ? updateValue(clientMapsData[0], field, "client_maps") : "No encontrado";
                     }
                   });
 
@@ -5350,6 +5367,11 @@ router.post('/save-configuration', async (req, res) => {
                               .map((inspection) => (inspection.hasOwnProperty(campo) ? inspection[campo] : []))
                               .filter((value) => value !== "No encontrado" && value !== null && value !== undefined);
                           }
+                        } else if (field.startsWith("Mapas-")) {
+                          const mapField = field.split('-')[1];
+                          return clientMapsData[0]
+                            ? [updateValue(clientMapsData[0], mapField, "client_maps")]
+                            : [];
                         } else {
                           return [field]; // Mantener el valor original si no coincide con ninguna regla
                         }
@@ -5383,6 +5405,17 @@ router.post('/save-configuration', async (req, res) => {
               const queryServiceData = 'SELECT * FROM services WHERE id = $1'; // Consulta para servicios
               const queryClientData = 'SELECT * FROM clients WHERE id = $1'; // Consulta para clientes
               const queryUserData = 'SELECT * FROM users WHERE id = $1'; // Consulta para usuarios
+
+              // Función auxiliar para actualizar valores según tipo de datos
+                const updateValue = (data, field, type) => {
+                  if (data && data.hasOwnProperty(field)) {
+                    console.log(\`Valor encontrado para "\${field}" en "\${type}": \${data[field]}\`);
+                    return data[field];
+                  } else {
+                    console.warn(\`El campo "\${field}" no existe en la entidad "\${type}".\`);
+                    return "No encontrado";
+                  }
+                };
 
               try {
                 // Consultar datos de la inspección
@@ -5460,6 +5493,10 @@ router.post('/save-configuration', async (req, res) => {
                   console.log("Datos de los acompañantes obtenidos:", companionData);
                 }
 
+                const queryClientMapsData = 'SELECT * FROM client_maps WHERE client_id = $1';
+                const resultClientMapsData = await pool.query(queryClientMapsData, [clientData.id]);
+                const clientMapsData = resultClientMapsData.rows.length > 0 ? resultClientMapsData.rows : [];
+
                 // Consultar normativas relacionadas con la categoría del cliente
                 let clientRulesData = [];
                 if (clientData.category) {
@@ -5531,6 +5568,9 @@ router.post('/save-configuration', async (req, res) => {
                     // Combinar las normativas en un solo string separado por comas
                     variables[key] = ruleValues.join("* ");
                     console.log(\`Variable "\${key}" actualizada a: \${variables[key]}\`);
+                  } else if (typeof value === 'string' && value.startsWith("Mapas-")) {
+                    const field = value.split('-')[1];
+                    variables[key] = clientMapsData[0] ? updateValue(clientMapsData[0], field, "client_maps") : "No encontrado";
                   }
 
                   console.log(\`Variable "\${key}" actualizada a: \${variables[key]}\`);
@@ -5947,7 +5987,7 @@ router.post('/save-configuration', async (req, res) => {
                         let replacedText = text.replace(\`{{\${key}}}\`, value);
               
                         // Si el valor tiene saltos de línea, hay que dividirlo correctamente
-                        if (value.includes("\\r\\n")) {
+                        if (value.includes("\\n")) {
                           const parts = replacedText.includes('\\r\\n') ? replacedText.split(/\\r\\n/) : replacedText.split(/\\n/);
                           let newElements = [];
               
@@ -6408,7 +6448,10 @@ router.post('/save-configuration', async (req, res) => {
 
               const processTableText = (text) => {
                 let newElements = [];
-                const parts = text.includes('\\r\\n') ? text.split(/\\r\\n/) : text.split(/\\n/);
+                const safeText = (text ?? '').toString();      // convierte null/undefined en ''
+                const parts = safeText.includes('\\r\\n')
+                  ? safeText.split(/\\r\\n/)
+                  : safeText.split(/\\n/);
               
                 parts.forEach((part, index) => {
                   if (index > 0) {
@@ -6885,12 +6928,133 @@ router.post('/save-configuration', async (req, res) => {
                 }
               });
             };  
+
+            // ① Obtén los encabezados de las tablas que declaraste como Horizontal
+            const horizontalHeaders = tablas
+              .filter(t => t.tipo === "Dinámica" && t.orientacion === "Horizontal")
+              .map(t => t.encabezado.flat().join("|||"));   // string único por tabla
+
+              const deepText = node =>
+                node && node.type === 'element'
+                  ? (node.name === 'w:t'
+                      ? (node.elements?.[0]?.text || '')
+                      : (node.elements||[]).map(deepText).join(''))
+                  : '';
+
+              const getCellText = tc =>
+                (tc.elements||[])
+                  .filter(el => el.name === 'w:p')
+                  .map(deepText)
+                  .join('')
+                  .trim();
+
+              const setText = (tc, txt) => {
+                const p = tc.elements.find(el => el.name === 'w:p');
+                p.elements = [{
+                  type:'element', name:'w:r', elements:[
+                    { type:'element', name:'w:t',
+                      attributes:{ 'xml:space':'preserve' },
+                      elements:[{type:'text',text:txt}]
+                    }
+                  ]
+                }];
+              };
+
+              /*********************************************************************/
+              /*  transponer-invertir  + quitar encabezado                         */
+              /*********************************************************************/
+              function transposeTbl(tbl){
+                /* 1. filas y textos originales */
+                const rows      = tbl.elements.filter(el=>el.name==='w:tr');
+                if (rows.length < 2) return;               // sin datos → nada
+                const headerRow = rows[0];
+                const bodyRows  = rows.slice(1);
+
+                const cellMtx = bodyRows.map(tr =>
+                  tr.elements.filter(el=>el.name==='w:tc'));
+                const txtMtx  = cellMtx.map(r => r.map(getCellText));
+
+                /* 2. traspuesta invertida */
+                const maxCols = Math.max(...txtMtx.map(r=>r.length));
+                const trans   = Array.from({length:maxCols},(_,c)=>
+                                txtMtx.map(r=>r[c] ?? '')).reverse();
+
+                /* 3. nuevas filas clonando la celda (0,0) */
+              const protoTc = cellMtx[0][0];            // sigue sirviendo de respaldo
+
+              const newRows = trans.map( (rowVals, rIdx) => {
+                const tr = { type:'element', name:'w:tr', elements:[] };
+
+                rowVals.forEach( (txt, cIdx) => {
+                  /*  ⬇️  ESTA es la línea que controla el color/estilo  ⬇️
+                      ───────────────────────────────────────────────────── */
+                  const srcTc =
+                    (cellMtx[cIdx] && cellMtx[cIdx][rIdx])  // celda equivalente original
+                    || protoTc;                             // si no existe, usa la 0-0
+
+                  const tc = JSON.parse(JSON.stringify(srcTc));
+                  setText(tc, txt);
+                  tr.elements.push(tc);
+                });
+                return tr;
+              });
+
+                /* 4. ancho total del encabezado */
+                const headerWidth = headerRow.elements
+                  .filter(el=>el.name==='w:tc')
+                  .reduce((sum,tc)=>{
+                    const w = tc.elements.find(e=>e.name==='w:tcPr')
+                              ?.elements.find(e=>e.name==='w:tcW')
+                              ?.attributes['w:w'];
+                    return sum + (parseInt(w,10)||0);
+                  },0);
+
+                /* 5. repartir anchuras */
+                const cols   = newRows[0].elements.length;
+                const perW   = Math.floor(headerWidth / cols);
+                let   resto  = headerWidth - perW*cols;
+
+                newRows.forEach(tr=>{
+                  tr.elements.forEach((tc,idx)=>{
+                    const tcW = tc.elements.find(e=>e.name==='w:tcPr')
+                                .elements.find(e=>e.name==='w:tcW');
+                    const wFinal = perW + (resto>0 ? 1 : 0);
+                    tcW.attributes['w:w'] = String(wFinal);
+                    if (resto > 0) resto--;
+                  });
+                });
+
+                /* 6. sustituir: solo las filas nuevas, SIN encabezado */
+                tbl.elements = newRows;  //newRows solo cuerpo
+              }
+
+              /*********************************************************************/
+              /* detector de tablas horizontales                                   */
+              /*********************************************************************/
+              function rotateHorizontalTables(nodes){
+                nodes.forEach(node=>{
+                  if(node.type==='element' && node.name==='w:tbl'){
+                    const firstTr = node.elements.find(el=>el.name==='w:tr');
+                    const hdrTxt  = firstTr
+                      ? firstTr.elements.filter(el=>el.name==='w:tc')
+                              .map(getCellText).join('|||')
+                      : '';
+                    if(horizontalHeaders.includes(hdrTxt)){
+                      console.log(\`↔️ Girando tabla: \${hdrTxt}\`);
+                      transposeTbl(node);
+                    }
+                  }
+                  if(node.elements) rotateHorizontalTables(node.elements);
+                });
+              }
             
               // Procesar y reemplazar variables y tablas
               console.log("Procesando documento XML...");
               normalizeTextNodes(parsedXml.elements);
               replaceVariables(parsedXml.elements); // Reemplaza variables
               replaceTableValues(parsedXml.elements, tablas); // Reemplaza valores en tablas
+
+              rotateHorizontalTables(parsedXml.elements);
 
               // Aplicar Arial 10 a todo el contenido
               applyArial10ToDocument(parsedXml.elements); // 👈 Aquí se aplica la fuente y tamaño
