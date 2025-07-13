@@ -1039,6 +1039,28 @@ router.delete('/clients/:id', async (req, res) => {
   }
 });
 
+// utils/normalize.js (o dentro de la misma ruta)
+const normalizeCompanion = (value) => {
+  if (value === undefined || value === null) return null;
+
+  /* Cadena */
+  if (typeof value === 'string') {
+    const clean = value.replace(/[\{\}"]/g, '').trim();
+    return clean === '' ? null : value;       // → null si la cadena está vacía
+  }
+
+  /* Array */
+  if (Array.isArray(value)) {
+    const cleanArray = value.filter(v => v && v.toString().trim() !== '');
+    return cleanArray.length ? cleanArray     // → []  si se queda vacío
+      : null;
+  }
+
+  /* Número u otro tipo  */
+  return value;
+};
+
+
 router.post('/services', async (req, res) => {
   const {
     company,
@@ -1052,8 +1074,10 @@ router.post('/services', async (req, res) => {
     value,
     created_by,
     responsible,
-    companion,
+    companion: rawCompanion,
   } = req.body;
+
+  const companion = normalizeCompanion(rawCompanion);
 
   try {
     // Asegúrate de que los valores vacíos sean tratados como null
@@ -1133,7 +1157,7 @@ router.post('/services', async (req, res) => {
     }
 
     // Iterar sobre los IDs de los acompañantes
-    if (parsedCompanion.length > 0) {
+    if (companion && parsedCompanion.length > 0) {
       for (let companionId of parsedCompanion) {
         try {
           const companionNotificationValues = [companionId, notificationMessage, 'pending'];
@@ -1209,98 +1233,99 @@ router.get('/services/:id', async (req, res) => {
 // Editar servicio
 router.put('/services/:id', async (req, res) => {
   const { id } = req.params;
-  const { service_type, description, pest_to_control, intervention_areas, category, quantity_per_month, client_id, value, created_by, responsible, companion, company } = req.body;
 
+  const {
+    service_type,
+    description,
+    pest_to_control,
+    intervention_areas,
+    category,
+    quantity_per_month,
+    client_id,
+    value,
+    created_by,
+    responsible,
+    companion,
+    company,
+  } = req.body;
+
+  /* 1️⃣  Normaliza acompañantes */
+  const companionNorm = normalizeCompanion(companion);   // null si llegó vacío
+
+  /* 2️⃣  Construye SET dinámicamente  */
+  const updates = [];
+  const values = [];
+  let idx = 1;
+  const push = (field, val) => { updates.push(`${field} = $${idx}`); values.push(val); idx++; };
+
+  push('service_type', service_type);
+  push('description', description);
+  push('pest_to_control', pest_to_control);
+  push('intervention_areas', intervention_areas);
+  push('category', category);
+  push('quantity_per_month', quantity_per_month);
+  push('client_id', client_id);
+  push('value', value);
+  push('created_by', created_by);
+  push('responsible', responsible);
+  push('company', company);
+
+  /*  Sólo se actualiza companion si viene no-vacío */
+  if (companionNorm !== null) push('companion', companionNorm);
+
+  const query = `
+    UPDATE services
+    SET ${updates.join(', ')}
+    WHERE id = $${idx}
+    RETURNING *;
+  `;
+  values.push(id);            // último placeholder
+
+  /* 3️⃣  Ejecuta actualización */
   try {
-    const query = `
-      UPDATE services
-      SET service_type = $1, description = $2, pest_to_control = $3, intervention_areas = $4, category = $5,
-          quantity_per_month = $6, client_id = $7, value = $8, created_by = $9, responsible = $10, companion = $11, company = $12
-      WHERE id = $13 RETURNING *
-    `;
-    const values = [service_type, description, pest_to_control, intervention_areas, category, quantity_per_month, client_id, value, created_by, responsible, companion, company, id];
     const result = await pool.query(query, values);
 
     if (result.rows.length === 0) {
-      return res.status(404).json({ success: false, message: "Service not found" });
+      return res.status(404).json({ success: false, message: 'Service not found' });
     }
 
     const service = result.rows[0];
     const notificationMessage = `Tu servicio ${service.id} ha sido actualizado.`;
 
-    // Notificar al responsable
+    /* 4️⃣  Notifica al responsable */
     const notificationQuery = `
       INSERT INTO notifications (user_id, notification, state)
-      VALUES ($1, $2, $3) RETURNING *
+      VALUES ($1, $2, $3) RETURNING *;
     `;
-    const responsibleNotificationValues = [responsible, notificationMessage, 'pending'];
-    const responsibleNotificationResult = await pool.query(notificationQuery, responsibleNotificationValues);
-
+    const respNotif = await pool.query(notificationQuery, [responsible, notificationMessage, 'pending']);
     req.io.to(responsible.toString()).emit('notification', {
       user_id: responsible,
-      notification: responsibleNotificationResult.rows[0],
+      notification: respNotif.rows[0],
     });
-    console.log(`Notificación emitida al responsable ${responsible}: ${notificationMessage}`);
 
-    // Procesar el campo companion (acompañantes)
-    let parsedCompanion = [];
-    console.log(`Valor inicial de companion: ${companion}`); // Log inicial
+    /* 5️⃣  Notifica a acompañantes (solo si cambiaron) */
+    if (companionNorm !== null && companionNorm.length) {
+      const compArr = Array.isArray(companionNorm)
+        ? companionNorm
+        : companionNorm.toString().replace(/[\{\}"]/g, '').split(',').filter(Boolean);
 
-    try {
-      if (typeof companion === 'string') {
-        console.log(`Companion detectado como string.`);
-        if (companion.startsWith('{') && companion.endsWith('}')) {
-          console.log(`Companion detectado como JSON-like. Intentando corregir.`);
-          const correctedCompanion = companion
-            .replace(/{/g, '[') // Reemplazar llaves por corchetes
-            .replace(/}/g, ']') // Reemplazar llaves por corchetes
-            .replace(/'/g, '"'); // Reemplazar comillas simples por dobles
-          console.log(`Companion corregido: ${correctedCompanion}`);
-          parsedCompanion = JSON.parse(correctedCompanion);
-        } else if (companion.includes(',')) {
-          console.log(`Companion detectado como lista separada por comas.`);
-          parsedCompanion = companion.split(',').map(id => id.trim());
-        } else {
-          console.log(`Companion detectado como string simple.`);
-          parsedCompanion = [companion];
+      for (const compId of compArr) {
+        try {
+          const compNotif = await pool.query(notificationQuery, [compId, notificationMessage, 'pending']);
+          req.io.to(compId.toString()).emit('notification', {
+            user_id: compId,
+            notification: compNotif.rows[0],
+          });
+        } catch (err) {
+          console.error(`Error notificar acompañante ${compId}:`, err.message);
         }
-      } else if (Array.isArray(companion)) {
-        console.log(`Companion detectado como array.`);
-        parsedCompanion = companion.map(id => id.toString());
-      } else if (typeof companion === 'number') {
-        console.log(`Companion detectado como número.`);
-        parsedCompanion = [companion.toString()];
-      } else {
-        console.error(`Formato de companion no soportado: ${companion}`);
-      }
-    } catch (parseError) {
-      console.error(`Error al procesar companion: ${parseError.message}`);
-      parsedCompanion = [];
-    }
-
-    console.log(`Lista procesada de acompañantes: ${JSON.stringify(parsedCompanion)}`);
-
-    // Notificar a los acompañantes
-    for (let companionId of parsedCompanion) {
-      console.log(`Procesando notificación para acompañante ${companionId}`);
-      try {
-        const companionNotificationValues = [companionId, notificationMessage, 'pending'];
-        const companionNotificationResult = await pool.query(notificationQuery, companionNotificationValues);
-
-        req.io.to(companionId.toString()).emit('notification', {
-          user_id: companionId,
-          notification: companionNotificationResult.rows[0],
-        });
-        console.log(`Notificación emitida al acompañante ${companionId}: ${notificationMessage}`);
-      } catch (companionError) {
-        console.error(`Error al notificar al acompañante ${companionId}: ${companionError.message}`);
       }
     }
 
-    res.json({ success: true, message: "Service updated successfully", service });
-  } catch (error) {
-    console.error("Error updating service:", error);
-    res.status(500).json({ success: false, message: "Server error" });
+    return res.json({ success: true, message: 'Service updated successfully', service });
+  } catch (err) {
+    console.error('Error updating service:', err);
+    return res.status(500).json({ success: false, message: 'Server error' });
   }
 });
 
@@ -4232,38 +4257,50 @@ router.delete('/maps/:id', async (req, res) => {
   }
 });
 
-router.get('/rules', async (req, res) => {
+router.get('/rules', async (_req, res) => {
   try {
-    const rulesData = await pool.query('SELECT * FROM rules'); // Cambia esto según tu base de datos
-    res.json(rulesData.rows);
-  } catch (error) {
-    console.error('Error al obtener las normas:', error);
+    const sql = `
+      SELECT r.id,
+             r.rule,
+             r.description,
+             r.category,                         -- aún varchar
+             rc.id        AS category_id,
+             rc.category  AS category_name
+      FROM   rules r
+      LEFT  JOIN rules_category rc
+             ON rc.id::text = r.category        -- 🔑 CAST aquí
+      ORDER BY r.id;
+    `;
+    const { rows } = await pool.query(sql);
+    res.json(rows);
+  } catch (e) {
+    console.error('Error al obtener las normas:', e);
     res.status(500).json({ success: false, message: 'Error en el servidor' });
-  }
-});
-
-// Obtener todas las reglas
-router.get('/rules', async (req, res) => {
-  try {
-    const result = await pool.query('SELECT * FROM rules');
-    res.json(result.rows);
-  } catch (err) {
-    console.error(err.message);
-    res.status(500).send('Error al obtener las reglas');
   }
 });
 
 // Agregar una nueva regla
 router.post('/rules', async (req, res) => {
-  const { rule, description, categoryId } = req.body; // categoryId es el id de la categoría seleccionada
+  const { rule, description, categoryId } = req.body;   // categoryId = número
   try {
-    const result = await pool.query(
-      `INSERT INTO rules (rule, description, category) 
-       VALUES ($1, $2, $3) 
-       RETURNING *`,
-      [rule || 'Norma', description || 'Descripción', categoryId]
+    // Guárdalo como texto (cast en JS)
+    const { rows: [newRow] } = await pool.query(
+      `INSERT INTO rules (rule, description, category)
+       VALUES ($1,$2,$3)
+       RETURNING id`,
+      [rule || 'Norma', description || 'Descripción', String(categoryId || '')]
     );
-    res.status(201).json(result.rows[0]);
+
+    // Trae la fila completa con JOIN
+    const { rows: [fullRow] } = await pool.query(
+      `SELECT r.id, r.rule, r.description, r.category,
+              rc.id AS category_id, rc.category AS category_name
+       FROM   rules r
+       LEFT  JOIN rules_category rc ON rc.id::text = r.category
+       WHERE  r.id = $1`, [newRow.id]
+    );
+
+    res.status(201).json(fullRow);
   } catch (error) {
     console.error('Error al agregar la norma:', error.message);
     res.status(500).json({ success: false, message: 'Error al agregar la norma' });
@@ -4273,11 +4310,15 @@ router.post('/rules', async (req, res) => {
 // Editar una regla
 router.put('/rules/:id', async (req, res) => {
   const { id } = req.params;
-  const { rule, description, category } = req.body;
+  const { rule, description, category } = req.body;     // `category` llega como número
   try {
     await pool.query(
-      'UPDATE rules SET rule = $1, description = $2, category = $3 WHERE id = $4',
-      [rule, description, category, id]
+      `UPDATE rules
+         SET rule = $1,
+             description = $2,
+             category = $3          -- guárdalo como texto
+       WHERE id = $4`,
+      [rule, description, String(category || ''), id]
     );
     res.send('Regla actualizada correctamente');
   } catch (err) {
