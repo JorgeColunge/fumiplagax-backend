@@ -3920,10 +3920,11 @@ router.post('/billing', uploadBillingFile, async (req, res) => {
     const { billingData } = req.body; // Se espera que sea un string en JSON
     const fileUrl = req.file ? `/media/documents/billing/${req.file.filename}` : null;
 
-    if (!billingData || !fileUrl) {
+    // ✅ Ahora solo validamos que exista billingData
+    if (!billingData) {
       return res.status(400).json({
         success: false,
-        message: "Datos incompletos: Se requiere billingData y un archivo comprobante.",
+        message: "Datos incompletos: Se requiere billingData.",
       });
     }
 
@@ -3939,9 +3940,8 @@ router.post('/billing', uploadBillingFile, async (req, res) => {
       });
     }
 
-    // Log para verificar los datos antes de la inserción
     console.log('Datos de facturación procesados:', parsedBillingData);
-    console.log('URL del archivo:', fileUrl);
+    console.log('URL del archivo:', fileUrl || 'Sin archivo');
 
     // Inserción en la base de datos
     const query = `
@@ -3949,9 +3949,9 @@ router.post('/billing', uploadBillingFile, async (req, res) => {
       VALUES ($1, $2, $3, NOW()) RETURNING *
     `;
     const values = [
-      parsedBillingData[0].client_id, // ID del cliente
-      JSON.stringify(parsedBillingData), // Asegurar que sea un string JSON
-      fileUrl, // URL del archivo comprobante
+      parsedBillingData[0].client_id,
+      JSON.stringify(parsedBillingData),
+      fileUrl, // Puede ser null
     ];
 
     const result = await pool.query(query, values);
