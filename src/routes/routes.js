@@ -2885,8 +2885,12 @@ router.post('/service-schedule', async (req, res) => {
     // Procesar acompañantes
     console.log("Acompañantes recibidos:", companion);
 
-    // Dividir acompañantes
-    const companions = companion.replace(/[{}]/g, '').split(',').map(id => id.replace(/"/g, '').trim());
+    const companions = (companion || "") // si es null o undefined, usar ""
+      .replace(/[{}]/g, '')
+      .split(',')
+      .map(id => id.replace(/"/g, '').trim())
+      .filter(id => id !== ""); // eliminar vacíos
+
     console.log("Acompañantes procesados:", companions);
 
     // Emitir eventos y notificaciones a cada acompañante
