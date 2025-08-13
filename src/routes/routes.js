@@ -2365,6 +2365,7 @@ const convertWithOnlyOffice = async (sourcePath, outputExtension = "pdf") => {
 
   return outputPath;
 };
+
 router.post("/convert-to-pdf", async (req, res) => {
   const { generatedDocumentId } = req.body;
 
@@ -2436,7 +2437,16 @@ router.post("/convert-to-pdf", async (req, res) => {
     console.log("Archivo convertido a PDF exitosamente:", pdfPath);
 
     // Subir el PDF a S3
-    const newKey = `documents/generated/${Date.now()}-generated.pdf`;
+    let newKey;
+    if (originalDocument.document_url.endsWith(".docx")) {
+      newKey = originalDocument.document_url
+        .split("fumiplagax2.s3.us-east-2.amazonaws.com/")[1]
+        .replace(/\.docx$/i, ".pdf");
+    } else {
+      const baseKey = originalDocument.document_url.split("fumiplagax2.s3.us-east-2.amazonaws.com/")[1];
+      newKey = baseKey.replace(/\.[^/.]+$/, ".pdf");
+    }
+    console.log("Nueva clave para S3:", newKey);
     console.log("Subiendo archivo PDF a S3...");
     const uploadResult = await uploadFile(bucketName, newKey, pdfBuffer);
     console.log("Archivo PDF subido a S3 con éxito:", uploadResult.Location);
