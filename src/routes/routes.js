@@ -1481,7 +1481,10 @@ router.post('/products', uploadProductFiles, async (req, res) => {
     unity,
     active_ingredient,
     category,
-    health_record // ✅ Agregado aquí
+    health_record,
+    toxicological_category,
+    target_species,
+    antidote
   } = req.body;
 
   console.log('Categorías recibidas:', category);
@@ -1523,41 +1526,38 @@ router.post('/products', uploadProductFiles, async (req, res) => {
       fileUrls.emergency_card = await uploadFileToS3(file.buffer, file.originalname, file.mimetype);
     }
 
-    // Insertar los datos del producto en la base de datos
     const query = `
-    INSERT INTO products (
-      name,
-      description_type,
-      dose,
-      residual_duration,
-      batch, 
-      expiration_date,
-      category,
-      active_ingredient,
-      health_record,
-      unity,
-      safety_data_sheet,
-      technical_sheet,
-      health_registration,
-      emergency_card
-    ) VALUES ($1, $2, $3, $4, $5, TO_DATE($6, 'YYYY-MM-DD'), $7, $8, $9, $10, $11, $12, $13, $14) RETURNING *
+      INSERT INTO products (
+        name, description_type, dose, residual_duration, batch,
+        expiration_date, category, active_ingredient, health_record, unity,
+        safety_data_sheet, technical_sheet, health_registration, emergency_card,
+        toxicological_category, target_species, antidote
+      ) VALUES (
+        $1, $2, $3, $4, $5,
+        TO_DATE($6, 'YYYY-MM-DD'), $7, $8, $9, $10,
+        $11, $12, $13, $14,
+        $15, $16, $17
+      ) RETURNING *
     `;
 
     const values = [
       name,
-      description_type,
-      dose,
-      residual_duration,
-      batch || null, // Asegurar que no sea undefined
-      expiration_date ? expiration_date.split('T')[0] : null, // Formatea la fecha correctamente
-      formattedCategory, // ✅ Ahora correctamente formateado
-      active_ingredient,
+      description_type || null,
+      dose || null,
+      residual_duration || null,
+      batch || null,
+      expiration_date ? expiration_date.split('T')[0] : null,
+      formattedCategory,
+      active_ingredient || null,
       health_record || null,
-      unity,
+      unity || null,
       fileUrls.safety_data_sheet || null,
       fileUrls.technical_sheet || null,
       fileUrls.health_registration || null,
-      fileUrls.emergency_card || null
+      fileUrls.emergency_card || null,
+      toxicological_category.trim(),
+      target_species.trim(),
+      antidote.trim()
     ];
 
     const result = await pool.query(query, values);
@@ -1573,10 +1573,11 @@ router.post('/products', uploadProductFiles, async (req, res) => {
 router.get('/products', async (req, res) => {
   try {
     const result = await pool.query(`
-      SELECT id, name, description_type, dose, residual_duration, batch, 
-             TO_CHAR(expiration_date, 'YYYY-MM-DD') AS expiration_date, -- ✅ Convierte la fecha correctamente
-             category, active_ingredient, health_record, unity, 
-             safety_data_sheet, technical_sheet, health_registration, emergency_card 
+      SELECT id, name, description_type, dose, residual_duration, batch,
+             TO_CHAR(expiration_date, 'YYYY-MM-DD') AS expiration_date,
+             category, active_ingredient, health_record, unity,
+             safety_data_sheet, technical_sheet, health_registration, emergency_card,
+             toxicological_category, target_species, antidote
       FROM products
     `);
 
@@ -1604,10 +1605,11 @@ router.get('/products/:id', async (req, res) => {
 
   try {
     const result = await pool.query(`
-      SELECT id, name, description_type, dose, residual_duration, batch, 
-             TO_CHAR(expiration_date, 'YYYY-MM-DD') AS expiration_date, -- ✅ Convierte la fecha correctamente
-             category, active_ingredient, health_record, unity, 
-             safety_data_sheet, technical_sheet, health_registration, emergency_card 
+      SELECT id, name, description_type, dose, residual_duration, batch,
+             TO_CHAR(expiration_date, 'YYYY-MM-DD') AS expiration_date,
+             category, active_ingredient, health_record, unity,
+             safety_data_sheet, technical_sheet, health_registration, emergency_card,
+             toxicological_category, target_species, antidote
       FROM products
       WHERE id = $1
     `, [id]);
@@ -1654,97 +1656,103 @@ router.put('/products/:id', uploadProductFiles, async (req, res) => {
     unity,
     active_ingredient,
     category,
-    health_record // ✅ Agregado aquí
+    health_record,
+    toxicological_category,  // ✅ NUEVO (OBLIGATORIO)
+    target_species,          // ✅ NUEVO (OBLIGATORIO)
+    antidote                 // ✅ NUEVO (OBLIGATORIO)
   } = req.body;
 
-  console.log("Datos recibidos en la actualización:", req.body); // Debug para verificar datos  
-
-  console.log('Categorías recibidas:', category);
-
-  // Convierte el arreglo de categorías en una cadena JSON válida
-  let formattedCategory;
-  if (Array.isArray(category)) {
-    formattedCategory = JSON.stringify(category); // Convierte a JSON sin estructuras anidadas
-  } else if (typeof category === 'string') {
-    try {
-      formattedCategory = JSON.stringify(JSON.parse(category)); // Intenta parsear si ya es JSON en string
-    } catch (error) {
-      formattedCategory = JSON.stringify(category.split(',').map(item => item.trim())); // Divide y limpia si es una lista separada por comas
-    }
-  } else {
-    formattedCategory = '[]'; // Valor por defecto si no hay categorías
+  // Validaciones
+  const missing = [];
+  if (!name?.trim()) missing.push("name");
+  if (!toxicological_category?.trim()) missing.push("toxicological_category");
+  if (!target_species?.trim()) missing.push("target_species");
+  if (!antidote?.trim()) missing.push("antidote");
+  if (missing.length) {
+    return res.status(400).json({
+      success: false,
+      message: `Campos obligatorios faltantes: ${missing.join(", ")}`
+    });
   }
 
-  console.log('Categoría procesada:', formattedCategory); // ✅ Log para depuración
+  let formattedCategory;
+  if (Array.isArray(category)) {
+    formattedCategory = JSON.stringify(category);
+  } else if (typeof category === 'string') {
+    try { formattedCategory = JSON.stringify(JSON.parse(category)); }
+    catch { formattedCategory = JSON.stringify(category.split(',').map(i => i.trim())); }
+  } else {
+    formattedCategory = '[]';
+  }
 
   let fileUrls = {};
-
   try {
-    // Procesar archivos opcionales
     if (req.files?.safety_data_sheet) {
-      const file = req.files.safety_data_sheet[0];
-      fileUrls.safety_data_sheet = await uploadFileToS3(file.buffer, file.originalname, file.mimetype);
+      const f = req.files.safety_data_sheet[0];
+      fileUrls.safety_data_sheet = await uploadFileToS3(f.buffer, f.originalname, f.mimetype);
     }
     if (req.files?.technical_sheet) {
-      const file = req.files.technical_sheet[0];
-      fileUrls.technical_sheet = await uploadFileToS3(file.buffer, file.originalname, file.mimetype);
+      const f = req.files.technical_sheet[0];
+      fileUrls.technical_sheet = await uploadFileToS3(f.buffer, f.originalname, f.mimetype);
     }
     if (req.files?.health_registration) {
-      const file = req.files.health_registration[0];
-      fileUrls.health_registration = await uploadFileToS3(file.buffer, file.originalname, file.mimetype);
+      const f = req.files.health_registration[0];
+      fileUrls.health_registration = await uploadFileToS3(f.buffer, f.originalname, f.mimetype);
     }
     if (req.files?.emergency_card) {
-      const file = req.files.emergency_card[0];
-      fileUrls.emergency_card = await uploadFileToS3(file.buffer, file.originalname, file.mimetype);
-    }
-
-    // 🔍 Maneja el caso en que `name` sea null
-    if (!name) {
-      return res.status(400).json({ success: false, message: "El campo 'name' es obligatorio." });
+      const f = req.files.emergency_card[0];
+      fileUrls.emergency_card = await uploadFileToS3(f.buffer, f.originalname, f.mimetype);
     }
 
     const query = `
-    UPDATE products
-    SET name = $1, 
-        description_type = $2, 
-        dose = $3, 
-        residual_duration = $4, 
-        batch = $5, 
-        expiration_date = TO_DATE($6, 'YYYY-MM-DD'), -- ✅ Conversión correcta de fecha
-        unity = $7,
-        active_ingredient = $8,
-        health_record = $9,
-        category = $10, -- ✅ Se guarda correctamente
-        safety_data_sheet = COALESCE($11, safety_data_sheet),
-        technical_sheet = COALESCE($12, technical_sheet),
-        health_registration = COALESCE($13, health_registration),
-        emergency_card = COALESCE($14, emergency_card)
-    WHERE id = $15 RETURNING *
+      UPDATE products
+      SET name = $1,
+          description_type = $2,
+          dose = $3,
+          residual_duration = $4,
+          batch = $5,
+          expiration_date = TO_DATE($6, 'YYYY-MM-DD'),
+          unity = $7,
+          active_ingredient = $8,
+          health_record = $9,
+          category = $10,
+          safety_data_sheet = COALESCE($11, safety_data_sheet),
+          technical_sheet    = COALESCE($12, technical_sheet),
+          health_registration= COALESCE($13, health_registration),
+          emergency_card     = COALESCE($14, emergency_card),
+          toxicological_category = $15,
+          target_species         = $16,
+          antidote               = $17
+      WHERE id = $18
+      RETURNING *
     `;
 
     const values = [
-      name,
-      description_type,
-      dose,
-      residual_duration,
+      name.trim(),
+      description_type || null,
+      dose || null,
+      residual_duration || null,
       batch || null,
-      expiration_date ? expiration_date.split('T')[0] : null, // Formatea la fecha correctamente
-      unity,
-      active_ingredient,
+      expiration_date ? expiration_date.split('T')[0] : null,
+      unity || null,
+      active_ingredient || null,
       health_record || null,
       formattedCategory,
       fileUrls.safety_data_sheet || null,
       fileUrls.technical_sheet || null,
       fileUrls.health_registration || null,
       fileUrls.emergency_card || null,
+      toxicological_category.trim(),
+      target_species.trim(),
+      antidote.trim(),
       id
     ];
 
     const result = await pool.query(query, values);
-
-    if (result.rows.length === 0) {
+    if (!result.rows.length) {
       return res.status(404).json({ success: false, message: "Producto no encontrado" });
     }
+
     res.json({ success: true, message: "Producto actualizado correctamente", product: result.rows[0] });
   } catch (error) {
     console.error("Error al actualizar el producto:", error);
