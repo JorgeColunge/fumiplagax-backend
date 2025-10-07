@@ -2408,16 +2408,53 @@ router.post("/convert-to-pdf", async (req, res) => {
     const documentUrl = originalDocument.document_url;
     console.log("URL del documento obtenida:", documentUrl);
 
-    // Obtener la clave del documento desde la URL
-    const documentKey = decodeURIComponent(
-      documentUrl.split("fumiplagax2.s3.us-east-2.amazonaws.com/")[1]
-    );
-    console.log("Clave del documento extraída de la URL:", documentKey);
+    // ---------- extracción y validación robusta de la clave S3 ----------
 
-    // Generar URL prefirmada para descargar el archivo desde S3
-    console.log("Generando URL prefirmada...");
+    // 1) Parsear la URL correctamente (sin splits frágiles)
+    const { pathname } = new URL(documentUrl);
+    // quitar "/" inicial y decodificar %xx (OJO: decodeURIComponent NO convierte "+" a espacio)
+    let documentKey = decodeURIComponent(pathname.replace(/^\//, ''));
+
+    // 2) Verificar qué variante existe realmente en S3
+    //    Usa el SDK que ya tengas. Abajo te dejo v2 y v3.
+    //    Coloca headExists en el mismo archivo donde tienes getSignedUrl/uploadFile.
+
+    async function headExists(key) {
+      try {
+        // --- Si usas AWS SDK v3 ---
+        // import { S3Client, HeadObjectCommand } from "@aws-sdk/client-s3";
+        // const s3 = new S3Client({ region: "us-east-2" });
+        // await s3.send(new HeadObjectCommand({ Bucket: bucketName, Key: key }));
+
+        // --- Si usas AWS SDK v2 ---
+        // const s3 = new AWS.S3({ region: "us-east-2" });
+        await s3.headObject({ Bucket: bucketName, Key: key }).promise();
+
+        return true;
+      } catch (e) {
+        if (e?.$metadata?.httpStatusCode === 404 || e?.code === 'NotFound') return false;
+        if (e?.$metadata?.httpStatusCode === 403) throw new Error(`Acceso denegado a ${key}`);
+        return false;
+      }
+    }
+
+    if (!(await headExists(documentKey))) {
+      // probar variantes + ↔ espacio
+      if (documentKey.includes('+') && await headExists(documentKey.replace(/\+/g, ' '))) {
+        documentKey = documentKey.replace(/\+/g, ' ');
+      } else if (documentKey.includes(' ') && await headExists(documentKey.replace(/ /g, '+'))) {
+        documentKey = documentKey.replace(/ /g, '+');
+      } else {
+        throw new Error(`Objeto no encontrado en S3 para la clave: ${documentKey}`);
+      }
+    }
+
+    console.log("Clave S3 final usada:", documentKey);
+
+    // 3) Generar la URL prefirmada con la clave correcta
     const signedUrl = await getSignedUrl(bucketName, documentKey);
     console.log("URL prefirmada generada:", signedUrl);
+
 
     // Descargar el archivo DOCX
     console.log("Descargando archivo DOCX desde S3...");
@@ -2454,6 +2491,7 @@ router.post("/convert-to-pdf", async (req, res) => {
       const baseKey = originalDocument.document_url.split("fumiplagax2.s3.us-east-2.amazonaws.com/")[1];
       newKey = baseKey.replace(/\.[^/.]+$/, ".pdf");
     }
+
     console.log("Nueva clave para S3:", newKey);
     console.log("Subiendo archivo PDF a S3...");
     const uploadResult = await uploadFile(bucketName, newKey, pdfBuffer);
