@@ -139,25 +139,99 @@ const s3 = new AWS.S3({
   region: process.env.AWS_REGION,
 });
 
-// Función para generar URL prefirmada
+// Helpers robustos
+function parseS3Url(urlString) {
+  const u = new URL(urlString);
+  const host = u.hostname;
+  const path = u.pathname.replace(/^\//, ''); // sin leading slash
+
+  let bucket;
+  let rawKey;
+
+  // Path-style: https://s3.us-east-2.amazonaws.com/<bucket>/<key>
+  //             https://s3-us-east-2.amazonaws.com/<bucket>/<key>
+  if (/^s3[.-]/i.test(host) || host === 's3.amazonaws.com') {
+    const parts = path.split('/');
+    bucket = parts.shift();
+    rawKey = parts.join('/');
+  } else {
+    // Virtual-hosted: https://<bucket>.s3.us-east-2.amazonaws.com/<key>
+    // bucket puede contener puntos; extraemos todo antes de ".s3"
+    const m = host.match(/^(.*?)\.s3[.-][a-z0-9-]+\.amazonaws\.com$/i);
+    bucket = m?.[1] ?? host.split('.s3')[0]; // fallback
+    rawKey = path;
+  }
+
+  return { bucket, rawKey };
+}
+
+function decodeKeyFromPath(rawKey) {
+  // 1) Decodificar percent-encoding (%20, %28, etc.)
+  let k = decodeURIComponent(rawKey);
+
+  // 2) Si la ruta original traía '+' y NO traía '%2B', es casi seguro que '+' pretendía ser ' '
+  //    (patrón común cuando alguien hizo URL-encoding estilo query-string en vez de en el path).
+  if (/\+/.test(k) && !/%2B/i.test(rawKey)) {
+    k = k.replace(/\+/g, ' ');
+  }
+
+  return k;
+}
+
+// Verifica si el objeto existe (HEAD). Útil para dar un error temprano y/o probar variantes.
+async function objectExists(Bucket, Key, s3) {
+  try {
+    await s3.headObject({ Bucket, Key }).promise();
+    return true;
+  } catch (err) {
+    if (err?.code === 'NotFound' || err?.$metadata?.httpStatusCode === 404) {
+      return false;
+    }
+    // Si es otro error (permisos, región, etc.), propagar
+    throw err;
+  }
+}
+
+async function resolveKeyOrFallback(Bucket, rawKey, s3) {
+  // Variante A: decodificación estándar + corrección '+'→' '
+  const decoded = decodeKeyFromPath(rawKey);
+  if (await objectExists(Bucket, decoded, s3)) return decoded;
+
+  // Variante B: si A no existe, probar reemplazar espacios por '+'
+  // (por si el objeto fue guardado literal con '+')
+  if (decoded.includes(' ')) {
+    const plusVariant = decoded.replace(/ /g, '+');
+    if (await objectExists(Bucket, plusVariant, s3)) return plusVariant;
+  }
+
+  // Como último recurso, intenta el rawKey decodificado "tal cual"
+  // (por si el archivo realmente tiene '+', y venía como %2B en origen)
+  const rawDecoded = decodeURIComponent(rawKey);
+  if (await objectExists(Bucket, rawDecoded, s3)) return rawDecoded;
+
+  // No se encontró ninguna variante
+  return null;
+}
+
+// ===== Funciones finales =====
+
 async function generateSignedUrl(url) {
   try {
-    // Extraer el bucket y el key desde la URL
-    const urlParts = new URL(url);
+    const { bucket: Bucket, rawKey } = parseS3Url(url);
+    let Key = await resolveKeyOrFallback(Bucket, rawKey, s3);
 
-    const bucketName = urlParts.hostname.split('.')[0]; // Extraer el nombre del bucket
-    // Decodificar el key para manejar caracteres especiales (%20, %28, %29)
-    const key = decodeURIComponent(
-      urlParts.pathname.startsWith('/') ? urlParts.pathname.substring(1) : urlParts.pathname
-    );
+    if (!Key) {
+      // Log útil para depurar el caso exacto
+      console.error('[Prefirma] No se encontró el objeto con ninguna variante de key', {
+        Bucket,
+        rawKey,
+        decoded: decodeURIComponent(rawKey),
+        plusAsSpace: decodeKeyFromPath(rawKey)
+      });
+      throw new Error('El objeto no existe en S3 (key inválida).');
+    }
 
-    const params = {
-      Bucket: bucketName,
-      Key: key,
-      Expires: 60, // Tiempo en segundos (ejemplo: 60 segundos)
-    };
-
-    // Generar URL prefirmada
+    const params = { Bucket, Key, Expires: 60 };
     return await s3.getSignedUrlPromise('getObject', params);
   } catch (error) {
     console.error('Error al generar URL prefirmada:', error);
@@ -165,26 +239,29 @@ async function generateSignedUrl(url) {
   }
 }
 
-// Función para generar URL prefirmada
 async function generateSignedUrlPDF(url) {
   try {
-    // Extraer el bucket y el key desde la URL
-    const urlParts = new URL(url);
+    const { bucket: Bucket, rawKey } = parseS3Url(url);
+    let Key = await resolveKeyOrFallback(Bucket, rawKey, s3);
 
-    const bucketName = urlParts.hostname.split('.')[0]; // Extraer el nombre del bucket
-    const key = decodeURIComponent(
-      urlParts.pathname.startsWith('/') ? urlParts.pathname.substring(1) : urlParts.pathname
-    );
+    if (!Key) {
+      console.error('[Prefirma PDF] No se encontró el objeto con ninguna variante de key', {
+        Bucket,
+        rawKey,
+        decoded: decodeURIComponent(rawKey),
+        plusAsSpace: decodeKeyFromPath(rawKey)
+      });
+      throw new Error('El objeto no existe en S3 (key inválida).');
+    }
 
     const params = {
-      Bucket: bucketName,
-      Key: key,
-      Expires: 60, // Tiempo en segundos (ejemplo: 60 segundos)
-      ResponseContentDisposition: 'inline', // 👈 ¡Esto permite verlo en el navegador!
-      ResponseContentType: 'application/pdf' // 👈 Asegura que sea tratado como PDF
+      Bucket,
+      Key,
+      Expires: 60,
+      ResponseContentDisposition: `inline; filename="${Key.split('/').pop()}"`,
+      ResponseContentType: 'application/pdf',
     };
 
-    // Generar URL prefirmada
     return await s3.getSignedUrlPromise('getObject', params);
   } catch (error) {
     console.error('Error al generar URL prefirmada:', error);
@@ -192,51 +269,36 @@ async function generateSignedUrlPDF(url) {
   }
 }
 
-// Ruta para prefirmar documentos de S3
 router.post('/PrefirmarArchivos', async (req, res) => {
   const { url } = req.body;
+  if (!url) return res.status(400).json({ message: 'La URL es requerida.' });
 
-  if (!url) {
-    console.error('URL no proporcionada en la solicitud.');
-    return res.status(400).json({ message: 'La URL es requerida.' });
-  }
-
-  console.log(`Recibida solicitud para prefirmar archivo con URL: ${url}`);
-
+  console.log(`[PrefirmarArchivos] URL recibida: ${url}`);
   try {
     const signedUrl = await generateSignedUrl(url);
-    console.log('Archivo encontrado y URL prefirmada generada con éxito.');
-    console.log(`URL prefirmada: ${signedUrl}`);
-
+    console.log('[PrefirmarArchivos] URL prefirmada generada.');
     res.json({ signedUrl });
   } catch (error) {
-    console.error('Error al generar la URL prefirmada:', error.message);
+    console.error('[PrefirmarArchivos] Error:', error.message);
     res.status(500).json({ message: 'Error al generar la URL prefirmada.', error: error.message });
   }
 });
 
-// Ruta para prefirmar documentos de S3
 router.post('/PrefirmarArchivosPDF', async (req, res) => {
   const { url } = req.body;
+  if (!url) return res.status(400).json({ message: 'La URL es requerida.' });
 
-  if (!url) {
-    console.error('URL no proporcionada en la solicitud.');
-    return res.status(400).json({ message: 'La URL es requerida.' });
-  }
-
-  console.log(`Recibida solicitud para prefirmar archivo con URL: ${url}`);
-
+  console.log(`[PrefirmarArchivosPDF] URL recibida: ${url}`);
   try {
     const signedUrl = await generateSignedUrlPDF(url);
-    console.log('Archivo encontrado y URL prefirmada generada con éxito.');
-    console.log(`URL prefirmada: ${signedUrl}`);
-
+    console.log('[PrefirmarArchivosPDF] URL prefirmada generada.');
     res.json({ signedUrl });
   } catch (error) {
-    console.error('Error al generar la URL prefirmada:', error.message);
+    console.error('[PrefirmarArchivosPDF] Error:', error.message);
     res.status(500).json({ message: 'Error al generar la URL prefirmada.', error: error.message });
   }
 });
+
 
 // Configuración del filtro para permitir solo imágenes
 const fileFilter = (req, file, cb) => {
